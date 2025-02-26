@@ -193,12 +193,12 @@
     top: 60px;
     right: 0;
     background-color: var(--charcoal);
-    padding: 1rem;
-    width: 200px;
+    padding: 0.5rem 1rem;
     z-index: 15;
     display: flex;
-    flex-direction: column; /* Stack items vertically */
-    gap: 0.5rem; /* Space between items */
+    flex-direction: column;
+    gap: 0.5rem;
+    width: auto;
   }
 
   .nav-menu a,
