@@ -5,13 +5,18 @@
 
   let challenges = [];
   let loading = true;
-
+  let error = null;
   onMount(async () => {
-    const { data, error } = await supabase
+    const { data, error: fetchError } = await supabase
       .from("challenges")
       .select("*")
       .eq("type", "public");
-    if (!error) challenges = data;
+    if (fetchError) {
+      error = fetchError.message;
+      console.error("Error fetching challenges:", error);
+    } else {
+      challenges = data;
+    }
     loading = false;
   });
 </script>

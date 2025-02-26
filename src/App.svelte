@@ -1,5 +1,5 @@
 <script>
-  import { Router, Route } from "svelte-routing";
+  import { Router, Route, link } from "svelte-routing";
   import { user } from "./stores/user.js";
   import Login from "./pages/Login.svelte";
   import SignUp from "./pages/SignUp.svelte";
@@ -43,10 +43,11 @@
 
   function goHome() {
     navigate("/");
-    menuOpen = false; // Close menu if open
+    menuOpen = false;
   }
 </script>
 
+<!-- Top Navbar (Excluded only for /login) -->
 {#if currentPath !== "/login"}
   <nav class="top-nav">
     <div class="nav-left">
@@ -57,29 +58,36 @@
     <button class="hamburger" on:click={toggleMenu}>
       <Fa icon={faBars} />
     </button>
-    {#if menuOpen || currentPath !== "/login"}
+    {#if menuOpen}
       <div class="nav-menu" class:open={menuOpen}>
         {#if currentUser}
-          <a href="/profile" on:click={toggleMenu} class="dark-bg-text"
+          <a href="/profile" use:link on:click={toggleMenu} class="dark-bg-text"
             >Profile</a
           >
-          <a href="/tokens" on:click={toggleMenu} class="dark-bg-text">Tokens</a
+          <a href="/tokens" use:link on:click={toggleMenu} class="dark-bg-text"
+            >Tokens</a
           >
-          <a href="/create-challenge" on:click={toggleMenu} class="dark-bg-text"
-            >Create Challenge</a
+          <a
+            href="/create-challenge"
+            use:link
+            on:click={toggleMenu}
+            class="dark-bg-text">Create Challenge</a
           >
           <button on:click={logout} class="logout-btn">Logout</button>
         {:else}
-          <a href="/signup" on:click={toggleMenu} class="dark-bg-text"
+          <a href="/signup" use:link on:click={toggleMenu} class="dark-bg-text"
             >Sign Up</a
           >
-          <a href="/login" on:click={toggleMenu} class="dark-bg-text">Login</a>
+          <a href="/login" use:link on:click={toggleMenu} class="dark-bg-text"
+            >Login</a
+          >
         {/if}
       </div>
     {/if}
   </nav>
 {/if}
 
+<!-- Main Content -->
 <main>
   <Router on:routeChanged={handleRouteChange}>
     {#if currentUser}
@@ -94,6 +102,8 @@
       />
       <Route path="/profile" component={Profile} />
       <Route path="/tokens" component={TokenPurchase} />
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={SignUp} />
     {:else}
       <Route path="/login" component={Login} />
       <Route path="/signup" component={SignUp} />
@@ -102,6 +112,7 @@
   </Router>
 </main>
 
+<!-- Bottom Navbar (Excluded only for /login) -->
 {#if currentPath !== "/login"}
   <BottomNav activeTab={currentPath === "/" ? "home" : currentPath.slice(1)} />
 {/if}
