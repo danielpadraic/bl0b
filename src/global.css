@@ -1,0 +1,62 @@
+:root {
+	--charcoal: #2F4858;
+	--tomato: #F26440;
+	--lapis-lazuli: #33658A;
+	--carolina-blue: #86BBD8;
+	--hunyadi-yellow: #F6AE2D;
+	--background: #FFFFFF;
+	--text: #2F4858; /* Charcoal for text on light backgrounds */
+	--tomato-light: #F58A6C; /* Lighter orange for hover */
+  }
+  
+  body {
+	background-color: var(--background);
+	color: var(--text);
+	font-family: Arial, Helvetica, sans-serif;
+	margin: 0;
+  }
+  
+  /* Uniform text elements */
+  h1, h2, p {
+	margin: 0 0 10px 0;
+	color: var(--text);
+  }
+  
+  /* Uniform button styling */
+  button {
+	background-color: var(--tomato);
+	color: var(--background);
+	border: 2px solid var(--tomato);
+	padding: 10px 20px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 1rem;
+  }
+  
+  button:hover {
+	background-color: var(--tomato-light);
+	border-color: var(--tomato-light);
+  }
+  
+  /* Uniform input, textarea, select styling */
+  input, textarea, select {
+	border: 2px solid var(--charcoal);
+	padding: 10px;
+	margin-bottom: 15px;
+	border-radius: 6px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 1rem;
+	width: 100%;
+	box-sizing: border-box;
+  }
+  
+  /* Text on dark backgrounds */
+  .dark-bg-text {
+	color: var(--carolina-blue);
+  }
+  
+  /* Ensure consistency across the app */
+  * {
+	font-family: Arial, Helvetica, sans-serif;
+  }
