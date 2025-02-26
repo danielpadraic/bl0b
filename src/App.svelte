@@ -63,29 +63,20 @@
       </div>
       {#if !isMobile}
         <nav class="top-nav">
-          <Link
-            to="/"
-            class={window.location.pathname === "/"
-              ? "nav-item active"
-              : "nav-item"}
-          >
+          <Link to="/" class={window.location.pathname === "/" ? "active" : ""}>
             <Fa icon={faHome} size="lg" />
             <span>Home</span>
           </Link>
           <Link
             to="/leaderboards"
-            class={window.location.pathname === "/leaderboards"
-              ? "nav-item active"
-              : "nav-item"}
+            class={window.location.pathname === "/leaderboards" ? "active" : ""}
           >
             <Fa icon={faTrophy} size="lg" />
             <span>Leaderboards</span>
           </Link>
           <Link
             to="/social"
-            class={window.location.pathname === "/social"
-              ? "nav-item active"
-              : "nav-item"}
+            class={window.location.pathname === "/social" ? "active" : ""}
           >
             <Fa icon={faUsers} size="lg" />
             <span>Social</span>
@@ -102,8 +93,12 @@
     {#if menuOpen}
       <div class="nav-menu">
         {#if currentUser}
-          <Link to="/profile" on:click={toggleMenu}>Profile</Link>
-          <Link to="/tokens" on:click={toggleMenu}>Tokens</Link>
+          <Link to="/profile" on:click={toggleMenu} class="dark-bg-text"
+            >Profile</Link
+          >
+          <Link to="/tokens" on:click={toggleMenu} class="dark-bg-text"
+            >Tokens</Link
+          >
           <button
             on:click={() => {
               navigate("/create-challenge");
@@ -113,8 +108,12 @@
           >
           <button on:click={logout} class="logout-btn">Logout</button>
         {:else}
-          <Link to="/signup" on:click={toggleMenu}>Sign Up</Link>
-          <Link to="/login" on:click={toggleMenu}>Login</Link>
+          <Link to="/signup" on:click={toggleMenu} class="dark-bg-text"
+            >Sign Up</Link
+          >
+          <Link to="/login" on:click={toggleMenu} class="dark-bg-text"
+            >Login</Link
+          >
         {/if}
       </div>
     {/if}
@@ -167,25 +166,33 @@
     gap: 1rem;
   }
 
-  .top-nav a.nav-item {
-    color: var(--carolina-blue);
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: 0.9rem;
+  :global(.top-nav a) {
+    color: var(--carolina-blue) !important;
+    text-decoration: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    font-size: 0.9rem !important;
   }
 
-  .top-nav a.nav-item.active {
-    color: var(--tomato);
+  :global(.top-nav a:link) {
+    color: var(--carolina-blue) !important;
   }
 
-  .top-nav a.nav-item:hover {
-    color: var(--tomato-light);
+  :global(.top-nav a:visited) {
+    color: var(--carolina-blue) !important;
   }
 
-  .top-nav a.nav-item span {
-    margin-top: 5px;
+  :global(.top-nav a.active) {
+    color: var(--tomato) !important;
+  }
+
+  :global(.top-nav a:hover) {
+    color: var(--tomato-light) !important;
+  }
+
+  :global(.top-nav a span) {
+    margin-top: 5px !important;
   }
 
   .hamburger {
@@ -216,7 +223,7 @@
     width: auto;
   }
 
-  .nav-menu a {
+  :global(.nav-menu a) {
     padding: 0.5rem;
     text-decoration: none;
     color: var(--carolina-blue);
@@ -225,7 +232,15 @@
     cursor: pointer;
   }
 
-  .nav-menu a:hover {
+  :global(.nav-menu a:link) {
+    color: var(--carolina-blue);
+  }
+
+  :global(.nav-menu a:visited) {
+    color: var(--carolina-blue);
+  }
+
+  :global(.nav-menu a:hover) {
     color: var(--tomato-light);
   }
 
@@ -239,9 +254,9 @@
   }
 
   .create-btn {
-    background-color: var(--tomato) !important;
-    color: var(--background) !important;
-    border: 2px solid var(--tomato) !important;
+    background-color: var(--tomato);
+    color: var(--background);
+    border: 2px solid var(--tomato);
     padding: 10px 20px;
     border-radius: 6px;
     cursor: pointer;
@@ -249,8 +264,8 @@
   }
 
   .create-btn:hover {
-    background-color: var(--tomato-light) !important;
-    border-color: var(--tomato-light) !important;
+    background-color: var(--tomato-light);
+    border-color: var(--tomato-light);
   }
 
   .logout-btn {
