@@ -221,9 +221,11 @@
   }
 
   .create-btn {
-    background-color: var(--tomato);
-    color: var(--background);
-    border: 2px solid var(--tomato);
+    background-color: var(
+      --tomato
+    ) !important; /* Ensure it overrides any parent styles */
+    color: var(--background) !important;
+    border: 2px solid var(--tomato) !important;
     padding: 10px 20px;
     border-radius: 6px;
     cursor: pointer;
@@ -231,8 +233,8 @@
   }
 
   .create-btn:hover {
-    background-color: var(--tomato-light);
-    border-color: var(--tomato-light);
+    background-color: var(--tomato-light) !important;
+    border-color: var(--tomato-light) !important;
   }
 
   .logout-btn {
