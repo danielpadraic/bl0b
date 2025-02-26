@@ -33,13 +33,13 @@
     right: 0;
     display: flex;
     justify-content: space-around;
-    background-color: #333;
+    background-color: var(--charcoal);
     padding: 10px 0;
     z-index: 10;
   }
 
   a {
-    color: white;
+    color: var(--carolina-blue);
     text-decoration: none;
     display: flex;
     flex-direction: column;
@@ -48,11 +48,11 @@
   }
 
   .active {
-    color: #ff6347;
+    color: var(--tomato);
   }
 
   a:hover {
-    color: #ff6347;
+    color: var(--tomato-light);
   }
 
   span {
