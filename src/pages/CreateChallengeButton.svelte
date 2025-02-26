@@ -1,13 +1,16 @@
 <script>
-  import { navigate } from "svelte-routing"; // Adjust if using SvelteKit routing
+  import { navigate } from "svelte-routing";
 </script>
 
-<button on:click={() => navigate("/create-challenge")}>
+<button
+  class="create-challenge-btn"
+  on:click={() => navigate("/create-challenge")}
+>
   Create Challenge
 </button>
 
 <style>
-  button {
+  .create-challenge-btn {
     background-color: var(--tomato, #ff6347);
     color: var(--white, #fff);
     border: none;
@@ -15,9 +18,13 @@
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
+    position: relative;
+    z-index: 5;
   }
 
-  button:hover {
-    background-color: var(--tomato-light, #ff8c69);
+  @media (max-width: 768px) {
+    .create-challenge-btn {
+      display: none; /* Hide on mobile; shown in hamburger menu */
+    }
   }
 </style>

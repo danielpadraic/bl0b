@@ -83,43 +83,50 @@
 
 <style>
   .social-feed {
-    padding: 1rem;
+    padding: clamp(0.5rem, 2vw, 1rem);
+  }
+
+  h2 {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    margin-bottom: clamp(0.5rem, 2vw, 1rem);
   }
 
   .posts {
-    margin-bottom: 1rem;
+    margin-bottom: clamp(0.5rem, 2vw, 1rem);
     max-height: 50vh;
     overflow-y: auto;
   }
 
   .post {
-    border-bottom: 1px solid var(--charcoal, #333);
-    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--charcoal);
+    padding: clamp(0.3rem, 1.5vw, 0.5rem) 0;
   }
 
   textarea {
     width: 100%;
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-    border: 1px solid var(--charcoal, #333);
+    padding: clamp(0.3rem, 1.5vw, 0.5rem);
+    margin-bottom: clamp(0.3rem, 1.5vw, 0.5rem);
+    border: 1px solid var(--charcoal);
     border-radius: 4px;
+    font-size: clamp(0.8rem, 2vw, 1rem);
   }
 
   button {
-    background-color: var(--tomato, #ff6347);
-    color: var(--white, #fff);
+    background-color: var(--tomato);
+    color: var(--white);
     border: none;
-    padding: 0.5rem 1rem;
+    padding: clamp(0.3rem, 1.5vw, 0.5rem) clamp(0.75rem, 2vw, 1rem);
     border-radius: 4px;
     cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 1rem);
   }
 
   button:disabled {
-    background-color: var(--gray, #a9a9a9);
+    background-color: var(--gray);
     cursor: not-allowed;
   }
 
   button:hover:not(:disabled) {
-    background-color: var(--tomato-light, #ff8c69);
+    background-color: var(--tomato-light);
   }
 </style>

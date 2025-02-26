@@ -1,6 +1,6 @@
 <script>
   import { link } from "svelte-routing";
-  import { Fa } from "svelte-fa";
+  import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
   export let activeTab;
@@ -33,26 +33,29 @@
     right: 0;
     display: flex;
     justify-content: space-around;
-    background-color: var(--charcoal); /* Changed from --lapis-lazuli */
-    padding: 10px 0;
-    border-top: 2px solid var(--charcoal);
+    background-color: var(--charcoal);
+    padding: clamp(0.5rem, 2vw, 1rem) 0;
     z-index: 10;
   }
+
   a {
-    color: var(--background);
+    color: var(--white);
     text-decoration: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 2vw, 1rem);
   }
+
   .active {
     color: var(--tomato);
   }
+
   a:hover {
     color: var(--tomato-light);
   }
+
   span {
-    margin-top: 5px;
+    margin-top: clamp(0.2rem, 1vw, 0.5rem);
   }
 </style>
