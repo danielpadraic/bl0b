@@ -63,15 +63,30 @@
       </div>
       {#if !isMobile}
         <nav class="top-nav">
-          <Link to="/" class="nav-item">
+          <Link
+            to="/"
+            class={window.location.pathname === "/"
+              ? "nav-item active"
+              : "nav-item"}
+          >
             <Fa icon={faHome} size="lg" />
             <span>Home</span>
           </Link>
-          <Link to="/leaderboards" class="nav-item">
+          <Link
+            to="/leaderboards"
+            class={window.location.pathname === "/leaderboards"
+              ? "nav-item active"
+              : "nav-item"}
+          >
             <Fa icon={faTrophy} size="lg" />
             <span>Leaderboards</span>
           </Link>
-          <Link to="/social" class="nav-item">
+          <Link
+            to="/social"
+            class={window.location.pathname === "/social"
+              ? "nav-item active"
+              : "nav-item"}
+          >
             <Fa icon={faUsers} size="lg" />
             <span>Social</span>
           </Link>
@@ -87,12 +102,8 @@
     {#if menuOpen}
       <div class="nav-menu">
         {#if currentUser}
-          <Link to="/profile" on:click={toggleMenu} class="dark-bg-text"
-            >Profile</Link
-          >
-          <Link to="/tokens" on:click={toggleMenu} class="dark-bg-text"
-            >Tokens</Link
-          >
+          <Link to="/profile" on:click={toggleMenu}>Profile</Link>
+          <Link to="/tokens" on:click={toggleMenu}>Tokens</Link>
           <button
             on:click={() => {
               navigate("/create-challenge");
@@ -102,12 +113,8 @@
           >
           <button on:click={logout} class="logout-btn">Logout</button>
         {:else}
-          <Link to="/signup" on:click={toggleMenu} class="dark-bg-text"
-            >Sign Up</Link
-          >
-          <Link to="/login" on:click={toggleMenu} class="dark-bg-text"
-            >Login</Link
-          >
+          <Link to="/signup" on:click={toggleMenu}>Sign Up</Link>
+          <Link to="/login" on:click={toggleMenu}>Login</Link>
         {/if}
       </div>
     {/if}
@@ -160,17 +167,25 @@
     gap: 1rem;
   }
 
-  .nav-item {
+  .top-nav a.nav-item {
     color: var(--carolina-blue);
     text-decoration: none;
-    font-size: 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
+    font-size: 0.9rem;
   }
 
-  .nav-item:hover {
+  .top-nav a.nav-item.active {
+    color: var(--tomato);
+  }
+
+  .top-nav a.nav-item:hover {
     color: var(--tomato-light);
+  }
+
+  .top-nav a.nav-item span {
+    margin-top: 5px;
   }
 
   .hamburger {
@@ -201,10 +216,21 @@
     width: auto;
   }
 
-  .nav-menu a,
-  .nav-menu button {
+  .nav-menu a {
     padding: 0.5rem;
     text-decoration: none;
+    color: var(--carolina-blue);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-menu a:hover {
+    color: var(--tomato-light);
+  }
+
+  .nav-menu button {
+    padding: 0.5rem;
     background: none;
     border: none;
     width: 100%;
@@ -212,18 +238,8 @@
     cursor: pointer;
   }
 
-  .nav-menu a {
-    color: var(--carolina-blue);
-  }
-
-  .nav-menu a:hover {
-    color: var(--tomato-light);
-  }
-
   .create-btn {
-    background-color: var(
-      --tomato
-    ) !important; /* Ensure it overrides any parent styles */
+    background-color: var(--tomato) !important;
     color: var(--background) !important;
     border: 2px solid var(--tomato) !important;
     padding: 10px 20px;
@@ -238,7 +254,6 @@
   }
 
   .logout-btn {
-    background: none;
     color: var(--carolina-blue);
   }
 
