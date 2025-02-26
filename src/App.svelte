@@ -1,23 +1,36 @@
 <script>
-  import { onMount } from "svelte";
-  import { navigate, Link } from "svelte-routing";
-  import { user } from "./stores/user.js";
-  import { supabase } from "./supabase.js";
-  import ChallengeLobby from "./ChallengeLobby.svelte";
+  import { onMount, onDestroy } from "svelte";
+  import { navigate, Router, Route, Link } from "svelte-routing";
+  import { user } from "./stores/user.js"; // Adjust path if needed
+  import { supabase } from "./supabase.js"; // Adjust path if needed
+  import ChallengeLobby from "./pages/ChallengeLobby.svelte"; // Updated path
+  import SocialFeed from "./pages/SocialFeed.svelte"; // Ensure this exists
   import BottomNav from "./components/BottomNav.svelte";
 
   let menuOpen = false;
   let currentUser = null;
   let isMobile = window.innerWidth < 769;
 
+  // Reactive screen size detection
+  function handleResize() {
+    isMobile = window.innerWidth < 769;
+    console.log("Window width:", window.innerWidth, "isMobile:", isMobile);
+  }
+
   onMount(() => {
-    currentUser = $user;
-    window.addEventListener("resize", () => {
-      isMobile = window.innerWidth < 769;
-    });
+    currentUser = $user; // Sync with store
+    $user
+      ? console.log("User logged in:", currentUser)
+      : console.log("No user logged in");
+    window.addEventListener("resize", handleResize);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("resize", handleResize);
   });
 
   function toggleMenu() {
+    console.log("Hamburger clicked, menuOpen:", !menuOpen);
     menuOpen = !menuOpen;
   }
 
@@ -58,29 +71,44 @@
       <span class="bar"></span>
       <span class="bar"></span>
     </button>
-    {#if menuOpen}
-      <div class="nav-menu" class:open={menuOpen}>
-        {#if currentUser}
-          <Link to="/profile" on:click={toggleMenu}>Profile</Link>
-          <Link to="/tokens" on:click={toggleMenu}>Tokens</Link>
-          <button
-            on:click={() => {
-              navigate("/create-challenge");
-              toggleMenu();
-            }}
-            class="create-btn">Create Challenge</button
-          >
-          <button on:click={logout} class="logout-btn">Logout</button>
-        {:else}
-          <Link to="/signup" on:click={toggleMenu}>Sign Up</Link>
-          <Link to="/login" on:click={toggleMenu}>Login</Link>
-        {/if}
-      </div>
-    {/if}
   </header>
 
+  {#if menuOpen}
+    <div class="nav-menu">
+      {#if currentUser}
+        <Link to="/profile" on:click={toggleMenu}>Profile</Link>
+        <Link to="/tokens" on:click={toggleMenu}>Tokens</Link>
+        <button
+          on:click={() => {
+            navigate("/create-challenge");
+            toggleMenu();
+          }}>Create Challenge</button
+        >
+        <button on:click={logout}>Logout</button>
+      {:else}
+        <Link to="/signup" on:click={toggleMenu}>Sign Up</Link>
+        <Link to="/login" on:click={toggleMenu}>Login</Link>
+      {/if}
+    </div>
+  {/if}
+
   <main>
-    <ChallengeLobby />
+    <Router>
+      <Route path="/" component={ChallengeLobby} />
+      <Route path="/social" component={SocialFeed} />
+      <Route path="/leaderboards" component={ChallengeLobby} />
+      <!-- Placeholder, adjust as needed -->
+      <Route path="/profile" component={ChallengeLobby} />
+      <!-- Placeholder -->
+      <Route path="/tokens" component={ChallengeLobby} />
+      <!-- Placeholder -->
+      <Route path="/create-challenge" component={ChallengeLobby} />
+      <!-- Placeholder -->
+      <Route path="/signup" component={ChallengeLobby} />
+      <!-- Placeholder -->
+      <Route path="/login" component={ChallengeLobby} />
+      <!-- Placeholder -->
+    </Router>
   </main>
 
   {#if isMobile && currentUser}
@@ -103,11 +131,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: clamp(0.5rem, 2vw, 1rem);
-    background-color: var(--charcoal);
-    color: var(--white);
-    position: relative;
-    z-index: 10;
+    padding: 1rem;
+    background-color: #333; /* Fallback color */
+    color: white;
   }
 
   .logo {
@@ -115,7 +141,7 @@
   }
 
   .logo img {
-    height: clamp(2rem, 5vw, 3rem);
+    height: 40px;
   }
 
   .top-nav {
@@ -124,13 +150,12 @@
   }
 
   .nav-item {
-    color: var(--white);
+    color: white;
     text-decoration: none;
-    font-size: clamp(0.9rem, 2vw, 1rem);
   }
 
   .nav-item:hover {
-    color: var(--tomato-light);
+    color: #ff6347; /* Tomato color */
   }
 
   .hamburger {
@@ -144,52 +169,38 @@
     display: block;
     width: 25px;
     height: 3px;
-    margin: 5px auto;
-    background-color: var(--white);
+    margin: 5px 0;
+    background-color: white;
   }
 
   .nav-menu {
-    position: fixed;
+    position: absolute;
     top: 60px;
     right: 0;
-    background-color: var(--charcoal);
+    background-color: #333;
     padding: 1rem;
-    display: none;
+    width: 200px;
     z-index: 15;
   }
 
-  .nav-menu.open {
+  .nav-menu a,
+  .nav-menu button {
     display: block;
-  }
-
-  a,
-  .create-btn,
-  .logout-btn {
-    display: block;
-    color: var(--white);
+    color: white;
     padding: 0.5rem;
     text-decoration: none;
-  }
-
-  .create-btn {
-    background-color: var(--tomato);
-    border: none;
-    border-radius: 4px;
-    margin: 0.5rem 0;
-  }
-
-  .create-btn:hover {
-    background-color: var(--tomato-light);
-  }
-
-  .logout-btn {
     background: none;
     border: none;
-    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-menu button:hover,
+  .nav-menu a:hover {
+    color: #ff6347;
   }
 
   main {
     flex: 1;
-    overflow-y: auto;
   }
 </style>
