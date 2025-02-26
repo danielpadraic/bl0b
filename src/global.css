@@ -7,6 +7,9 @@
 	--background: #FFFFFF;
 	--text: #2F4858; /* Charcoal for text on light backgrounds */
 	--tomato-light: #F58A6C; /* Lighter orange for hover */
+	--light-gray: #e0e0e0;
+    --gray: #a9a9a9;
+	--white: #fff;
   }
   
   body {

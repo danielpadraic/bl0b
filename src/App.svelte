@@ -1,213 +1,126 @@
 <script>
-  import { Router, Route, link } from "svelte-routing";
+  import { onMount } from "svelte";
+  import { navigate, Link } from "svelte-routing"; // Adjust if using SvelteKit
   import { user } from "./stores/user.js";
-  import Login from "./pages/Login.svelte";
-  import SignUp from "./pages/SignUp.svelte";
-  import ChallengeLobby from "./pages/ChallengeLobby.svelte";
-  import SocialFeed from "./pages/SocialFeed.svelte";
-  import Leaderboards from "./pages/Leaderboards.svelte";
-  import ChallengeCreation from "./pages/ChallengeCreation.svelte";
-  import ChallengeDetails from "./pages/ChallengeDetails.svelte";
-  import Profile from "./pages/Profile.svelte";
-  import TokenPurchase from "./pages/TokenPurchase.svelte";
-  import BottomNav from "./components/BottomNav.svelte";
-  import { Fa } from "svelte-fa";
-  import { faBars } from "@fortawesome/free-solid-svg-icons";
   import { supabase } from "./supabase.js";
-  import { navigate } from "svelte-routing";
+  import ChallengeLobby from "./pages/ChallengeLobby.svelte"; // Other imports as needed
 
-  let currentUser;
   let menuOpen = false;
-  let currentPath = window.location.pathname;
+  let currentUser = null;
 
-  user.subscribe((value) => (currentUser = value));
+  onMount(() => {
+    currentUser = $user;
+  });
 
   function toggleMenu() {
     menuOpen = !menuOpen;
   }
 
-  function handleRouteChange(event) {
-    currentPath = event.detail.path || window.location.pathname;
-  }
-
   async function logout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout failed:", error.message);
-    } else {
-      user.set(null);
-      navigate("/login");
-      menuOpen = false;
-    }
-  }
-
-  function goHome() {
+    await supabase.auth.signOut();
+    $user = null;
+    currentUser = null;
     navigate("/");
     menuOpen = false;
   }
 </script>
 
-<!-- Top Navbar (Excluded only for /login) -->
-{#if currentPath !== "/login"}
-  <nav class="top-nav">
-    <div class="nav-left">
-      <button class="logo-btn" on:click={goHome}>
-        <img src="/assets/logo.png" alt="blOb Logo" class="logo" />
-      </button>
-    </div>
-    <button class="hamburger" on:click={toggleMenu}>
-      <Fa icon={faBars} />
+<div class="app">
+  <nav class="hamburger">
+    <button on:click={toggleMenu} aria-label="Toggle menu">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
     </button>
     {#if menuOpen}
       <div class="nav-menu" class:open={menuOpen}>
+        <Link to="/" on:click={toggleMenu}>Home</Link>
         {#if currentUser}
-          <a href="/profile" use:link on:click={toggleMenu} class="dark-bg-text"
-            >Profile</a
-          >
-          <a href="/tokens" use:link on:click={toggleMenu} class="dark-bg-text"
-            >Tokens</a
-          >
-          <a
-            href="/create-challenge"
-            use:link
-            on:click={toggleMenu}
-            class="dark-bg-text">Create Challenge</a
+          <Link to="/profile" on:click={toggleMenu}>Profile</Link>
+          <Link to="/tokens" on:click={toggleMenu}>Tokens</Link>
+          <button
+            on:click={() => {
+              navigate("/create-challenge");
+              toggleMenu();
+            }}
+            class="create-btn">Create Challenge</button
           >
           <button on:click={logout} class="logout-btn">Logout</button>
         {:else}
-          <a href="/signup" use:link on:click={toggleMenu} class="dark-bg-text"
-            >Sign Up</a
-          >
-          <a href="/login" use:link on:click={toggleMenu} class="dark-bg-text"
-            >Login</a
-          >
+          <Link to="/signup" on:click={toggleMenu}>Sign Up</Link>
+          <Link to="/login" on:click={toggleMenu}>Login</Link>
         {/if}
       </div>
     {/if}
   </nav>
-{/if}
 
-<!-- Main Content -->
-<main>
-  <Router on:routeChanged={handleRouteChange}>
-    {#if currentUser}
-      <Route path="/" component={ChallengeLobby} />
-      <Route path="/social" component={SocialFeed} />
-      <Route path="/leaderboards" component={Leaderboards} />
-      <Route path="/create-challenge" component={ChallengeCreation} />
-      <Route
-        path="/challenge/:id"
-        component={ChallengeDetails}
-        let:params={{ id }}
-      />
-      <Route path="/profile" component={Profile} />
-      <Route path="/tokens" component={TokenPurchase} />
-      <Route path="/login" component={Login} />
-      <Route path="/signup" component={SignUp} />
-    {:else}
-      <Route path="/login" component={Login} />
-      <Route path="/signup" component={SignUp} />
-      <Route path="*" component={Login} />
-    {/if}
-  </Router>
-</main>
-
-<!-- Bottom Navbar (Excluded only for /login) -->
-{#if currentPath !== "/login"}
-  <BottomNav activeTab={currentPath === "/" ? "home" : currentPath.slice(1)} />
-{/if}
+  <main>
+    <ChallengeLobby />
+    <!-- Routing logic here if using svelte-routing -->
+  </main>
+</div>
 
 <style>
-  .top-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: var(--charcoal);
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 10;
+  .app {
+    min-height: 100vh;
   }
-  .nav-left {
-    display: flex;
-    align-items: center;
-  }
-  .logo-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-  }
-  .logo {
-    width: 50px;
-    height: auto;
-    margin-right: 10px;
-  }
+
   .hamburger {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 20;
+  }
+
+  button {
     background: none;
     border: none;
-    color: var(--background);
-    font-size: 1.5rem;
     cursor: pointer;
   }
+
+  .bar {
+    display: block;
+    width: 25px;
+    height: 3px;
+    margin: 5px auto;
+    background-color: var(--charcoal, #333);
+  }
+
   .nav-menu {
-    display: none;
-    flex-direction: column;
-    position: absolute;
+    position: fixed;
     top: 60px;
-    left: 0;
-    width: 100%;
-    background-color: var(--charcoal);
-    padding: 10px;
+    right: 0;
+    background-color: var(--charcoal, #333);
+    padding: 1rem;
+    display: none;
   }
+
   .nav-menu.open {
-    display: flex;
+    display: block;
   }
-  .nav-menu a {
-    color: var(--carolina-blue);
+
+  .create-btn,
+  .logout-btn {
+    display: block;
+    color: var(--white, #fff);
+    padding: 0.5rem;
     text-decoration: none;
-    padding: 10px;
-    font-size: 1rem;
   }
-  .nav-menu a:hover {
-    color: var(--tomato-light);
+
+  .create-btn {
+    background-color: var(--tomato, #ff6347);
+    border: none;
+    border-radius: 4px;
+    margin: 0.5rem 0;
   }
+
+  .create-btn:hover {
+    background-color: var(--tomato-light, #ff8c69);
+  }
+
   .logout-btn {
     background: none;
     border: none;
-    color: var(--carolina-blue);
-    padding: 10px;
-    font-size: 1rem;
     cursor: pointer;
-    text-align: left;
-  }
-  .logout-btn:hover {
-    color: var(--tomato-light);
-  }
-  main {
-    padding: 70px 10px 60px;
-  }
-
-  @media (min-width: 768px) {
-    .hamburger {
-      display: none;
-    }
-    .nav-menu {
-      display: flex;
-      flex-direction: row;
-      position: static;
-      width: auto;
-      background: none;
-      padding: 0;
-    }
-    .nav-menu a,
-    .nav-menu .logout-btn {
-      margin-left: 20px;
-    }
-    main {
-      padding: 80px 20px 70px;
-    }
   }
 </style>

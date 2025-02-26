@@ -1,131 +1,125 @@
 <script>
-  import { supabase } from "../supabase.js";
-  import { user } from "../stores/user.js";
   import { onMount } from "svelte";
-  import { uploadFile } from "../utils/upload.js";
-  import BottomNav from "../components/BottomNav.svelte";
-  import { Fa } from "svelte-fa";
-  import {
-    faHome,
-    faTrophy,
-    faUsers,
-    faPlus,
-  } from "@fortawesome/free-solid-svg-icons";
+  import { user } from "../stores/user.js";
+  import { supabase } from "../supabase.js";
 
+  export let channel;
   let posts = [];
+  let newPost = "";
   let loading = true;
-  let showPostForm = false;
-  let postContent = "";
-  let postFile;
 
   onMount(async () => {
-    const { data, error } = await supabase
-      .from("posts")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (!error) posts = data;
+    if (channel) {
+      await fetchPosts();
+    }
     loading = false;
   });
 
-  async function createPost() {
-    let mediaUrl = "";
-    if (postFile) {
-      const { Key } = await uploadFile(
-        postFile,
-        "post-media",
-        `${Date.now()}-${postFile.name}`
-      );
-      mediaUrl = supabase.storage.from("post-media").getPublicUrl(Key)
-        .data.publicUrl;
-    }
-    const { data, error } = await supabase.from("posts").insert([
-      {
-        content: postContent,
-        media_url: mediaUrl,
-        user_id: supabase.auth.user().id,
-      },
-    ]);
+  $: if (channel) fetchPosts();
+
+  async function fetchPosts() {
+    const table =
+      channel.type === "social"
+        ? "social_channels"
+        : channel.type === "group"
+          ? "private_groups"
+          : "challenge_lobbies";
+    const { data } = await supabase
+      .from("posts")
+      .select("*, users(username)")
+      .eq("channel_id", channel.id)
+      .order("created_at", { ascending: false });
+    posts = data || [];
+  }
+
+  async function submitPost() {
+    if (!$user || !newPost.trim()) return;
+    const { error } = await supabase.from("posts").insert({
+      channel_id: channel.id,
+      user_id: $user.id,
+      content: newPost,
+    });
     if (!error) {
-      posts = [data[0], ...posts];
-      showPostForm = false;
-      postContent = "";
-      postFile = null;
+      newPost = "";
+      await fetchPosts();
     }
   }
 </script>
 
 <div class="social-feed">
-  <h1>Social Feed</h1>
-  <button class="fab" on:click={() => (showPostForm = !showPostForm)}>
-    <Fa icon={faPlus} />
-  </button>
-  {#if showPostForm}
-    <form on:submit|preventDefault={createPost}>
-      <textarea
-        bind:value={postContent}
-        placeholder="What's on your mind?"
-        required
-      ></textarea>
-      <input type="file" on:change={(e) => (postFile = e.target.files[0])} />
-      <button type="submit">Post</button>
-    </form>
-  {/if}
-  {#if loading}
-    <p>Loading...</p>
+  <h2>Social Feed</h2>
+  {#if !channel}
+    <p>Select a channel to view the feed.</p>
+  {:else if loading}
+    <p>Loading feed...</p>
   {:else}
-    {#each posts as post}
-      <div class="post">
-        <p>{post.content}</p>
-        {#if post.media_url}
-          <img src={post.media_url} alt="Post media" width="100%" />
-        {/if}
-      </div>
-    {/each}
+    <section class="posts">
+      {#each posts as post}
+        <div class="post">
+          <strong>@{post.users.username}</strong>
+          <p>{post.content}</p>
+          <small>{new Date(post.created_at).toLocaleString()}</small>
+        </div>
+      {/each}
+      {#if posts.length === 0}
+        <p>No posts yet. Be the first!</p>
+      {/if}
+    </section>
+    {#if $user}
+      <form on:submit|preventDefault={submitPost}>
+        <textarea
+          bind:value={newPost}
+          placeholder="Post a message..."
+          rows="3"
+          disabled={!channel}
+        ></textarea>
+        <button type="submit" disabled={!newPost.trim()}>Post</button>
+      </form>
+    {:else}
+      <p><a href="/signup">Sign up</a> to join the conversation!</p>
+    {/if}
   {/if}
 </div>
-<BottomNav activeTab="social" />
 
 <style>
   .social-feed {
-    padding: 20px;
-    padding-bottom: 60px;
+    padding: 1rem;
   }
-  .fab {
-    position: fixed;
-    bottom: 70px;
-    right: 20px;
-    background-color: var(--tomato);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    cursor: pointer;
+
+  .posts {
+    margin-bottom: 1rem;
+    max-height: 50vh;
+    overflow-y: auto;
   }
-  .fab:hover {
-    background-color: var(--hunyadi-yellow);
-  }
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-    border: 1px solid var(--charcoal);
-    padding: 10px;
-  }
-  button {
-    background-color: var(--tomato);
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-  }
+
   .post {
-    border: 1px solid var(--charcoal);
-    padding: 10px;
-    margin-bottom: 10px;
+    border-bottom: 1px solid var(--charcoal, #333);
+    padding: 0.5rem 0;
   }
-  .post:hover {
-    border-color: var(--lapis-lazuli);
+
+  textarea {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--charcoal, #333);
+    border-radius: 4px;
+  }
+
+  button {
+    background-color: var(--tomato, #ff6347);
+    color: var(--white, #fff);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    background-color: var(--gray, #a9a9a9);
+    cursor: not-allowed;
+  }
+
+  button:hover:not(:disabled) {
+    background-color: var(--tomato-light, #ff8c69);
   }
 </style>
