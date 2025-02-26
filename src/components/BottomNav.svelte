@@ -33,29 +33,29 @@
     right: 0;
     display: flex;
     justify-content: space-around;
-    background-color: var(--charcoal);
-    padding: clamp(0.5rem, 2vw, 1rem) 0;
+    background-color: #333;
+    padding: 10px 0;
     z-index: 10;
   }
 
   a {
-    color: var(--white);
+    color: white;
     text-decoration: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-size: 0.9rem;
   }
 
   .active {
-    color: var(--tomato);
+    color: #ff6347;
   }
 
   a:hover {
-    color: var(--tomato-light);
+    color: #ff6347;
   }
 
   span {
-    margin-top: clamp(0.2rem, 1vw, 0.5rem);
+    margin-top: 5px;
   }
 </style>

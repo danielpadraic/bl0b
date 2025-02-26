@@ -1,28 +1,27 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { navigate, Router, Route, Link } from "svelte-routing";
-  import { user } from "./stores/user.js"; // Adjust path if needed
-  import { supabase } from "./supabase.js"; // Adjust path if needed
-  import ChallengeLobby from "./pages/ChallengeLobby.svelte"; // Updated path
-  import SocialFeed from "./pages/SocialFeed.svelte"; // Ensure this exists
+  import { user } from "./stores/user.js";
+  import { supabase } from "./supabase.js";
+  import ChallengeLobby from "./pages/ChallengeLobby.svelte";
+  import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
 
   let menuOpen = false;
   let currentUser = null;
   let isMobile = window.innerWidth < 769;
 
-  // Reactive screen size detection
   function handleResize() {
     isMobile = window.innerWidth < 769;
-    console.log("Window width:", window.innerWidth, "isMobile:", isMobile);
   }
 
   onMount(() => {
-    currentUser = $user; // Sync with store
-    $user
-      ? console.log("User logged in:", currentUser)
-      : console.log("No user logged in");
+    currentUser = $user;
     window.addEventListener("resize", handleResize);
+    supabase.auth.onAuthStateChange((event, session) => {
+      currentUser = session?.user ?? null;
+      $user = currentUser;
+    });
   });
 
   onDestroy(() => {
@@ -30,7 +29,6 @@
   });
 
   function toggleMenu() {
-    console.log("Hamburger clicked, menuOpen:", !menuOpen);
     menuOpen = !menuOpen;
   }
 
@@ -97,17 +95,11 @@
       <Route path="/" component={ChallengeLobby} />
       <Route path="/social" component={SocialFeed} />
       <Route path="/leaderboards" component={ChallengeLobby} />
-      <!-- Placeholder, adjust as needed -->
       <Route path="/profile" component={ChallengeLobby} />
-      <!-- Placeholder -->
       <Route path="/tokens" component={ChallengeLobby} />
-      <!-- Placeholder -->
       <Route path="/create-challenge" component={ChallengeLobby} />
-      <!-- Placeholder -->
       <Route path="/signup" component={ChallengeLobby} />
-      <!-- Placeholder -->
       <Route path="/login" component={ChallengeLobby} />
-      <!-- Placeholder -->
     </Router>
   </main>
 
@@ -132,12 +124,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background-color: #333; /* Fallback color */
+    background-color: #333;
     color: white;
-  }
-
-  .logo {
-    cursor: pointer;
+    width: 100%;
   }
 
   .logo img {
@@ -155,7 +144,7 @@
   }
 
   .nav-item:hover {
-    color: #ff6347; /* Tomato color */
+    color: #ff6347;
   }
 
   .hamburger {

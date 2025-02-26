@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   import { createEventDispatcher } from "svelte";
   import { supabase } from "../supabase.js";
   import { user } from "../stores/user.js";
@@ -9,12 +10,11 @@
   let lobbies = [];
   let loading = true;
 
-  // Fetch channels, groups, and lobbies on mount
   onMount(async () => {
     if ($user) {
       const [channelRes, groupRes, lobbyRes] = await Promise.all([
         supabase.from("social_channels").select("*").eq("is_public", true),
-        supabase.from("private_groups").select("*"), // Add user-specific filter if needed
+        supabase.from("private_groups").select("*"),
         supabase.from("challenge_lobbies").select("*, challenges(title)"),
       ]);
 
@@ -43,53 +43,36 @@
   {:else}
     <section>
       <h3># Public Channels</h3>
-      <ul>
+      <div>
         {#each channels as channel}
-          <li
+          <button
             on:click={() => selectChannel({ type: "social", ...channel })}
-            role="button"
-            tabindex="0"
-            on:keydown={(e) =>
-              e.key === "Enter" &&
-              selectChannel({ type: "social", ...channel })}
           >
             #{channel.name}
-          </li>
+          </button>
         {/each}
-      </ul>
+      </div>
     </section>
     {#if $user}
       <section>
         <h3># Private Groups</h3>
-        <ul>
+        <div>
           {#each groups as group}
-            <li
-              on:click={() => selectChannel({ type: "group", ...group })}
-              role="button"
-              tabindex="0"
-              on:keydown={(e) =>
-                e.key === "Enter" && selectChannel({ type: "group", ...group })}
-            >
+            <button on:click={() => selectChannel({ type: "group", ...group })}>
               #{group.name}
-            </li>
+            </button>
           {/each}
-        </ul>
+        </div>
       </section>
       <section>
         <h3># Challenge Lobbies</h3>
-        <ul>
+        <div>
           {#each lobbies as lobby}
-            <li
-              on:click={() => selectChannel({ type: "lobby", ...lobby })}
-              role="button"
-              tabindex="0"
-              on:keydown={(e) =>
-                e.key === "Enter" && selectChannel({ type: "lobby", ...lobby })}
-            >
+            <button on:click={() => selectChannel({ type: "lobby", ...lobby })}>
               #{lobby.name} ({lobby.challenges.title})
-            </li>
+            </button>
           {/each}
-        </ul>
+        </div>
       </section>
     {/if}
   {/if}
@@ -98,34 +81,29 @@
 <style>
   .channel-sidebar {
     width: 250px;
-    background-color: var(--charcoal, #333);
-    color: var(--white, #fff);
+    background-color: #333;
+    color: white;
     padding: 1rem;
     position: absolute;
-    top: 60px; /* Below header */
+    top: 60px;
     left: 0;
     bottom: 0;
     z-index: 10;
     overflow-y: auto;
   }
 
-  h2,
-  h3 {
-    margin: 0 0 0.5rem;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-  }
-
-  li {
+  button {
+    background: none;
+    border: none;
+    color: white;
     padding: 0.5rem;
     cursor: pointer;
+    width: 100%;
+    text-align: left;
   }
 
-  li:hover {
-    background-color: var(--tomato, #ff6347);
+  button:hover {
+    background-color: #ff6347;
   }
 
   @media (max-width: 768px) {
