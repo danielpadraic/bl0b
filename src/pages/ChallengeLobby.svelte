@@ -36,18 +36,6 @@
 </script>
 
 <div class="challenge-lobby">
-  <header>
-    <div
-      class="logo"
-      on:click={toggleSidebar}
-      role="button"
-      tabindex="0"
-      on:keydown={(e) => e.key === "Enter" && toggleSidebar()}
-    >
-      <img src="/assets/logo.png" alt="blOb Logo" />
-    </div>
-  </header>
-
   <main class="main-content">
     {#if showSidebar}
       <ChannelSidebar on:select={handleChannelSelect} />
@@ -70,28 +58,10 @@
     height: 100vh;
   }
 
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: clamp(0.5rem, 2vw, 1rem);
-    background-color: var(--charcoal);
-    color: var(--white);
-    position: relative;
-    z-index: 10;
-  }
-
-  .logo {
-    cursor: pointer;
-  }
-
-  .logo img {
-    height: clamp(2rem, 5vw, 3rem);
-  }
-
   .main-content {
     flex: 1;
     overflow: hidden;
+    margin-top: 60px; /* Space for header */
   }
 
   .challenge-table {
@@ -101,6 +71,6 @@
 
   .signup-prompt {
     text-align: center;
-    padding: clamp(0.5rem, 2vw, 1rem);
+    padding: 1rem;
   }
 </style>
