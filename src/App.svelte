@@ -6,6 +6,8 @@
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
+  import Fa from "svelte-fa";
+  import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
   let menuOpen = false;
   let currentUser = null;
@@ -29,7 +31,7 @@
   });
 
   function toggleMenu() {
-    console.log("Toggling menu, new state:", !menuOpen); // Debug log
+    console.log("Toggling menu, new state:", !menuOpen);
     menuOpen = !menuOpen;
   }
 
@@ -61,9 +63,18 @@
       </div>
       {#if !isMobile}
         <nav class="top-nav">
-          <Link to="/" class="nav-item">Home</Link>
-          <Link to="/leaderboards" class="nav-item">Leaderboards</Link>
-          <Link to="/social" class="nav-item">Social</Link>
+          <Link to="/" class="nav-item">
+            <Fa icon={faHome} size="lg" />
+            <span>Home</span>
+          </Link>
+          <Link to="/leaderboards" class="nav-item">
+            <Fa icon={faTrophy} size="lg" />
+            <span>Leaderboards</span>
+          </Link>
+          <Link to="/social" class="nav-item">
+            <Fa icon={faUsers} size="lg" />
+            <span>Social</span>
+          </Link>
         </nav>
       {/if}
       <button class="hamburger" on:click={toggleMenu} aria-label="Toggle menu">
@@ -153,6 +164,9 @@
     color: var(--carolina-blue);
     text-decoration: none;
     font-size: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .nav-item:hover {
@@ -182,11 +196,13 @@
     padding: 1rem;
     width: 200px;
     z-index: 15;
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    gap: 0.5rem; /* Space between items */
   }
 
   .nav-menu a,
   .nav-menu button {
-    display: block;
     padding: 0.5rem;
     text-decoration: none;
     background: none;
@@ -196,26 +212,36 @@
     cursor: pointer;
   }
 
-  .nav-menu a,
-  .create-btn,
-  .logout-btn {
+  .nav-menu a {
     color: var(--carolina-blue);
   }
 
-  .nav-menu a:hover,
-  .create-btn:hover,
-  .logout-btn:hover {
+  .nav-menu a:hover {
     color: var(--tomato-light);
   }
 
   .create-btn {
     background-color: var(--tomato);
-    border-radius: 4px;
-    margin: 0.5rem 0;
+    color: var(--background);
+    border: 2px solid var(--tomato);
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  .create-btn:hover {
+    background-color: var(--tomato-light);
+    border-color: var(--tomato-light);
   }
 
   .logout-btn {
     background: none;
+    color: var(--carolina-blue);
+  }
+
+  .logout-btn:hover {
+    color: var(--tomato-light);
   }
 
   main {
