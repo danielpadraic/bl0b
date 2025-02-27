@@ -52,7 +52,7 @@
 
   // Resizing functions
   function startResize(event, th) {
-    event.preventDefault(); // Prevent text selection
+    event.preventDefault();
     resizing = true;
     startX = event.pageX;
     startWidth = th.getBoundingClientRect().width;
@@ -63,7 +63,7 @@
   function resize(event) {
     if (resizing && targetTh) {
       const width = startWidth + (event.pageX - startX);
-      targetTh.style.width = `${Math.max(width, 50)}px`; // Minimum width of 50px
+      targetTh.style.width = `${Math.max(width, 50)}px`;
       console.log("Resizing to:", targetTh.style.width);
     }
   }
@@ -127,7 +127,7 @@
     <table>
       <thead>
         <tr>
-          <th on:click={() => sortChallenges("title")}>
+          <th class="title-column" on:click={() => sortChallenges("title")}>
             Title
             <div
               class="resize-handle"
@@ -177,7 +177,6 @@
             ></div>
           </th>
           <th>Join</th>
-          <!-- No resize handle for action column -->
         </tr>
       </thead>
       <tbody>
@@ -285,19 +284,19 @@
 
   table {
     width: 100%;
-    table-layout: fixed; /* Enables explicit width control */
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 0.8rem;
   }
 
   th,
   td {
-    padding: 6px 10px; /* Padding on either side */
+    padding: 6px 10px;
     text-align: left;
     border-bottom: 1px solid var(--light-gray);
-    white-space: nowrap; /* Prevents text wrapping */
-    overflow: hidden; /* Hides overflowing content */
-    text-overflow: ellipsis; /* Adds ellipsis for hidden text */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   th {
@@ -306,8 +305,13 @@
     font-size: 0.85rem;
     cursor: pointer;
     transition: background-color 0.3s;
-    position: relative; /* For resize handle */
-    width: auto; /* Default to content width */
+    position: relative;
+    width: auto;
+  }
+
+  /* Double the default width for Title column */
+  th.title-column {
+    width: 132px; /* Approx. 2x "Title" width (66px) with padding */
   }
 
   th:hover {
