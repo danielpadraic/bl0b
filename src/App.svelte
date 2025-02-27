@@ -9,6 +9,7 @@
   import ChallengeCreation from "./pages/ChallengeCreation.svelte";
   import Profile from "./pages/Profile.svelte";
   import Login from "./pages/Login.svelte"; // Correct import
+  import SignUp from "./pages/SignUp.svelte";
   import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
@@ -132,12 +133,14 @@
 
     <main>
       <Route path="/" component={ChallengeLobby} />
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={SignUp} />
       <Route path="/social" component={SocialFeed} />
       <Route path="/leaderboards" component={ChallengeLobby} />
       <Route path="/profile" component={Profile} />
       <Route path="/tokens" component={ChallengeLobby} />
-      <Route path="/signup" component={ChallengeLobby} />
-      <Route path="/login" component={Login} />
+      <Route path="*" component={ChallengeLobby} />
+      <!-- Catch-all at the end -->
     </main>
 
     {#if isMobile && currentUser}
