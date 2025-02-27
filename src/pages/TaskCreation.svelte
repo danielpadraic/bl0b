@@ -1,8 +1,10 @@
 <script>
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import { supabase } from "../supabase.js";
 
   export let challengeId;
+  export let task = null;
+  export let editMode = false;
 
   const dispatch = createEventDispatcher();
 
@@ -10,22 +12,58 @@
   let frequency = "";
   let customValue = "";
   let customUnit = "days";
-  let verificationType = ""; // Changed from dataType
+  let verificationType = "";
   let notes = "";
-  let requireAttachment = false; // New toggle state
+  let requireAttachment = false;
   let errorMessage = "";
 
-  async function createTask() {
+  onMount(() => {
+    console.log("TaskCreation mounted. editMode:", editMode, "task:", task);
+    if (editMode && task) {
+      console.log("Populating task form with:", task);
+      action = task.action || "";
+      frequency = task.frequency.startsWith("Every")
+        ? "Custom"
+        : task.frequency;
+      if (frequency === "Custom") {
+        const [_, value, unit] = task.frequency.split(" ");
+        customValue = value || "";
+        customUnit = unit || "days";
+      }
+      verificationType = task.verification_type || "";
+      notes = task.notes || "";
+      requireAttachment = task.require_attachment || false;
+      console.log("Task fields set:", {
+        action,
+        frequency,
+        verificationType,
+        requireAttachment,
+      });
+    }
+  });
+
+  async function saveTask(event) {
+    event.preventDefault(); // Ensure form submit works
+    console.log("saveTask called with:", {
+      action,
+      frequency,
+      verificationType,
+      requireAttachment,
+      notes,
+    });
+
     if (!action || !frequency || !verificationType) {
       errorMessage = "Please fill in all required fields.";
-      return;
+      console.log("Validation failed:", errorMessage);
+      return false;
     }
 
     let finalFrequency = frequency;
     if (frequency === "Custom") {
       if (!customValue || isNaN(customValue) || customValue <= 0) {
         errorMessage = "Please enter a valid number for custom frequency.";
-        return;
+        console.log("Custom frequency validation failed:", errorMessage);
+        return false;
       }
       finalFrequency = `Every ${customValue} ${customUnit}`;
     }
@@ -34,18 +72,39 @@
       challenge_id: challengeId,
       action,
       frequency: finalFrequency,
-      verification_type: verificationType, // Changed from data_type
+      verification_type: verificationType,
       notes,
-      require_attachment: requireAttachment, // New field
+      require_attachment: requireAttachment,
     };
 
-    const { error } = await supabase.from("tasks").insert([taskData]);
+    console.log("Saving task to Supabase:", taskData);
+    let result;
+    if (editMode && task) {
+      result = await supabase
+        .from("tasks")
+        .update(taskData)
+        .eq("id", task.id)
+        .select()
+        .single();
+    } else {
+      result = await supabase
+        .from("tasks")
+        .insert([taskData])
+        .select()
+        .single();
+    }
+
+    const { data, error } = result; // Ensure we capture data and error correctly
     if (error) {
       errorMessage = error.message;
-    } else {
-      dispatch("taskCreated");
-      resetForm();
+      console.error("Supabase error:", errorMessage);
+      return false;
     }
+
+    console.log("Task saved successfully:", data);
+    dispatch("taskCreated");
+    resetForm();
+    return true;
   }
 
   function resetForm() {
@@ -53,23 +112,35 @@
     frequency = "";
     customValue = "";
     customUnit = "days";
-    verificationType = ""; // Changed from dataType
+    verificationType = "";
     notes = "";
-    requireAttachment = false; // Reset toggle
+    requireAttachment = false;
     errorMessage = "";
   }
 
+  async function closeAndSave() {
+    console.log("closeAndSave called");
+    const success = await saveTask({ preventDefault: () => {} }); // Simulate event for consistency
+    if (success) {
+      console.log("Task saved, closing modal");
+      dispatch("close");
+    } else {
+      console.log("Task save failed, modal remains open");
+    }
+  }
+
   function close() {
+    console.log("close called");
     dispatch("close");
   }
 </script>
 
 <div class="task-creation">
-  <h2>Create Task</h2>
+  <h2>{editMode ? "Edit Task" : "Create Task"}</h2>
   {#if errorMessage}
     <p class="error">{errorMessage}</p>
   {/if}
-  <form on:submit|preventDefault={createTask}>
+  <form on:submit={saveTask}>
     <label>
       Action:
       <input type="text" bind:value={action} required />
@@ -133,8 +204,11 @@
       <textarea bind:value={notes}></textarea>
     </label>
     <div class="buttons">
-      <button type="submit">Add Task</button>
-      <button type="button" on:click={close}>Complete</button>
+      <button type="submit">{editMode ? "Update Task" : "Add Task"}</button>
+      <button type="button" on:click={closeAndSave}>Complete</button>
+      {#if editMode}
+        <button type="button" on:click={close}>Cancel</button>
+      {/if}
     </div>
   </form>
 </div>
@@ -252,6 +326,7 @@
     display: flex;
     justify-content: space-between;
     margin-top: 1rem;
+    gap: 0.5rem; /* Added spacing between buttons */
   }
 
   button {
@@ -262,6 +337,7 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
+    flex: 1; /* Make buttons equal width */
   }
 
   button:hover {

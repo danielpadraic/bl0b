@@ -16,6 +16,7 @@
   let timeLeft = "";
   let timer = null;
   let showTaskCreation = false;
+  let editingTaskId = null; // New state to track the task being edited
 
   onMount(async () => {
     console.log("ChallengeDetails mounted with challengeId:", challengeId);
@@ -148,6 +149,12 @@
   }
 
   function toggleEdit() {
+    console.log(
+      "Toggling edit mode. Current showChallengeCreation:",
+      $showChallengeCreation,
+      "Challenge:",
+      challenge
+    );
     $showChallengeCreation = true;
   }
 
@@ -164,6 +171,7 @@
 
   function toggleTaskCreation() {
     showTaskCreation = !showTaskCreation;
+    editingTaskId = null; // Reset when toggling manually
   }
 
   async function handleTaskCreated() {
@@ -192,6 +200,12 @@
 
   async function editTask(taskId) {
     console.log("Edit task:", taskId);
+    const selectedTask = tasks.find((t) => t.id === taskId);
+    if (selectedTask) {
+      console.log("Opening TaskCreation for edit with task:", selectedTask);
+      editingTaskId = taskId;
+      showTaskCreation = true;
+    }
   }
 
   async function removeTask(taskId) {
@@ -280,6 +294,8 @@
     {#if showTaskCreation}
       <TaskCreation
         {challengeId}
+        task={editingTaskId ? tasks.find((t) => t.id === editingTaskId) : null}
+        editMode={!!editingTaskId}
         on:taskCreated={handleTaskCreated}
         on:close={toggleTaskCreation}
       />

@@ -5,10 +5,9 @@
   import { showChallengeCreation, user } from "../stores.js";
   import { supabase } from "../supabase.js";
 
-  export let challenge = null; // Challenge data for editing
-  export let editMode = false; // Flag to switch between create/edit
+  export let challenge = null;
+  export let editMode = false;
 
-  // Persistent form data store for create mode
   const formData = writable({
     title: "",
     challengeType: "Fitness",
@@ -49,39 +48,18 @@
   let showEndPicker = false;
 
   onMount(() => {
+    console.log(
+      "ChallengeCreation mounted. editMode:",
+      editMode,
+      "challenge:",
+      challenge
+    );
     if (editMode && challenge) {
-      console.log("Edit mode: Populating with challenge data:", challenge);
-      title = challenge.title || "";
-      challengeType = ["Fitness"].includes(challenge.type)
-        ? challenge.type
-        : "Other";
-      otherType = challengeType === "Other" ? challenge.type : "";
-      maxParticipants = challenge.participants_max || 0;
-      creatorParticipating = challenge.creator_participating ? "yes" : "no";
-      buyInCost = challenge.buy_in_cost || 0;
-      additionalPrizeMoney = challenge.additional_prize_money || 0;
-      prizeType = challenge.prize_type || "just_for_fun";
-      prizeAmount = challenge.prize_amount || 0;
-      numberOfWinners = challenge.number_of_winners || 1;
-      scoringType = [
-        "Consistency",
-        "Time (High)",
-        "Time (Low)",
-        "Distance",
-        "Points",
-        "None",
-      ].includes(challenge.scoring_type)
-        ? challenge.scoring_type
-        : "Other";
-      otherScoringType = scoringType === "Other" ? challenge.scoring_type : "";
-      isPrivate = challenge.is_private || false;
-      coverFile = null; // Reset file input
-      startDateTime = challenge.start_datetime
-        ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
-        : "";
-      endDateTime = challenge.end_datetime
-        ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
-        : "";
+      console.log(
+        "Populating form with challenge data via onMount:",
+        challenge
+      );
+      populateForm();
     } else {
       console.log("Create mode: Loading persisted form data");
       $formData.title = title;
@@ -102,6 +80,53 @@
       $formData.endDateTime = endDateTime;
     }
   });
+
+  // Reactive update to ensure DOM reflects changes
+  $: if (editMode && challenge) {
+    console.log("Reactive update triggered with challenge:", challenge);
+    populateForm();
+  }
+
+  function populateForm() {
+    title = challenge.title || "";
+    challengeType = ["Fitness"].includes(challenge.type)
+      ? challenge.type
+      : "Other";
+    otherType = challengeType === "Other" ? challenge.type : "";
+    maxParticipants = challenge.participants_max || 0;
+    creatorParticipating = challenge.creator_participating ? "yes" : "no";
+    buyInCost = challenge.buy_in_cost || 0;
+    additionalPrizeMoney = challenge.additional_prize_money || 0;
+    prizeType = challenge.prize_type || "just_for_fun";
+    prizeAmount = challenge.prize_amount || 0;
+    numberOfWinners = challenge.number_of_winners || 1;
+    scoringType = [
+      "Consistency",
+      "Time (High)",
+      "Time (Low)",
+      "Distance",
+      "Points",
+      "None",
+    ].includes(challenge.scoring_type)
+      ? challenge.scoring_type
+      : "Other";
+    otherScoringType = scoringType === "Other" ? challenge.scoring_type : "";
+    isPrivate = challenge.is_private || false;
+    coverFile = null;
+    startDateTime = challenge.start_datetime
+      ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
+      : "";
+    endDateTime = challenge.end_datetime
+      ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
+      : "";
+    console.log("Form fields set:", {
+      title,
+      challengeType,
+      creatorParticipating,
+      scoringType,
+      isPrivate,
+    });
+  }
 
   onDestroy(() => {
     if (!editMode) {
