@@ -116,20 +116,25 @@
     }
   }
 
-  function closePrompt() {
-    console.log("Closing prompt");
-    showAuthPrompt = false;
-    promptAction = "";
+  function closePrompt(event) {
+    console.log("Closing prompt via", event.type);
+    if (
+      event.type === "click" ||
+      (event.type === "keydown" && event.key === "Escape")
+    ) {
+      showAuthPrompt = false;
+      promptAction = "";
+    }
   }
 
   function goToSignUp() {
     navigate("/signup");
-    closePrompt();
+    closePrompt({ type: "click" });
   }
 
   function goToLogin() {
     navigate("/login");
-    closePrompt();
+    closePrompt({ type: "click" });
   }
 
   // Event handlers for ChallengeTable
@@ -143,23 +148,39 @@
   }
 </script>
 
-<div class="challenge-lobby" class:blur={showAuthPrompt}>
-  <h2>Challenge Lobby</h2>
+<div class="challenge-lobby">
+  <div class="content" class:blur={showAuthPrompt}>
+    <h2>Challenge Lobby</h2>
 
-  <!-- Display challenges -->
-  <ChallengeTable
-    {challenges}
-    {loading}
-    {error}
-    bind:searchQuery
-    on:onJoin={handleJoin}
-    on:onCreate={handleCreate}
-  />
+    <!-- Display challenges -->
+    <ChallengeTable
+      {challenges}
+      {loading}
+      {error}
+      bind:searchQuery
+      on:onJoin={handleJoin}
+      on:onCreate={handleCreate}
+    />
+
+    {#if !$user}
+      <div class="create-account-link">
+        <p>Not a member yet?</p>
+        <button on:click={goToSignUp}>Create an Account</button>
+      </div>
+    {/if}
+  </div>
 
   <!-- Prompt for unauthenticated users -->
   {#if showAuthPrompt}
-    <div class="auth-prompt-overlay">
-      <div class="auth-prompt">
+    <div
+      class="auth-prompt-overlay"
+      on:click={closePrompt}
+      on:keydown={closePrompt}
+      tabindex="0"
+      role="dialog"
+      aria-label="Authentication prompt"
+    >
+      <div class="auth-prompt" on:click|stopPropagation>
         <p>
           Please sign up or log in to {promptAction === "create"
             ? "create a challenge"
@@ -173,13 +194,6 @@
       </div>
     </div>
   {/if}
-
-  {#if !$user}
-    <div class="create-account-link">
-      <p>Not a member yet?</p>
-      <button on:click={goToSignUp}>Create an Account</button>
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -188,6 +202,12 @@
     background-color: var(--background);
     color: var(--text);
     position: relative;
+    min-height: 100vh;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
   }
 
   .blur {
@@ -221,6 +241,7 @@
     text-align: center;
     max-width: 400px;
     width: 90%;
+    z-index: 1001;
   }
 
   .prompt-buttons {
