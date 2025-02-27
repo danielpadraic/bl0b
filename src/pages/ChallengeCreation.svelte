@@ -1,101 +1,278 @@
 <script>
   import { showChallengeCreation } from "../stores.js";
   import { supabase } from "../supabase.js";
+  import { v4 as uuidv4 } from "uuid";
 
-  let title = "";
-  let type = "Solo";
-  let participantsMax = 10;
-  let cost = 0;
-  let prizePool = 0;
-  let scoringType = "Points";
-  let isPublic = true;
+  // Form variables
+  let challengeName = "";
+  let challengeType = "Fitness";
+  let otherType = "";
+  let maxParticipants = 0;
+  let buyInCost = 0;
+  let additionalPrizeMoney = 0;
+  let prizeType = "just_for_fun";
+  let prizeAmount = 0;
+  let numberOfWinners = 1;
+  let scoringType = "Consistency";
+  let otherScoringType = "";
+  let isPrivate = false;
 
-  async function createChallenge() {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) {
-      console.error("User not logged in");
+  // Handle form submission
+  async function createChallenge(e) {
+    e.preventDefault();
+
+    // Validate required fields
+    if (!challengeName) {
+      alert("Challenge Name is required.");
+      return;
+    }
+    if (challengeType === "Other" && !otherType) {
+      alert("Please specify the Other challenge type.");
+      return;
+    }
+    if (prizeType === "set_amount" && prizeAmount <= 0) {
+      alert("Please enter a valid prize amount.");
+      return;
+    }
+    if (prizeType === "evenly_distributed" && numberOfWinners <= 0) {
+      alert("Please specify the number of winners.");
+      return;
+    }
+    if (scoringType === "Other" && !otherScoringType) {
+      alert("Please describe the Other scoring type.");
       return;
     }
 
-    const { data, error } = await supabase.from("challenges").insert([
-      {
-        title,
-        type,
-        participants_max: participantsMax,
-        cost,
-        prize_pool: prizePool,
-        scoring_type: scoringType,
-        is_public: isPublic,
-        created_by: user.id,
-        participants_current: 1,
-      },
-    ]);
+    // Determine final challenge type
+    let finalChallengeType =
+      challengeType === "Other" ? otherType : challengeType;
+
+    // Determine final scoring type
+    let finalScoringType =
+      scoringType === "Other" ? otherScoringType : scoringType;
+
+    // Generate invitation link if private
+    let invitationLink = null;
+    if (isPrivate) {
+      const uuid = uuidv4();
+      invitationLink = `/join/${uuid}`;
+    }
+
+    // Prepare data for Supabase
+    const challengeData = {
+      challenge_name: challengeName,
+      challenge_type: finalChallengeType,
+      max_participants: maxParticipants === 0 ? null : maxParticipants, // Null for unlimited
+      buy_in_cost: parseFloat(buyInCost) || 0,
+      additional_prize_money: parseFloat(additionalPrizeMoney) || 0,
+      prize_type: prizeType,
+      prize_amount:
+        prizeType === "set_amount" ? parseFloat(prizeAmount) || 0 : null,
+      number_of_winners:
+        prizeType === "evenly_distributed" ? numberOfWinners : null,
+      scoring_type: finalScoringType,
+      is_private: isPrivate,
+      invitation_link: invitationLink,
+      created_by: (await supabase.auth.getUser()).data.user?.id, // Assumes user is logged in
+    };
+
+    // Insert into Supabase
+    const { error } = await supabase.from("challenges").insert([challengeData]);
 
     if (error) {
-      console.error("Error creating challenge:", error);
+      console.error("Error creating challenge:", error.message);
+      alert("Failed to create challenge: " + error.message);
     } else {
-      console.log("Challenge created:", data);
+      console.log("Challenge created successfully");
       $showChallengeCreation = false;
+      resetForm();
     }
   }
 
-  function closeModal() {
-    $showChallengeCreation = false;
+  // Reset form fields
+  function resetForm() {
+    challengeName = "";
+    challengeType = "Fitness";
+    otherType = "";
+    maxParticipants = 0;
+    buyInCost = 0;
+    additionalPrizeMoney = 0;
+    prizeType = "just_for_fun";
+    prizeAmount = 0;
+    numberOfWinners = 1;
+    scoringType = "Consistency";
+    otherScoringType = "";
+    isPrivate = false;
+  }
+
+  // Close modal without saving
+  function closeModal(event) {
+    if (
+      event.type === "click" ||
+      (event.type === "keydown" && event.key === "Escape")
+    ) {
+      $showChallengeCreation = false;
+      resetForm();
+    }
   }
 </script>
 
-<div class="modal">
-  <div class="modal-content">
-    <h2>Create a New Challenge</h2>
-    <form on:submit|preventDefault={createChallenge}>
-      <label>
-        Title:
-        <input type="text" bind:value={title} required />
-      </label>
-      <label>
-        Type:
-        <select bind:value={type}>
-          <option value="Solo">Solo</option>
-          <option value="Group">Group</option>
-        </select>
-      </label>
-      <label>
-        Max Participants:
-        <input type="number" bind:value={participantsMax} min="1" required />
-      </label>
-      <label>
-        Cost ($):
-        <input type="number" bind:value={cost} min="0" step="0.01" required />
-      </label>
-      <label>
-        Prize Pool ($):
-        <input
-          type="number"
-          bind:value={prizePool}
-          min="0"
-          step="0.01"
-          required
-        />
-      </label>
-      <label>
-        Scoring Type:
-        <select bind:value={scoringType}>
-          <option value="Points">Points</option>
-          <option value="Time">Time</option>
-        </select>
-      </label>
-      <label>
-        Public:
-        <input type="checkbox" bind:checked={isPublic} />
-      </label>
-      <button type="submit">Create Challenge</button>
-      <button type="button" on:click={closeModal}>Cancel</button>
-    </form>
+{#if $showChallengeCreation}
+  <div
+    class="modal-overlay"
+    on:click={closeModal}
+    on:keydown={closeModal}
+    role="dialog"
+    aria-modal="true"
+    tabindex="0"
+  >
+    <div class="modal-content" on:click|stopPropagation>
+      <h2>Create a New Challenge</h2>
+      <form on:submit={createChallenge}>
+        <!-- Challenge Name -->
+        <label>
+          Challenge Name:
+          <input
+            type="text"
+            bind:value={challengeName}
+            required
+            placeholder="Enter challenge name"
+          />
+        </label>
+
+        <!-- Challenge Type -->
+        <label>
+          Challenge Type:
+          <select bind:value={challengeType}>
+            <option value="Fitness">Fitness</option>
+            <option value="Other">Other</option>
+          </select>
+          {#if challengeType === "Other"}
+            <input
+              type="text"
+              bind:value={otherType}
+              placeholder="Specify challenge type"
+              required
+            />
+          {/if}
+        </label>
+
+        <!-- Number of Participants -->
+        <label>
+          Number of Participants (0 for unlimited):
+          <input
+            type="number"
+            bind:value={maxParticipants}
+            min="0"
+            placeholder="0"
+          />
+          {#if maxParticipants === 1}
+            <small>Only you can join this challenge.</small>
+          {/if}
+        </label>
+
+        <!-- Buy-In Cost -->
+        <label>
+          Buy-In Cost ($):
+          <input
+            type="number"
+            bind:value={buyInCost}
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+          />
+        </label>
+
+        <!-- Additional Prize Money -->
+        <label>
+          Additional Prize Money ($):
+          <input
+            type="number"
+            bind:value={additionalPrizeMoney}
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+          />
+        </label>
+
+        <!-- Prize Type -->
+        <label>
+          Prize:
+          <select bind:value={prizeType}>
+            <option value="just_for_fun">Just for Fun</option>
+            <option value="set_amount">Set Amount</option>
+            <option value="winner_takes_all">Winner Takes All</option>
+            <option value="evenly_distributed">Evenly Distributed</option>
+            <option value="tournament">Tournament Style</option>
+          </select>
+          {#if prizeType === "set_amount"}
+            <input
+              type="number"
+              bind:value={prizeAmount}
+              step="0.01"
+              min="0"
+              placeholder="Prize amount"
+              required
+            />
+          {/if}
+          {#if prizeType === "evenly_distributed"}
+            <input
+              type="number"
+              bind:value={numberOfWinners}
+              min="1"
+              placeholder="Number of winners"
+              required
+            />
+          {/if}
+          {#if prizeType === "tournament"}
+            <small
+              >Prizes calculated based on participant count at challenge end.</small
+            >
+          {/if}
+        </label>
+
+        <!-- Scoring Type -->
+        <label>
+          Scoring Type:
+          <select bind:value={scoringType}>
+            <option value="Consistency">Consistency</option>
+            <option value="Time">Time</option>
+            <option value="Distance">Distance</option>
+            <option value="Points">Points</option>
+            <option value="Other">Other</option>
+            <option value="None">None</option>
+          </select>
+          {#if scoringType === "Other"}
+            <input
+              type="text"
+              bind:value={otherScoringType}
+              placeholder="Describe scoring type"
+              required
+            />
+          {/if}
+        </label>
+
+        <!-- Private Challenge -->
+        <label>
+          Private Challenge:
+          <input type="checkbox" bind:checked={isPrivate} />
+          {#if isPrivate}
+            <small>A unique invitation link will be generated.</small>
+          {/if}
+        </label>
+
+        <!-- Form Buttons -->
+        <div class="buttons">
+          <button type="submit">Create Challenge</button>
+          <button type="button" on:click={closeModal}>Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
-</div>
+{/if}
 
 <style>
-  .modal {
+  .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -110,7 +287,6 @@
 
   .modal-content {
     background: var(--background);
-    color: var(--text);
     padding: 2rem;
     border-radius: 8px;
     max-width: 500px;
@@ -118,6 +294,13 @@
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    color: var(--text);
+  }
+
+  h2 {
+    margin-top: 0;
+    color: var(--text);
+    font-size: clamp(1.5rem, 3vw, 2rem);
   }
 
   form {
@@ -137,26 +320,43 @@
     padding: 0.5rem;
     border: 1px solid var(--light-gray);
     border-radius: 4px;
+    font-size: 1rem;
     background-color: var(--white);
     color: var(--charcoal);
   }
 
+  small {
+    color: var(--gray);
+    font-size: 0.9rem;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: flex-end;
+  }
+
   button {
-    background-color: var(--tomato);
-    color: var(--background);
-    border: none;
     padding: 0.75rem 1.5rem;
+    border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 1rem;
   }
 
-  button:hover {
+  button[type="submit"] {
+    background-color: var(--tomato);
+    color: var(--background);
+  }
+
+  button[type="submit"]:hover {
     background-color: var(--tomato-light);
   }
 
   button[type="button"] {
     background-color: var(--gray);
+    color: var(--background);
   }
 
   button[type="button"]:hover {

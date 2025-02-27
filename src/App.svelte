@@ -37,6 +37,10 @@
     $showChallengeCreation = !$showChallengeCreation;
   }
 
+  function openChallengeCreation() {
+    $showChallengeCreation = true;
+  }
+
   async function logout() {
     await supabase.auth.signOut();
     currentUser = null;

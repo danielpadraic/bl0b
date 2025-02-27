@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-  "build": "rollup -c",
-  "dev": "concurrently \"rollup -c -w\" \"sirv public --no-clear --dev\"",
-  "start": "sirv public --no-clear",
-  "push-and-dev": "git add . && git commit -m 'Auto commit before dev' && git push origin main && concurrently \"rollup -c -w\" \"sirv public --no-clear --dev\""
-},
+    "build": "rollup -c",
+    "dev": "concurrently \"rollup -c -w\" \"sirv public --no-clear --dev\"",
+    "start": "sirv public --no-clear",
+    "push-and-dev": "git add . && git commit -m 'Auto commit before dev' && git push origin main && concurrently \"rollup -c -w\" \"sirv public --no-clear --dev\""
+  },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.1.0",
     "@rollup/plugin-node-resolve": "^15.3.1",
@@ -28,6 +28,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "sirv-cli": "^2.0.0",
     "svelte-fa": "^4.0.3",
-    "svelte-routing": "^2.13.0"
+    "svelte-routing": "^2.13.0",
+    "uuid": "^11.1.0"
   }
 }
