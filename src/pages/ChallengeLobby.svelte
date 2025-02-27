@@ -1,18 +1,20 @@
 <script>
   import { onMount } from "svelte";
   import { navigate } from "svelte-routing";
-  import { supabase } from "../supabase.js"; // Correct path from src/pages/
-  import { user, showChallengeCreation } from "../stores.js"; // Correct path from src/pages/
+  import { supabase } from "../supabase.js";
+  import { user, showChallengeCreation } from "../stores.js";
   import ChallengeTable from "./ChallengeTable.svelte";
 
-  let allChallenges = []; // Unfiltered list
-  let challenges = []; // Filtered list passed to table
+  let allChallenges = [];
+  let challenges = [];
   let loading = true;
   let error = null;
   let searchQuery = "";
-  let showAuthPrompt = false; // Controls the sign-up/login prompt
+  let showAuthPrompt = false;
+  let promptAction = "";
 
   onMount(async () => {
+    console.log("ChallengeLobby mounted, user:", $user);
     await fetchChallenges();
   });
 
@@ -22,13 +24,16 @@
       const { data, error: fetchError } = await supabase
         .from("challenges")
         .select(
-          "title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
+          "id, title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
         )
         .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
 
+      console.log("Fetched challenges:", data);
+
       allChallenges = data.map((challenge) => ({
+        id: challenge.id,
         title: challenge.title,
         type: challenge.type,
         participants_max:
@@ -42,7 +47,8 @@
         scoring_type: challenge.scoring_type || "None",
         is_public: !challenge.is_private,
       }));
-      challenges = [...allChallenges]; // Initialize with all challenges
+      challenges = [...allChallenges];
+      console.log("Mapped challenges:", challenges);
       error = null;
     } catch (err) {
       error = err.message;
@@ -70,64 +76,105 @@
     console.log("Filtered challenges:", challenges);
   }
 
-  // Reactively update challenges when searchQuery changes
   $: searchQuery, filterChallenges();
 
-  // Handle interactions (create, join, view)
-  function handleInteraction(action) {
+  function handleInteraction(action, challengeId = null) {
+    console.log(
+      "handleInteraction called with action:",
+      action,
+      "challengeId:",
+      challengeId,
+      "user:",
+      $user
+    );
     if (!$user) {
+      console.log("User not authenticated, showing prompt");
       showAuthPrompt = true;
+      promptAction = action;
     } else {
+      console.log("User authenticated, proceeding with action:", action);
       if (action === "create") {
         $showChallengeCreation = true;
-      } else if (action === "join") {
-        alert("Join challenge (add your logic here)");
-      } else if (action === "view") {
-        alert("View challenge (add your logic here)");
+      } else if (action === "join" && challengeId) {
+        joinChallenge(challengeId);
       }
+    }
+    console.log("showAuthPrompt set to:", showAuthPrompt);
+  }
+
+  async function joinChallenge(challengeId) {
+    try {
+      const { error } = await supabase
+        .from("challenge_participants")
+        .insert([{ challenge_id: challengeId, user_id: $user.id }]);
+      if (error) throw error;
+      alert("Successfully joined the challenge!");
+      await fetchChallenges();
+    } catch (err) {
+      console.error("Error joining challenge:", err);
+      alert("Failed to join challenge: " + err.message);
     }
   }
 
-  // Close the prompt
   function closePrompt() {
+    console.log("Closing prompt");
     showAuthPrompt = false;
+    promptAction = "";
   }
 
-  // Navigate to sign-up or login pages
   function goToSignUp() {
     navigate("/signup");
+    closePrompt();
   }
 
   function goToLogin() {
     navigate("/login");
+    closePrompt();
+  }
+
+  // Event handlers for ChallengeTable
+  function handleCreate() {
+    handleInteraction("create");
+  }
+
+  function handleJoin(event) {
+    const challengeId = event.detail;
+    handleInteraction("join", challengeId);
   }
 </script>
 
-<div class="challenge-lobby">
+<div class="challenge-lobby" class:blur={showAuthPrompt}>
   <h2>Challenge Lobby</h2>
+
+  <!-- Display challenges -->
+  <ChallengeTable
+    {challenges}
+    {loading}
+    {error}
+    bind:searchQuery
+    on:onJoin={handleJoin}
+    on:onCreate={handleCreate}
+  />
 
   <!-- Prompt for unauthenticated users -->
   {#if showAuthPrompt}
-    <div class="auth-prompt">
-      <p>Please sign up or log in to {handleInteraction.action} challenges.</p>
-      <button on:click={goToSignUp}>Sign Up</button>
-      <button on:click={goToLogin}>Log In</button>
-      <button on:click={closePrompt}>Close</button>
+    <div class="auth-prompt-overlay">
+      <div class="auth-prompt">
+        <p>
+          Please sign up or log in to {promptAction === "create"
+            ? "create a challenge"
+            : "join a challenge"}.
+        </p>
+        <div class="prompt-buttons">
+          <button on:click={goToSignUp}>Sign Up</button>
+          <button on:click={goToLogin}>Log In</button>
+          <button on:click={closePrompt}>Close</button>
+        </div>
+      </div>
     </div>
   {/if}
 
-  <!-- Display challenges -->
-  <ChallengeTable {challenges} {loading} {error} bind:searchQuery />
-
-  <!-- Create Challenge button -->
-  {#if $user}
-    <button on:click={() => handleInteraction("create")}
-      >Create Challenge</button
-    >
-  {:else}
-    <button on:click={() => handleInteraction("create")}
-      >Create Challenge (Login Required)</button
-    >
+  {#if !$user}
     <div class="create-account-link">
       <p>Not a member yet?</p>
       <button on:click={goToSignUp}>Create an Account</button>
@@ -140,6 +187,11 @@
     padding: 1rem;
     background-color: var(--background);
     color: var(--text);
+    position: relative;
+  }
+
+  .blur {
+    filter: blur(5px);
   }
 
   h2 {
@@ -148,11 +200,34 @@
     text-align: left;
   }
 
+  .auth-prompt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
   .auth-prompt {
-    border: 1px solid var(--light-gray);
-    padding: 10px;
-    margin: 10px 0;
-    background: #f9f9f9;
+    background: var(--white);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+  }
+
+  .prompt-buttons {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
   }
 
   .create-account-link {
@@ -161,7 +236,7 @@
   }
 
   button {
-    margin: 0 5px;
+    margin: 5px;
     padding: 5px 10px;
     background-color: var(--tomato);
     color: var(--white);

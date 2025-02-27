@@ -1,27 +1,30 @@
 <script>
-  import { showChallengeCreation } from "../stores.js";
+  import { user } from "../stores.js"; // Path from src/pages/
+  import { createEventDispatcher } from "svelte";
 
   export let challenges = [];
   export let loading = false;
   export let error = null;
-  export let searchQuery = ""; // Bound to parent
+  export let searchQuery = "";
+  const dispatch = createEventDispatcher();
 
   let sortColumn = null;
   let sortDirection = "asc";
 
   function toggleChallengeCreation() {
-    $showChallengeCreation = !$showChallengeCreation;
-    console.log(
-      "Toggling challenge creation modal from table:",
-      $showChallengeCreation
-    );
+    console.log("Create Challenge clicked, user:", $user);
+    dispatch("onCreate"); // Dispatching 'onCreate' event
+    console.log("Dispatched onCreate event");
   }
 
   function joinChallenge(challengeId) {
-    console.log(`Joining challenge ${challengeId}`);
+    console.log("Join clicked for challenge:", challengeId, "user:", $user);
+    dispatch("onJoin", challengeId); // Pass challengeId back to parent
+    console.log("Dispatched onJoin event for challenge:", challengeId);
   }
 
   function sortChallenges(column) {
+    console.log("Sorting by:", column);
     if (sortColumn === column) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
     } else {
@@ -110,9 +113,6 @@
             <td colspan="8" class="no-challenges">
               <div class="no-challenges-content">
                 <span>No Challenges Available</span>
-                <button on:click={toggleChallengeCreation} class="create-btn"
-                  >Create Challenge</button
-                >
               </div>
             </td>
           </tr>
@@ -127,11 +127,9 @@
       placeholder="Search by title, type, or cost..."
       class="search-input"
     />
-    {#if challenges.length > 0}
-      <button on:click={toggleChallengeCreation} class="create-btn"
-        >Create Challenge</button
-      >
-    {/if}
+    <button on:click={toggleChallengeCreation} class="create-btn"
+      >Create Challenge</button
+    >
   </div>
 </div>
 
