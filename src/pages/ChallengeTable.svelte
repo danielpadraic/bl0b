@@ -191,7 +191,15 @@
         {:else if filteredChallenges.length > 0}
           {#each filteredChallenges as challenge, index}
             <tr class={index % 2 === 0 ? "even-row" : "odd-row"}>
-              <td data-label="Title">{challenge.title}</td>
+              <td data-label="Title">
+                <a
+                  href={`/challenge/${challenge.id}`}
+                  on:click|preventDefault={() =>
+                    navigate(`/challenge/${challenge.id}`)}
+                >
+                  {challenge.title}
+                </a>
+              </td>
               <td data-label="Type">{challenge.type}</td>
               <td data-label="Players"
                 >{challenge.participants_current}/{challenge.participants_max}</td

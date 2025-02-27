@@ -1,13 +1,13 @@
 <script>
-  import { showChallengeCreation } from "../stores.js";
+  import { onMount } from "svelte";
+  import { showChallengeCreation, user } from "../stores.js";
   import { supabase } from "../supabase.js";
-  import { v4 as uuidv4 } from "uuid";
 
-  // Form variables
   let title = "";
   let challengeType = "Fitness";
   let otherType = "";
   let maxParticipants = 0;
+  let creatorParticipating = "yes";
   let buyInCost = 0;
   let additionalPrizeMoney = 0;
   let prizeType = "just_for_fun";
@@ -16,93 +16,15 @@
   let scoringType = "Consistency";
   let otherScoringType = "";
   let isPrivate = false;
-  let creatorParticipating = "yes"; // Default to "Yes"
+  let coverFile = null; // For photo/video upload
+  let errorMessage = "";
 
-  // Handle form submission
-  async function createChallenge(e) {
-    e.preventDefault();
-
-    // Validate required fields
-    if (!title) {
-      alert("Challenge Title is required.");
-      return;
-    }
-    if (challengeType === "Other" && !otherType.trim()) {
-      alert("Please specify the Other challenge type.");
-      return;
-    }
-    if (prizeType === "set_amount" && (!prizeAmount || prizeAmount <= 0)) {
-      alert("Please enter a valid prize amount greater than 0.");
-      return;
-    }
-    if (
-      prizeType === "evenly_distributed" &&
-      (!numberOfWinners || numberOfWinners <= 0)
-    ) {
-      alert("Please specify a valid number of winners greater than 0.");
-      return;
-    }
-    if (scoringType === "Other" && !otherScoringType.trim()) {
-      alert("Please describe the Other scoring type.");
-      return;
-    }
-
-    // Determine final challenge type
-    let finalChallengeType =
-      challengeType === "Other" ? otherType.trim() : challengeType;
-
-    // Determine final scoring type
-    let finalScoringType =
-      scoringType === "Other" ? otherScoringType.trim() : scoringType;
-
-    // Generate invitation link if private
-    let invitationLink = null;
-    if (isPrivate) {
-      const uuid = uuidv4();
-      invitationLink = `/join/${uuid}`;
-    }
-
-    // Determine participants_current based on creator participation
-    const participantsCurrent = creatorParticipating === "yes" ? 1 : 0;
-
-    // Prepare data for Supabase
-    const challengeData = {
-      title,
-      type: finalChallengeType,
-      participants_max: maxParticipants,
-      buy_in_cost: parseFloat(buyInCost) || 0,
-      additional_prize_money: parseFloat(additionalPrizeMoney) || 0,
-      prize_type: prizeType,
-      prize_amount:
-        prizeType === "set_amount" ? parseFloat(prizeAmount) || 0 : null,
-      number_of_winners:
-        prizeType === "evenly_distributed" ? numberOfWinners : null,
-      scoring_type: finalScoringType,
-      is_private: isPrivate,
-      invitation_link: invitationLink,
-      created_by: (await supabase.auth.getUser()).data.user?.id,
-      participants_current: participantsCurrent,
-    };
-
-    // Insert into Supabase
-    const { error } = await supabase.from("challenges").insert([challengeData]);
-
-    if (error) {
-      console.error("Error creating challenge:", error.message);
-      alert("Failed to create challenge: " + error.message);
-    } else {
-      console.log("Challenge created successfully");
-      $showChallengeCreation = false;
-      resetForm();
-    }
-  }
-
-  // Reset form fields
   function resetForm() {
     title = "";
     challengeType = "Fitness";
     otherType = "";
     maxParticipants = 0;
+    creatorParticipating = "yes";
     buyInCost = 0;
     additionalPrizeMoney = 0;
     prizeType = "just_for_fun";
@@ -111,10 +33,69 @@
     scoringType = "Consistency";
     otherScoringType = "";
     isPrivate = false;
-    creatorParticipating = "yes"; // Reset to default "Yes"
+    coverFile = null;
+    errorMessage = "";
   }
 
-  // Close modal without saving
+  async function createChallenge(event) {
+    event.preventDefault();
+    try {
+      let coverUrl = null;
+      if (coverFile) {
+        const fileName = `${Date.now()}-${coverFile.name}`;
+        const { data, error: uploadError } = await supabase.storage
+          .from("challenge-covers")
+          .upload(fileName, coverFile);
+        if (uploadError) throw uploadError;
+        coverUrl = `${supabase.storageUrl}/object/public/challenge-covers/${fileName}`;
+      }
+
+      const challengeData = {
+        title,
+        type: challengeType === "Other" ? otherType : challengeType,
+        participants_max: maxParticipants,
+        creator_participating: creatorParticipating === "yes",
+        buy_in_cost: buyInCost,
+        additional_prize_money: additionalPrizeMoney,
+        prize_type: prizeType,
+        prize_amount: prizeType === "set_amount" ? prizeAmount : null,
+        number_of_winners:
+          prizeType === "evenly_distributed" ? numberOfWinners : null,
+        scoring_type: scoringType === "Other" ? otherScoringType : scoringType,
+        is_private: isPrivate,
+        cover_media: coverUrl,
+        creator_id: $user.id,
+      };
+
+      const { error } = await supabase
+        .from("challenges")
+        .insert([challengeData]);
+      if (error) throw error;
+
+      if (creatorParticipating === "yes") {
+        await supabase
+          .from("challenge_participants")
+          .insert([
+            {
+              challenge_id: (
+                await supabase
+                  .from("challenges")
+                  .select("id")
+                  .eq("title", title)
+                  .single()
+              ).data.id,
+              user_id: $user.id,
+            },
+          ]);
+      }
+
+      $showChallengeCreation = false;
+      resetForm();
+    } catch (error) {
+      errorMessage = error.message;
+    }
+  }
+
   function closeModal(event) {
     if (
       event.type === "click" ||
@@ -124,22 +105,20 @@
       resetForm();
     }
   }
+
+  function handleFileChange(event) {
+    coverFile = event.target.files[0];
+  }
 </script>
 
 {#if $showChallengeCreation}
-  <div
-    class="modal-overlay"
-    on:click={(e) => {
-      if (e.target === e.currentTarget) closeModal(e);
-    }}
-    on:keydown={closeModal}
-    role="dialog"
-    aria-modal="true"
-  >
-    <div class="modal-content">
+  <div class="modal-overlay" on:click={closeModal} on:keydown={closeModal}>
+    <div class="modal-content" on:click|stopPropagation>
       <h2>Create a New Challenge</h2>
+      {#if errorMessage}
+        <p class="error">{errorMessage}</p>
+      {/if}
       <form on:submit={createChallenge}>
-        <!-- Challenge Title -->
         <label>
           Challenge Title:
           <input
@@ -150,7 +129,6 @@
           />
         </label>
 
-        <!-- Rest of your form fields (unchanged) -->
         <label>
           Challenge Type:
           <select bind:value={challengeType}>
@@ -288,6 +266,15 @@
           {/if}
         </label>
 
+        <label>
+          Cover Photo/Video:
+          <input
+            type="file"
+            accept="image/*,video/*"
+            on:change={handleFileChange}
+          />
+        </label>
+
         <div class="buttons">
           <button type="submit">Create Challenge</button>
           <button type="button" on:click={closeModal}>Cancel</button>
@@ -313,91 +300,83 @@
 
   .modal-content {
     background: var(--background);
-    padding: 2rem;
+    padding: 1rem;
     border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     max-width: 500px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     color: var(--text);
   }
 
   h2 {
-    margin-top: 0;
-    color: var(--text);
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+    color: var(--charcoal);
   }
 
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+  .error {
+    color: var(--tomato);
+    margin-bottom: 1rem;
   }
 
   label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
   }
 
   input,
   select {
+    width: 100%;
     padding: 0.5rem;
+    margin-top: 0.25rem;
     border: 1px solid var(--light-gray);
     border-radius: 4px;
-    font-size: 1rem;
     background-color: var(--white);
     color: var(--charcoal);
+    font-size: 0.9rem;
   }
 
   .radio-group {
     display: flex;
     gap: 1rem;
-    margin-top: 0.5rem;
-  }
-
-  .radio-group label {
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
+    margin-top: 0.25rem;
   }
 
   small {
+    display: block;
     color: var(--gray);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
   }
 
   .buttons {
     display: flex;
-    gap: 1rem;
+    justify-content: space-between;
     margin-top: 1rem;
-    justify-content: flex-end;
   }
 
   button {
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--tomato);
+    color: var(--white);
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
+    transition: background-color 0.3s;
   }
 
-  button[type="submit"] {
-    background-color: var(--tomato);
-    color: var(--background);
-  }
-
-  button[type="submit"]:hover {
+  button:hover {
     background-color: var(--tomato-light);
   }
 
   button[type="button"] {
     background-color: var(--gray);
-    color: var(--background);
   }
 
   button[type="button"]:hover {
-    background-color: darken(var(--gray), 10%);
+    background-color: var(--light-gray);
   }
 </style>
