@@ -1,39 +1,85 @@
 <script>
-  import { supabase } from "../supabase.js";
-  import { user } from "../stores.js"; // Your user store (adjust the path if needed)
-  import { navigate } from "svelte-routing"; // For navigation
   import { onMount } from "svelte";
+  import { navigate } from "svelte-routing";
+  import { supabase } from "../supabase.js"; // Correct path from src/pages/
+  import { user, showChallengeCreation } from "../stores.js"; // Correct path from src/pages/
+  import ChallengeTable from "./ChallengeTable.svelte";
 
-  console.log("User status:", $user);
-  let challenges = []; // List of challenges
-  let loading = true; // Loading state
-  let error = null; // Error state
+  let allChallenges = []; // Unfiltered list
+  let challenges = []; // Filtered list passed to table
+  let loading = true;
+  let error = null;
+  let searchQuery = "";
   let showAuthPrompt = false; // Controls the sign-up/login prompt
 
-  // Fetch public challenges when the page loads
   onMount(async () => {
+    await fetchChallenges();
+  });
+
+  async function fetchChallenges() {
     try {
-      const { data, error } = await supabase
+      loading = true;
+      const { data, error: fetchError } = await supabase
         .from("challenges")
-        .select("*")
-        .eq("is_private", false);
-      if (error) throw error;
-      challenges = data;
+        .select(
+          "title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
+        )
+        .order("created_at", { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      allChallenges = data.map((challenge) => ({
+        title: challenge.title,
+        type: challenge.type,
+        participants_max:
+          challenge.participants_max === 0
+            ? "Unlimited"
+            : challenge.participants_max,
+        participants_current: challenge.participants_current || 0,
+        cost: challenge.buy_in_cost || 0,
+        prize_pool:
+          (challenge.buy_in_cost || 0) * (challenge.participants_current || 0),
+        scoring_type: challenge.scoring_type || "None",
+        is_public: !challenge.is_private,
+      }));
+      challenges = [...allChallenges]; // Initialize with all challenges
+      error = null;
     } catch (err) {
       error = err.message;
+      console.error("Error fetching challenges:", err);
     } finally {
       loading = false;
     }
-  });
+  }
+
+  function filterChallenges() {
+    const query = searchQuery.toLowerCase().trim();
+    console.log("Filtering with query:", query);
+    if (!query) {
+      challenges = [...allChallenges];
+    } else {
+      challenges = allChallenges.filter((challenge) => {
+        const matches =
+          challenge.title.toLowerCase().includes(query) ||
+          challenge.type.toLowerCase().includes(query) ||
+          challenge.cost.toString().includes(query);
+        console.log("Challenge:", challenge.title, "Matches:", matches);
+        return matches;
+      });
+    }
+    console.log("Filtered challenges:", challenges);
+  }
+
+  // Reactively update challenges when searchQuery changes
+  $: searchQuery, filterChallenges();
 
   // Handle interactions (create, join, view)
   function handleInteraction(action) {
     if (!$user) {
-      showAuthPrompt = true; // Show prompt if not logged in
+      showAuthPrompt = true;
     } else {
-      // Add your logic for logged-in users here later
       if (action === "create") {
-        alert("Create challenge (add your logic here)");
+        $showChallengeCreation = true;
       } else if (action === "join") {
         alert("Join challenge (add your logic here)");
       } else if (action === "view") {
@@ -71,40 +117,7 @@
   {/if}
 
   <!-- Display challenges -->
-  {#if loading}
-    <p>Loading challenges...</p>
-  {:else if error}
-    <p>Error: {error}</p>
-  {:else}
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each challenges as challenge}
-          <tr>
-            <td>{challenge.name}</td>
-            <td>
-              {#if $user}
-                <button on:click={() => handleInteraction("join")}>Join</button>
-                <button on:click={() => handleInteraction("view")}>View</button>
-              {:else}
-                <button on:click={() => handleInteraction("join")}
-                  >Join (Login Required)</button
-                >
-                <button on:click={() => handleInteraction("view")}
-                  >View (Login Required)</button
-                >
-              {/if}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {/if}
+  <ChallengeTable {challenges} {loading} {error} bind:searchQuery />
 
   <!-- Create Challenge button -->
   {#if $user}
@@ -115,10 +128,6 @@
     <button on:click={() => handleInteraction("create")}
       >Create Challenge (Login Required)</button
     >
-  {/if}
-
-  <!-- Create an Account link for visitors -->
-  {#if !$user}
     <div class="create-account-link">
       <p>Not a member yet?</p>
       <button on:click={goToSignUp}>Create an Account</button>
@@ -128,33 +137,40 @@
 
 <style>
   .challenge-lobby {
-    padding: 20px;
+    padding: 1rem;
+    background-color: var(--background);
+    color: var(--text);
   }
+
+  h2 {
+    margin: 0 0 1rem 0;
+    font-size: clamp(1rem, 4vw, 2rem);
+    text-align: left;
+  }
+
   .auth-prompt {
-    border: 1px solid #ccc;
+    border: 1px solid var(--light-gray);
     padding: 10px;
     margin: 10px 0;
     background: #f9f9f9;
   }
+
   .create-account-link {
     margin-top: 20px;
+    text-align: center;
   }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-  }
-  th,
-  td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-  }
-  th {
-    background: #f2f2f2;
-  }
+
   button {
     margin: 0 5px;
     padding: 5px 10px;
+    background-color: var(--tomato);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: var(--tomato-light);
   }
 </style>
