@@ -67,10 +67,12 @@
         {:else}
           <tr>
             <td colspan="8" class="no-challenges">
-              <span>No Challenges Available</span>
-              <button on:click={toggleChallengeCreation} class="create-btn"
-                >Create Challenge</button
-              >
+              <div class="no-challenges-content">
+                <span>No Challenges Available</span>
+                <button on:click={toggleChallengeCreation} class="create-btn"
+                  >Create Challenge</button
+                >
+              </div>
             </td>
           </tr>
         {/if}
@@ -93,32 +95,32 @@
     text-align: center;
     margin-bottom: 1rem;
     color: var(--text);
-    font-size: clamp(1rem, 4vw, 2rem); /* Scales relative to screen size */
+    font-size: clamp(1rem, 4vw, 2rem);
   }
 
   .table-wrapper {
-    overflow-x: auto; /* Enables horizontal scrolling on small screens */
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   table {
     width: 100%;
-    min-width: 600px; /* Minimum width to ensure scrollability on mobile */
+    min-width: 600px;
     border-collapse: collapse;
     background-color: var(--white);
     color: var(--charcoal);
-    font-size: clamp(0.75rem, 2vw, 1rem); /* Scales text */
+    font-size: clamp(0.75rem, 2vw, 1rem);
   }
 
   th,
   td {
-    padding: clamp(0.5rem, 2vw, 1rem); /* Scales padding */
-    border: 1px solid var(--light-gray); /* Border on all cells */
+    padding: clamp(0.5rem, 2vw, 1rem);
+    border: 1px solid var(--light-gray);
   }
 
   th {
-    background-color: var(--charcoal);
-    color: var(--white);
+    background-color: var(--carolina-blue); /* Updated header background */
+    color: var(--charcoal); /* Updated header text color */
     font-size: clamp(0.8rem, 2.5vw, 1.2rem);
     text-align: center;
   }
@@ -137,10 +139,13 @@
     text-align: center;
     padding: 2rem;
     color: var(--gray);
+  }
+
+  .no-challenges-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem; /* Ensures button is below text */
+    gap: 1rem;
   }
 
   button {

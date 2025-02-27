@@ -170,12 +170,21 @@
     cursor: pointer;
   }
 
-  /* Corrected Top Nav styling */
+  .top-nav {
+    display: flex;
+    flex-direction: row; /* Horizontal layout */
+    justify-content: space-evenly; /* Even spacing */
+    align-items: center;
+    gap: 2rem; /* Consistent spacing */
+    width: 100%;
+    max-width: 400px; /* Limits width for better spacing */
+  }
+
   :global(.top-nav a) {
     color: var(--carolina-blue) !important;
     text-decoration: none !important;
-    display: flex !important;
-    flex-direction: column !important;
+    display: flex;
+    flex-direction: column !important; /* Keeps icon above text */
     align-items: center !important;
     font-size: clamp(0.8rem, 2vw, 1rem) !important;
   }
@@ -197,7 +206,7 @@
   }
 
   :global(.top-nav a span) {
-    margin-top: 5px !important;
+    margin-top: 0.3rem !important;
   }
 
   .hamburger {
@@ -266,7 +275,7 @@
   }
 
   .logout-btn:hover {
-    background-color: #e69a26; /* Slightly darker yellow for hover */
+    background-color: #e69a26;
     border-color: #e69a26;
   }
 
