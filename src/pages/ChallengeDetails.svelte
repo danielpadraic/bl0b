@@ -291,13 +291,12 @@
     <div class="tasks">
       <h2>Tasks</h2>
       {#if tasks.length > 0}
-        <table class="tasks-table">
+        <table class="challenge-table">
           <thead>
             <tr>
               <th>Action</th>
               <th>Frequency</th>
               <th>Verification Type</th>
-              <th>Attachment Required</th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -308,7 +307,6 @@
                 <td class="no-wrap">{task.action}</td>
                 <td>{task.frequency}</td>
                 <td>{task.verification_type}</td>
-                <td>{task.require_attachment ? "Yes" : "No"}</td>
                 <td>{task.notes || ""}</td>
                 <td>
                   {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
@@ -518,7 +516,7 @@
     margin-bottom: 1rem;
   }
 
-  .tasks-table {
+  .challenge-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
@@ -527,33 +525,33 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
-  .tasks-table th,
-  .tasks-table td {
+  .challenge-table th,
+  .challenge-table td {
     padding: 0.75rem;
     border: 1px solid var(--light-gray);
     text-align: left;
     font-size: 0.9rem;
   }
 
-  .tasks-table th {
+  .challenge-table th {
     background: linear-gradient(to bottom, var(--tomato), var(--tomato-light));
     color: var(--white);
     font-weight: bold;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
   }
 
-  .tasks-table td {
+  .challenge-table td {
     background-color: var(--white);
     color: var(--charcoal);
     transition: background-color 0.3s ease;
   }
 
-  .tasks-table tr:hover td {
+  .challenge-table tr:hover td {
     background-color: var(--light-gray);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
-  .tasks-table .no-wrap {
+  .challenge-table .no-wrap {
     white-space: nowrap;
   }
 
