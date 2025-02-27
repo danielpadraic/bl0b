@@ -26,30 +26,33 @@
       alert("Challenge Title is required.");
       return;
     }
-    if (challengeType === "Other" && !otherType) {
+    if (challengeType === "Other" && !otherType.trim()) {
       alert("Please specify the Other challenge type.");
       return;
     }
-    if (prizeType === "set_amount" && prizeAmount <= 0) {
-      alert("Please enter a valid prize amount.");
+    if (prizeType === "set_amount" && (!prizeAmount || prizeAmount <= 0)) {
+      alert("Please enter a valid prize amount greater than 0.");
       return;
     }
-    if (prizeType === "evenly_distributed" && numberOfWinners <= 0) {
-      alert("Please specify the number of winners.");
+    if (
+      prizeType === "evenly_distributed" &&
+      (!numberOfWinners || numberOfWinners <= 0)
+    ) {
+      alert("Please specify a valid number of winners greater than 0.");
       return;
     }
-    if (scoringType === "Other" && !otherScoringType) {
+    if (scoringType === "Other" && !otherScoringType.trim()) {
       alert("Please describe the Other scoring type.");
       return;
     }
 
     // Determine final challenge type
     let finalChallengeType =
-      challengeType === "Other" ? otherType : challengeType;
+      challengeType === "Other" ? otherType.trim() : challengeType;
 
     // Determine final scoring type
     let finalScoringType =
-      scoringType === "Other" ? otherScoringType : scoringType;
+      scoringType === "Other" ? otherScoringType.trim() : scoringType;
 
     // Generate invitation link if private
     let invitationLink = null;
@@ -61,7 +64,7 @@
     // Prepare data for Supabase
     const challengeData = {
       title,
-      type: finalChallengeType, // Changed from challenge_type to type
+      type: finalChallengeType,
       max_participants: maxParticipants === 0 ? null : maxParticipants,
       buy_in_cost: parseFloat(buyInCost) || 0,
       additional_prize_money: parseFloat(additionalPrizeMoney) || 0,
