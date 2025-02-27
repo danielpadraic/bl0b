@@ -129,7 +129,9 @@
 {#if $showChallengeCreation}
   <div
     class="modal-overlay"
-    on:click={closeModal}
+    on:click={(e) => {
+      if (e.target === e.currentTarget) closeModal(e);
+    }}
     on:keydown={closeModal}
     role="dialog"
     aria-modal="true"
@@ -148,7 +150,7 @@
           />
         </label>
 
-        <!-- Challenge Type -->
+        <!-- Rest of your form fields (unchanged) -->
         <label>
           Challenge Type:
           <select bind:value={challengeType}>
@@ -165,7 +167,6 @@
           {/if}
         </label>
 
-        <!-- Number of Participants -->
         <label>
           Number of Participants (0 for unlimited):
           <input
@@ -179,7 +180,6 @@
           {/if}
         </label>
 
-        <!-- Creator Participation -->
         <label>
           Will you be participating in this Challenge?
           <div class="radio-group">
@@ -203,7 +203,6 @@
           </div>
         </label>
 
-        <!-- Buy-In Cost -->
         <label>
           Buy-In Cost ($):
           <input
@@ -215,7 +214,6 @@
           />
         </label>
 
-        <!-- Additional Prize Money -->
         <label>
           Additional Prize Money ($):
           <input
@@ -227,7 +225,6 @@
           />
         </label>
 
-        <!-- Prize Type -->
         <label>
           Prize:
           <select bind:value={prizeType}>
@@ -263,7 +260,6 @@
           {/if}
         </label>
 
-        <!-- Scoring Type -->
         <label>
           Scoring Type:
           <select bind:value={scoringType}>
@@ -284,7 +280,6 @@
           {/if}
         </label>
 
-        <!-- Private Challenge -->
         <label>
           Private Challenge:
           <input type="checkbox" bind:checked={isPrivate} />
@@ -293,7 +288,6 @@
           {/if}
         </label>
 
-        <!-- Form Buttons -->
         <div class="buttons">
           <button type="submit">Create Challenge</button>
           <button type="button" on:click={closeModal}>Cancel</button>
