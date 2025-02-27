@@ -44,6 +44,25 @@
 
   async function createChallenge(event) {
     event.preventDefault();
+
+    // Validate dates
+    const now = new Date();
+    const start = startDateTime ? new Date(startDateTime) : null;
+    const end = endDateTime ? new Date(endDateTime) : null;
+
+    if (start && start < now) {
+      errorMessage = "Start date and time cannot be in the past.";
+      return;
+    }
+    if (end && end < now) {
+      errorMessage = "End date and time cannot be in the past.";
+      return;
+    }
+    if (start && end && end <= start) {
+      errorMessage = "End date and time must be after start date and time.";
+      return;
+    }
+
     try {
       let coverUrl = null;
       if (coverFile) {
