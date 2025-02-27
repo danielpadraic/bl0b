@@ -6,12 +6,14 @@
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
+  import ChallengeCreation from "./pages/ChallengeCreation.svelte";
   import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
   let menuOpen = false;
   let currentUser = null;
   let isMobile = window.innerWidth < 769;
+  let showChallengeCreation = false;
 
   function handleResize() {
     isMobile = window.innerWidth < 769;
@@ -31,7 +33,6 @@
   });
 
   function toggleMenu() {
-    console.log("Toggling menu, new state:", !menuOpen);
     menuOpen = !menuOpen;
   }
 
@@ -46,6 +47,10 @@
   function goHome() {
     navigate("/");
     menuOpen = false;
+  }
+
+  function toggleChallengeCreation() {
+    showChallengeCreation = !showChallengeCreation;
   }
 </script>
 
@@ -101,7 +106,7 @@
           >
           <button
             on:click={() => {
-              navigate("/create-challenge");
+              toggleChallengeCreation();
               toggleMenu();
             }}
             class="create-btn">Create Challenge</button
@@ -124,7 +129,6 @@
       <Route path="/leaderboards" component={ChallengeLobby} />
       <Route path="/profile" component={ChallengeLobby} />
       <Route path="/tokens" component={ChallengeLobby} />
-      <Route path="/create-challenge" component={ChallengeLobby} />
       <Route path="/signup" component={ChallengeLobby} />
       <Route path="/login" component={ChallengeLobby} />
     </main>
@@ -134,6 +138,13 @@
         activeTab={window.location.pathname === "/"
           ? "home"
           : window.location.pathname.slice(1)}
+      />
+    {/if}
+
+    <!-- Challenge Creation Modal -->
+    {#if showChallengeCreation}
+      <ChallengeCreation
+        on:challengeCreated={() => (showChallengeCreation = false)}
       />
     {/if}
   </Router>

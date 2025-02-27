@@ -5,14 +5,15 @@
 
   const dispatch = createEventDispatcher();
 
+  export let show = false; // Controlled by parent (App.svelte)
+
   // Form state
-  let showForm = false;
   let title = "";
   let type = "Fitness";
   let customType = "";
   let maxParticipants = null;
   let allowLateJoins = false;
-  let startDate = new Date().toISOString().slice(0, 16); // For datetime-local
+  let startDate = new Date().toISOString().slice(0, 16);
   let endDate = new Date().toISOString().slice(0, 16);
   let joinCost = 0.0;
   let prizeDistribution = "even";
@@ -28,7 +29,7 @@
       .from("challenge_types")
       .select("name")
       .order("usage_count", { ascending: false })
-      .limit(5); // Top 5 most used types
+      .limit(5);
     if (!error) {
       challengeTypes = [
         "Fitness",
@@ -127,7 +128,7 @@
       return;
     }
 
-    showForm = false;
+    show = false;
     resetForm();
     dispatch("challengeCreated", challenge);
   }
@@ -155,17 +156,14 @@
       event.type === "click" ||
       (event.type === "keydown" && event.key === "Escape")
     ) {
-      showForm = !showForm;
-      if (!showForm) resetForm();
+      show = !show;
+      if (!show) resetForm();
     }
   }
 </script>
 
-<!-- Trigger button -->
-<button on:click={toggleForm}>Create Challenge</button>
-
 <!-- Floating form -->
-{#if showForm}
+{#if show}
   <div
     class="modal-overlay"
     on:click={toggleForm}
