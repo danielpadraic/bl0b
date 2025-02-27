@@ -8,7 +8,8 @@
   export let challenge = null;
   export let editMode = false;
 
-  const formData = writable({
+  // Single reactive object for all form fields
+  let form = {
     title: "",
     challengeType: "Fitness",
     otherType: "",
@@ -25,27 +26,13 @@
     coverFile: null,
     startDateTime: "",
     endDateTime: "",
-  });
+    errorMessage: "",
+    showStartPicker: false,
+    showEndPicker: false,
+  };
 
-  let title = "";
-  let challengeType = "Fitness";
-  let otherType = "";
-  let maxParticipants = 0;
-  let creatorParticipating = "yes";
-  let buyInCost = 0;
-  let additionalPrizeMoney = 0;
-  let prizeType = "just_for_fun";
-  let prizeAmount = 0;
-  let numberOfWinners = 1;
-  let scoringType = "Consistency";
-  let otherScoringType = "";
-  let isPrivate = false;
-  let coverFile = null;
-  let startDateTime = "";
-  let endDateTime = "";
-  let errorMessage = "";
-  let showStartPicker = false;
-  let showEndPicker = false;
+  // Persistent store for create mode
+  const formData = writable({ ...form });
 
   onMount(() => {
     console.log(
@@ -55,99 +42,52 @@
       challenge
     );
     if (editMode && challenge) {
-      console.log(
-        "Populating form with challenge data via onMount:",
-        challenge
-      );
-      populateForm();
+      console.log("Populating form with challenge data:", challenge);
+      form.title = challenge.title || "";
+      form.challengeType = ["Fitness"].includes(challenge.type)
+        ? challenge.type
+        : "Other";
+      form.otherType = form.challengeType === "Other" ? challenge.type : "";
+      form.maxParticipants = challenge.participants_max || 0;
+      form.creatorParticipating = challenge.creator_participating
+        ? "yes"
+        : "no";
+      form.buyInCost = challenge.buy_in_cost || 0;
+      form.additionalPrizeMoney = challenge.additional_prize_money || 0;
+      form.prizeType = challenge.prize_type || "just_for_fun";
+      form.prizeAmount = challenge.prize_amount || 0;
+      form.numberOfWinners = challenge.number_of_winners || 1;
+      form.scoringType = [
+        "Consistency",
+        "Time (High)",
+        "Time (Low)",
+        "Distance",
+        "Points",
+        "None",
+      ].includes(challenge.scoring_type)
+        ? challenge.scoring_type
+        : "Other";
+      form.otherScoringType =
+        form.scoringType === "Other" ? challenge.scoring_type : "";
+      form.isPrivate = challenge.is_private || false;
+      form.coverFile = null;
+      form.startDateTime = challenge.start_datetime
+        ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
+        : "";
+      form.endDateTime = challenge.end_datetime
+        ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
+        : "";
+      console.log("Form fields set:", form);
     } else {
       console.log("Create mode: Loading persisted form data");
-      $formData.title = title;
-      $formData.challengeType = challengeType;
-      $formData.otherType = otherType;
-      $formData.maxParticipants = maxParticipants;
-      $formData.creatorParticipating = creatorParticipating;
-      $formData.buyInCost = buyInCost;
-      $formData.additionalPrizeMoney = additionalPrizeMoney;
-      $formData.prizeType = prizeType;
-      $formData.prizeAmount = prizeAmount;
-      $formData.numberOfWinners = numberOfWinners;
-      $formData.scoringType = scoringType;
-      $formData.otherScoringType = otherScoringType;
-      $formData.isPrivate = isPrivate;
-      $formData.coverFile = coverFile;
-      $formData.startDateTime = startDateTime;
-      $formData.endDateTime = endDateTime;
+      form = { ...$formData };
     }
   });
 
-  // Reactive update to ensure DOM reflects changes
-  $: if (editMode && challenge) {
-    console.log("Reactive update triggered with challenge:", challenge);
-    populateForm();
-  }
-
-  function populateForm() {
-    title = challenge.title || "";
-    challengeType = ["Fitness"].includes(challenge.type)
-      ? challenge.type
-      : "Other";
-    otherType = challengeType === "Other" ? challenge.type : "";
-    maxParticipants = challenge.participants_max || 0;
-    creatorParticipating = challenge.creator_participating ? "yes" : "no";
-    buyInCost = challenge.buy_in_cost || 0;
-    additionalPrizeMoney = challenge.additional_prize_money || 0;
-    prizeType = challenge.prize_type || "just_for_fun";
-    prizeAmount = challenge.prize_amount || 0;
-    numberOfWinners = challenge.number_of_winners || 1;
-    scoringType = [
-      "Consistency",
-      "Time (High)",
-      "Time (Low)",
-      "Distance",
-      "Points",
-      "None",
-    ].includes(challenge.scoring_type)
-      ? challenge.scoring_type
-      : "Other";
-    otherScoringType = scoringType === "Other" ? challenge.scoring_type : "";
-    isPrivate = challenge.is_private || false;
-    coverFile = null;
-    startDateTime = challenge.start_datetime
-      ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
-      : "";
-    endDateTime = challenge.end_datetime
-      ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
-      : "";
-    console.log("Form fields set:", {
-      title,
-      challengeType,
-      creatorParticipating,
-      scoringType,
-      isPrivate,
-    });
-  }
-
   onDestroy(() => {
     if (!editMode) {
-      formData.set({
-        title,
-        challengeType,
-        otherType,
-        maxParticipants,
-        creatorParticipating,
-        buyInCost,
-        additionalPrizeMoney,
-        prizeType,
-        prizeAmount,
-        numberOfWinners,
-        scoringType,
-        otherScoringType,
-        isPrivate,
-        coverFile,
-        startDateTime,
-        endDateTime,
-      });
+      console.log("Saving form data to store for create mode");
+      formData.set({ ...form });
     }
   });
 
@@ -155,37 +95,38 @@
     event.preventDefault();
 
     const now = new Date();
-    const start = startDateTime ? new Date(startDateTime) : null;
-    const end = endDateTime ? new Date(endDateTime) : null;
+    const start = form.startDateTime ? new Date(form.startDateTime) : null;
+    const end = form.endDateTime ? new Date(form.endDateTime) : null;
 
     if (start && start < now) {
-      errorMessage = "Start date and time cannot be in the past.";
+      form.errorMessage = "Start date and time cannot be in the past.";
       return;
     }
     if (end && end < now) {
-      errorMessage = "End date and time cannot be in the past.";
+      form.errorMessage = "End date and time cannot be in the past.";
       return;
     }
     if (start && end && end <= start) {
-      errorMessage = "End date and time must be after start date and time.";
+      form.errorMessage =
+        "End date and time must be after start date and time.";
       return;
     }
 
     try {
       let coverUrl = challenge ? challenge.cover_media : null;
-      if (coverFile) {
-        const fileName = `${Date.now()}-${coverFile.name}`;
+      if (form.coverFile) {
+        const fileName = `${Date.now()}-${form.coverFile.name}`;
         console.log(
           "Uploading file:",
           fileName,
           "Size:",
-          coverFile.size,
+          form.coverFile.size,
           "Type:",
-          coverFile.type
+          form.coverFile.type
         );
         const { data, error: uploadError } = await supabase.storage
           .from("challenge-covers")
-          .upload(fileName, coverFile, {
+          .upload(fileName, form.coverFile, {
             cacheControl: "3600",
             upsert: false,
           });
@@ -200,22 +141,26 @@
       }
 
       const challengeData = {
-        title,
-        type: challengeType === "Other" ? otherType : challengeType,
-        participants_max: maxParticipants,
-        creator_participating: creatorParticipating === "yes",
-        buy_in_cost: buyInCost,
-        additional_prize_money: additionalPrizeMoney,
-        prize_type: prizeType,
-        prize_amount: prizeType === "set_amount" ? prizeAmount : null,
+        title: form.title,
+        type:
+          form.challengeType === "Other" ? form.otherType : form.challengeType,
+        participants_max: form.maxParticipants,
+        creator_participating: form.creatorParticipating === "yes",
+        buy_in_cost: form.buyInCost,
+        additional_prize_money: form.additionalPrizeMoney,
+        prize_type: form.prizeType,
+        prize_amount: form.prizeType === "set_amount" ? form.prizeAmount : null,
         number_of_winners:
-          prizeType === "evenly_distributed" ? numberOfWinners : null,
-        scoring_type: scoringType === "Other" ? otherScoringType : scoringType,
-        is_private: isPrivate,
+          form.prizeType === "evenly_distributed" ? form.numberOfWinners : null,
+        scoring_type:
+          form.scoringType === "Other"
+            ? form.otherScoringType
+            : form.scoringType,
+        is_private: form.isPrivate,
         cover_media: coverUrl,
         creator_id: $user.id,
-        start_datetime: startDateTime || null,
-        end_datetime: endDateTime || null,
+        start_datetime: form.startDateTime || null,
+        end_datetime: form.endDateTime || null,
       };
 
       let newChallenge;
@@ -237,7 +182,7 @@
         if (error) throw error;
         newChallenge = data;
 
-        if (creatorParticipating === "yes") {
+        if (form.creatorParticipating === "yes") {
           await supabase
             .from("challenge_participants")
             .insert([{ challenge_id: newChallenge.id, user_id: $user.id }]);
@@ -248,50 +193,35 @@
       resetForm();
       navigate(`/challenge/${newChallenge.id}`);
     } catch (error) {
-      errorMessage = error.message;
+      form.errorMessage = error.message;
       console.error("Challenge submission error:", error);
     }
   }
 
   function resetForm() {
-    title = "";
-    challengeType = "Fitness";
-    otherType = "";
-    maxParticipants = 0;
-    creatorParticipating = "yes";
-    buyInCost = 0;
-    additionalPrizeMoney = 0;
-    prizeType = "just_for_fun";
-    prizeAmount = 0;
-    numberOfWinners = 1;
-    scoringType = "Consistency";
-    otherScoringType = "";
-    isPrivate = false;
-    coverFile = null;
-    startDateTime = "";
-    endDateTime = "";
-    errorMessage = "";
-    showStartPicker = false;
-    showEndPicker = false;
+    form = {
+      title: "",
+      challengeType: "Fitness",
+      otherType: "",
+      maxParticipants: 0,
+      creatorParticipating: "yes",
+      buyInCost: 0,
+      additionalPrizeMoney: 0,
+      prizeType: "just_for_fun",
+      prizeAmount: 0,
+      numberOfWinners: 1,
+      scoringType: "Consistency",
+      otherScoringType: "",
+      isPrivate: false,
+      coverFile: null,
+      startDateTime: "",
+      endDateTime: "",
+      errorMessage: "",
+      showStartPicker: false,
+      showEndPicker: false,
+    };
     if (!editMode) {
-      formData.set({
-        title: "",
-        challengeType: "Fitness",
-        otherType: "",
-        maxParticipants: 0,
-        creatorParticipating: "yes",
-        buyInCost: 0,
-        additionalPrizeMoney: 0,
-        prizeType: "just_for_fun",
-        prizeAmount: 0,
-        numberOfWinners: 1,
-        scoringType: "Consistency",
-        otherScoringType: "",
-        isPrivate: false,
-        coverFile: null,
-        startDateTime: "",
-        endDateTime: "",
-      });
+      formData.set({ ...form });
     }
   }
 
@@ -305,16 +235,16 @@
   }
 
   function handleFileChange(event) {
-    coverFile = event.target.files[0];
-    console.log("Selected file:", coverFile);
+    form.coverFile = event.target.files[0];
+    console.log("Selected file:", form.coverFile);
   }
 
   function confirmStartDate() {
-    showStartPicker = false;
+    form.showStartPicker = false;
   }
 
   function confirmEndDate() {
-    showEndPicker = false;
+    form.showEndPicker = false;
   }
 </script>
 
@@ -326,15 +256,15 @@
       on:keydown|stopPropagation={() => {}}
     >
       <h2>{editMode ? "Edit Challenge" : "Create a New Challenge"}</h2>
-      {#if errorMessage}
-        <p class="error">{errorMessage}</p>
+      {#if form.errorMessage}
+        <p class="error">{form.errorMessage}</p>
       {/if}
       <form on:submit={submitChallenge}>
         <label>
           Challenge Title:
           <input
             type="text"
-            bind:value={title}
+            bind:value={form.title}
             required
             placeholder="Enter challenge title"
           />
@@ -342,14 +272,14 @@
 
         <label>
           Challenge Type:
-          <select bind:value={challengeType}>
+          <select bind:value={form.challengeType}>
             <option value="Fitness">Fitness</option>
             <option value="Other">Other</option>
           </select>
-          {#if challengeType === "Other"}
+          {#if form.challengeType === "Other"}
             <input
               type="text"
-              bind:value={otherType}
+              bind:value={form.otherType}
               placeholder="Specify challenge type"
               required
             />
@@ -360,11 +290,11 @@
           Number of Participants (0 for unlimited):
           <input
             type="number"
-            bind:value={maxParticipants}
+            bind:value={form.maxParticipants}
             min="0"
             placeholder="0"
           />
-          {#if maxParticipants === 1}
+          {#if form.maxParticipants === 1}
             <small>Only you can join this challenge.</small>
           {/if}
         </label>
@@ -375,7 +305,7 @@
             <label>
               <input
                 type="radio"
-                bind:group={creatorParticipating}
+                bind:group={form.creatorParticipating}
                 value="yes"
               />
               Yes
@@ -383,7 +313,7 @@
             <label>
               <input
                 type="radio"
-                bind:group={creatorParticipating}
+                bind:group={form.creatorParticipating}
                 value="no"
               />
               No
@@ -395,7 +325,7 @@
           Buy-In Cost ($):
           <input
             type="number"
-            bind:value={buyInCost}
+            bind:value={form.buyInCost}
             step="0.01"
             min="0"
             placeholder="0.00"
@@ -406,7 +336,7 @@
           Additional Prize Money ($):
           <input
             type="number"
-            bind:value={additionalPrizeMoney}
+            bind:value={form.additionalPrizeMoney}
             step="0.01"
             min="0"
             placeholder="0.00"
@@ -415,33 +345,33 @@
 
         <label>
           Prize:
-          <select bind:value={prizeType}>
+          <select bind:value={form.prizeType}>
             <option value="just_for_fun">Just for Fun</option>
             <option value="set_amount">Set Amount</option>
             <option value="winner_takes_all">Winner Takes All</option>
             <option value="evenly_distributed">Evenly Distributed</option>
             <option value="tournament">Tournament Style</option>
           </select>
-          {#if prizeType === "set_amount"}
+          {#if form.prizeType === "set_amount"}
             <input
               type="number"
-              bind:value={prizeAmount}
+              bind:value={form.prizeAmount}
               step="0.01"
               min="0"
               placeholder="Prize amount"
               required
             />
           {/if}
-          {#if prizeType === "evenly_distributed"}
+          {#if form.prizeType === "evenly_distributed"}
             <input
               type="number"
-              bind:value={numberOfWinners}
+              bind:value={form.numberOfWinners}
               min="1"
               placeholder="Number of winners"
               required
             />
           {/if}
-          {#if prizeType === "tournament"}
+          {#if form.prizeType === "tournament"}
             <small
               >Prizes calculated based on participant count at challenge end.</small
             >
@@ -450,7 +380,7 @@
 
         <label>
           Scoring Type:
-          <select bind:value={scoringType}>
+          <select bind:value={form.scoringType}>
             <option value="Consistency">Consistency</option>
             <option value="Time (High)">Time (High)</option>
             <option value="Time (Low)">Time (Low)</option>
@@ -459,10 +389,10 @@
             <option value="Other">Other</option>
             <option value="None">None</option>
           </select>
-          {#if scoringType === "Other"}
+          {#if form.scoringType === "Other"}
             <input
               type="text"
-              bind:value={otherScoringType}
+              bind:value={form.otherScoringType}
               placeholder="Describe scoring type"
               required
             />
@@ -471,8 +401,8 @@
 
         <label>
           Private Challenge:
-          <input type="checkbox" bind:checked={isPrivate} />
-          {#if isPrivate}
+          <input type="checkbox" bind:checked={form.isPrivate} />
+          {#if form.isPrivate}
             <small>A unique invitation link will be generated.</small>
           {/if}
         </label>
@@ -481,12 +411,12 @@
           Start Date & Time:
           <input
             type="datetime-local"
-            bind:value={startDateTime}
+            bind:value={form.startDateTime}
             step="900"
             required
-            on:focus={() => (showStartPicker = true)}
+            on:focus={() => (form.showStartPicker = true)}
           />
-          {#if showStartPicker}
+          {#if form.showStartPicker}
             <button type="button" on:click={confirmStartDate}>OK</button>
           {/if}
         </label>
@@ -495,12 +425,12 @@
           End Date & Time:
           <input
             type="datetime-local"
-            bind:value={endDateTime}
+            bind:value={form.endDateTime}
             step="900"
             required
-            on:focus={() => (showEndPicker = true)}
+            on:focus={() => (form.showEndPicker = true)}
           />
-          {#if showEndPicker}
+          {#if form.showEndPicker}
             <button type="button" on:click={confirmEndDate}>OK</button>
           {/if}
         </label>
@@ -512,7 +442,7 @@
             accept="image/*,video/*"
             on:change={handleFileChange}
           />
-          {#if editMode && challenge.cover_media && !coverFile}
+          {#if editMode && challenge.cover_media && !form.coverFile}
             <small
               >Current: <a href={challenge.cover_media} target="_blank">View</a
               ></small
