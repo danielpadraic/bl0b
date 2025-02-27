@@ -16,63 +16,67 @@
 
 <div class="challenge-table">
   <h2>Challenge Lobby</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Type</th>
-        <th>Participants</th>
-        <th>Cost</th>
-        <th>Prize Pool</th>
-        <th>Scoring Type</th>
-        <th>Public/Private</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#if loading}
+  <div class="table-wrapper">
+    <table>
+      <thead>
         <tr>
-          <td colspan="8">Loading challenges...</td>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Participants</th>
+          <th>Cost</th>
+          <th>Prize</th>
+          <th>Scoring Type</th>
+          <th>Privacy</th>
+          <th>Action</th>
         </tr>
-      {:else if error}
-        <tr>
-          <td colspan="8" class="error">Error: {error}</td>
-        </tr>
-      {:else if challenges.length > 0}
-        {#each challenges as challenge}
+      </thead>
+      <tbody>
+        {#if loading}
           <tr>
-            <td>{challenge.title}</td>
-            <td>{challenge.type}</td>
-            <td
-              >{challenge.participants_current}/{challenge.participants_max}</td
-            >
-            <td>${challenge.cost.toFixed(2)}</td>
-            <td>${challenge.prize_pool.toFixed(2)}</td>
-            <td>{challenge.scoring_type}</td>
-            <td>{challenge.is_public ? "Public" : "Private"}</td>
-            <td>
-              <button
-                on:click={() => joinChallenge(challenge.id)}
-                disabled={challenge.participants_current >=
-                  challenge.participants_max}
+            <td colspan="8">Loading challenges...</td>
+          </tr>
+        {:else if error}
+          <tr>
+            <td colspan="8" class="error">Error: {error}</td>
+          </tr>
+        {:else if challenges.length > 0}
+          {#each challenges as challenge}
+            <tr>
+              <td data-label="Title">{challenge.title}</td>
+              <td data-label="Type">{challenge.type}</td>
+              <td data-label="Participants"
+                >{challenge.participants_current}/{challenge.participants_max}</td
               >
-                Join
-              </button>
+              <td data-label="Cost">${challenge.cost.toFixed(2)}</td>
+              <td data-label="Prize">${challenge.prize_pool.toFixed(2)}</td>
+              <td data-label="Scoring Type">{challenge.scoring_type}</td>
+              <td data-label="Privacy"
+                >{challenge.is_public ? "Public" : "Private"}</td
+              >
+              <td data-label="Action">
+                <button
+                  on:click={() => joinChallenge(challenge.id)}
+                  disabled={challenge.participants_current >=
+                    challenge.participants_max}
+                >
+                  Join
+                </button>
+              </td>
+            </tr>
+          {/each}
+        {:else}
+          <tr>
+            <td colspan="8" class="no-challenges">
+              <span>No Challenges Available</span>
+              <button on:click={toggleChallengeCreation} class="create-btn"
+                >Create Challenge</button
+              >
             </td>
           </tr>
-        {/each}
-      {:else}
-        <tr>
-          <td colspan="8" class="no-challenges">
-            No Challenges Available
-            <button on:click={toggleChallengeCreation} class="create-btn"
-              >Create Challenge</button
-            >
-          </td>
-        </tr>
-      {/if}
-    </tbody>
-  </table>
+        {/if}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <style>
@@ -80,6 +84,7 @@
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
+    padding: 1rem;
     background-color: var(--background);
     color: var(--text);
   }
@@ -88,25 +93,38 @@
     text-align: center;
     margin-bottom: 1rem;
     color: var(--text);
+    font-size: clamp(1rem, 4vw, 2rem); /* Scales relative to screen size */
+  }
+
+  .table-wrapper {
+    overflow-x: auto; /* Enables horizontal scrolling on small screens */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
   }
 
   table {
     width: 100%;
+    min-width: 600px; /* Minimum width to ensure scrollability on mobile */
     border-collapse: collapse;
     background-color: var(--white);
     color: var(--charcoal);
+    font-size: clamp(0.75rem, 2vw, 1rem); /* Scales text */
   }
 
   th,
   td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--light-gray);
+    padding: clamp(0.5rem, 2vw, 1rem); /* Scales padding */
+    border: 1px solid var(--light-gray); /* Border on all cells */
   }
 
   th {
     background-color: var(--charcoal);
     color: var(--white);
+    font-size: clamp(0.8rem, 2.5vw, 1.2rem);
+    text-align: center;
+  }
+
+  td {
+    text-align: left;
   }
 
   .error {
@@ -119,16 +137,20 @@
     text-align: center;
     padding: 2rem;
     color: var(--gray);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem; /* Ensures button is below text */
   }
 
   button {
     background-color: var(--tomato);
     color: var(--background);
     border: none;
-    padding: 0.5rem 1rem;
+    padding: clamp(0.4rem, 1.5vw, 0.75rem) clamp(0.8rem, 2vw, 1rem);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: clamp(0.7rem, 1.5vw, 1rem);
   }
 
   button:disabled {
@@ -143,10 +165,9 @@
   .create-btn {
     background-color: var(--tomato);
     color: var(--background);
-    padding: 0.5rem 1rem;
+    padding: clamp(0.4rem, 1.5vw, 0.75rem) clamp(0.8rem, 2vw, 1rem);
     border-radius: 4px;
     cursor: pointer;
-    margin-left: 1rem;
   }
 
   .create-btn:hover {

@@ -147,9 +147,9 @@
 
 <style>
   .app {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
     background-color: var(--background);
     color: var(--text);
   }
@@ -170,23 +170,34 @@
     cursor: pointer;
   }
 
-  .top-nav {
-    display: flex;
-    gap: 1rem;
+  /* Corrected Top Nav styling */
+  :global(.top-nav a) {
+    color: var(--carolina-blue) !important;
+    text-decoration: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    font-size: clamp(0.8rem, 2vw, 1rem) !important;
   }
 
-  .top-nav a {
-    color: var(--carolina-blue);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 1rem;
+  :global(.top-nav a:link) {
+    color: var(--carolina-blue) !important;
   }
 
-  .top-nav a.active {
-    color: var(--tomato);
-    font-weight: bold;
+  :global(.top-nav a:visited) {
+    color: var(--carolina-blue) !important;
+  }
+
+  :global(.top-nav a.active) {
+    color: var(--tomato) !important;
+  }
+
+  :global(.top-nav a:hover) {
+    color: var(--tomato-light) !important;
+  }
+
+  :global(.top-nav a span) {
+    margin-top: 5px !important;
   }
 
   .hamburger {
@@ -255,8 +266,8 @@
   }
 
   .logout-btn:hover {
-    background-color: darken(var(--hunyadi-yellow), 10%);
-    border-color: darken(var(--hunyadi-yellow), 10%);
+    background-color: #e69a26; /* Slightly darker yellow for hover */
+    border-color: #e69a26;
   }
 
   main {
