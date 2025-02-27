@@ -26,7 +26,7 @@
     try {
       const { data, error: fetchError } = await supabase
         .from("challenges")
-        .select("*, profiles!challenges_creator_id_fkey(username)") // Fetch creator's username
+        .select("*, profiles!challenges_creator_id_fkey(username)")
         .eq("id", challengeId)
         .single();
       console.log("Fetched challenge data:", data, "Error:", fetchError);
@@ -137,7 +137,9 @@
         {#if challenge.cover_media.match(/\.(jpg|jpeg|png|gif)$/i)}
           <img src={challenge.cover_media} alt="Challenge Cover" />
         {:else if challenge.cover_media.match(/\.(mp4|webm)$/i)}
-          <video controls src={challenge.cover_media}></video>
+          <video controls src={challenge.cover_media}>
+            <track kind="captions" label="No captions available" />
+          </video>
         {/if}
       </div>
     {/if}
