@@ -1,19 +1,18 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { navigate, Router, Route, Link } from "svelte-routing";
-  import { user } from "./stores/user.js";
+  import { user, showChallengeCreation } from "./stores.js"; // Import the store
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
-  import ChallengeCreation from "./pages/ChallengeCreation.svelte";
+  import ChallengeCreation from "./pages/ChallengeCreation.svelte"; // Ensure this import exists
   import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
   let menuOpen = false;
   let currentUser = null;
   let isMobile = window.innerWidth < 769;
-  let showChallengeCreation = false;
 
   function handleResize() {
     isMobile = window.innerWidth < 769;
@@ -50,7 +49,7 @@
   }
 
   function toggleChallengeCreation() {
-    showChallengeCreation = !showChallengeCreation;
+    $showChallengeCreation = !$showChallengeCreation; // Toggle the modal state
   }
 </script>
 
@@ -141,154 +140,38 @@
       />
     {/if}
 
-    <!-- Challenge Creation Modal -->
-    {#if showChallengeCreation}
-      <ChallengeCreation
-        on:challengeCreated={() => (showChallengeCreation = false)}
-      />
+    <!-- Render the ChallengeCreation modal -->
+    {#if $showChallengeCreation}
+      <ChallengeCreation />
     {/if}
   </Router>
 </div>
 
 <style>
+  /* Keep your existing styles */
   .app {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    position: relative;
   }
-
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background-color: var(--charcoal);
-    color: var(--white);
-    width: 100%;
-    z-index: 10;
-  }
-
-  .logo img {
-    height: 40px;
-  }
-
-  .top-nav {
-    display: flex;
-    gap: 1rem;
-  }
-
-  :global(.top-nav a) {
-    color: var(--carolina-blue) !important;
-    text-decoration: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    font-size: 0.9rem !important;
-  }
-
-  :global(.top-nav a:link) {
-    color: var(--carolina-blue) !important;
-  }
-
-  :global(.top-nav a:visited) {
-    color: var(--carolina-blue) !important;
-  }
-
-  :global(.top-nav a.active) {
-    color: var(--tomato) !important;
-  }
-
-  :global(.top-nav a:hover) {
-    color: var(--tomato-light) !important;
-  }
-
-  :global(.top-nav a span) {
-    margin-top: 5px !important;
-  }
-
-  .hamburger {
-    background: none;
-    border: none;
-    cursor: pointer;
-    z-index: 20;
-  }
-
-  .bar {
-    display: block;
-    width: 25px;
-    height: 3px;
-    margin: 5px 0;
-    background-color: var(--white);
-  }
-
-  .nav-menu {
-    position: absolute;
-    top: 60px;
-    right: 0;
-    background-color: var(--charcoal);
-    padding: 0.5rem 1rem;
-    z-index: 15;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    width: auto;
-  }
-
-  :global(.nav-menu a) {
-    padding: 0.5rem;
-    text-decoration: none;
-    color: var(--carolina-blue);
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  :global(.nav-menu a:link) {
-    color: var(--carolina-blue);
-  }
-
-  :global(.nav-menu a:visited) {
-    color: var(--carolina-blue);
-  }
-
-  :global(.nav-menu a:hover) {
-    color: var(--tomato-light);
-  }
-
-  .nav-menu button {
-    padding: 0.5rem;
-    background: none;
-    border: none;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-  }
-
   .create-btn {
-    background-color: var(--tomato);
-    color: var(--background);
-    border: 2px solid var(--tomato);
-    padding: 10px 20px;
-    border-radius: 6px;
+    background-color: #007bff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 1rem;
   }
-
   .create-btn:hover {
-    background-color: var(--tomato-light);
-    border-color: var(--tomato-light);
+    background-color: #0056b3;
   }
-
   .logout-btn {
-    color: var(--carolina-blue);
+    background-color: #dc3545;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
   }
-
   .logout-btn:hover {
-    color: var(--tomato-light);
-  }
-
-  main {
-    flex: 1;
-    overflow-y: auto;
+    background-color: #c82333;
   }
 </style>

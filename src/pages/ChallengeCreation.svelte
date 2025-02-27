@@ -1,311 +1,100 @@
 <script>
-  import { onMount } from "svelte";
-  import { createEventDispatcher } from "svelte";
-  import { supabase } from "../supabase.js"; // Adjust path if different
+  import { showChallengeCreation, user } from "../stores.js";
+  import { supabase } from "../supabase.js";
 
-  const dispatch = createEventDispatcher();
-
-  export let show = false; // Controlled by parent (App.svelte)
-
-  // Form state
   let title = "";
-  let type = "Fitness";
-  let customType = "";
-  let maxParticipants = null;
-  let allowLateJoins = false;
-  let startDate = new Date().toISOString().slice(0, 16);
-  let endDate = new Date().toISOString().slice(0, 16);
-  let joinCost = 0.0;
-  let prizeDistribution = "even";
-  let scoringSystem = "points";
-  let customScoring = "";
+  let type = "Solo";
+  let participantsMax = 10;
+  let cost = 0;
+  let prizePool = 0;
+  let scoringType = "Points";
   let isPublic = true;
-  let tasks = [{ description: "", pointValue: 0, verificationMethod: "none" }];
-  let challengeTypes = ["Fitness", "Other"];
 
-  // Fetch challenge types from Supabase
-  async function fetchChallengeTypes() {
-    const { data, error } = await supabase
-      .from("challenge_types")
-      .select("name")
-      .order("usage_count", { ascending: false })
-      .limit(5);
-    if (!error) {
-      challengeTypes = [
-        "Fitness",
-        ...data.map((d) => d.name).filter((n) => n !== "Fitness"),
-        "Other",
-      ];
-    } else {
-      console.error("Error fetching challenge types:", error);
-    }
-  }
-
-  onMount(fetchChallengeTypes);
-
-  // Add a new task
-  function addTask() {
-    tasks = [
-      ...tasks,
-      { description: "", pointValue: 0, verificationMethod: "none" },
-    ];
-  }
-
-  // Remove a task
-  function removeTask(index) {
-    tasks = tasks.filter((_, i) => i !== index);
-  }
-
-  // Handle form submission
-  async function createChallenge(e) {
-    e.preventDefault();
-
-    let typeId;
-    if (type === "Other" && customType) {
-      const { data, error } = await supabase
-        .from("challenge_types")
-        .insert([{ name: customType }])
-        .select("id")
-        .single();
-      if (error) {
-        console.error("Error creating challenge type:", error);
-        return;
-      }
-      typeId = data.id;
-    } else {
-      const { data, error } = await supabase
-        .from("challenge_types")
-        .select("id")
-        .eq("name", type)
-        .single();
-      if (error) {
-        console.error("Error finding challenge type:", error);
-        return;
-      }
-      typeId = data.id;
-    }
-
-    await supabase.rpc("increment_usage_count", { type_id: typeId });
-
-    const challengeData = {
-      title,
-      type_id: typeId,
-      max_participants: maxParticipants || null,
-      allow_late_joins: allowLateJoins,
-      start_date: new Date(startDate).toISOString(),
-      end_date: new Date(endDate).toISOString(),
-      join_cost: parseFloat(joinCost),
-      prize_distribution: { type: prizeDistribution },
-      scoring_system:
-        scoringSystem === "custom"
-          ? { type: "custom", details: customScoring }
-          : { type: scoringSystem },
-      is_public: isPublic,
-      created_by: (await supabase.auth.getUser()).data.user.id,
-    };
-
-    const { data: challenge, error: challengeError } = await supabase
-      .from("challenges")
-      .insert([challengeData])
-      .select()
-      .single();
-    if (challengeError) {
-      console.error("Error creating challenge:", challengeError);
+  async function createChallenge() {
+    if (!$user) {
+      console.error("User not logged in");
       return;
     }
 
-    const taskInserts = tasks.map((task) => ({
-      challenge_id: challenge.id,
-      description: task.description,
-      point_value: task.pointValue || 0,
-      verification_method: task.verificationMethod,
-    }));
-    const { error: taskError } = await supabase
-      .from("tasks")
-      .insert(taskInserts);
-    if (taskError) {
-      console.error("Error creating tasks:", taskError);
-      return;
-    }
+    const { data, error } = await supabase.from("challenges").insert([
+      {
+        title,
+        type,
+        participants_max: participantsMax,
+        cost,
+        prize_pool: prizePool,
+        scoring_type: scoringType,
+        is_public: isPublic,
+        created_by: $user.id,
+        participants_current: 1,
+      },
+    ]);
 
-    show = false;
-    resetForm();
-    dispatch("challengeCreated", challenge);
+    if (error) {
+      console.error("Error creating challenge:", error);
+    } else {
+      console.log("Challenge created:", data);
+      $showChallengeCreation = false; // Close the modal
+    }
   }
 
-  // Reset form fields
-  function resetForm() {
-    title = "";
-    type = "Fitness";
-    customType = "";
-    maxParticipants = null;
-    allowLateJoins = false;
-    startDate = new Date().toISOString().slice(0, 16);
-    endDate = new Date().toISOString().slice(0, 16);
-    joinCost = 0.0;
-    prizeDistribution = "even";
-    scoringSystem = "points";
-    customScoring = "";
-    isPublic = true;
-    tasks = [{ description: "", pointValue: 0, verificationMethod: "none" }];
-  }
-
-  // Toggle form visibility with click or Escape key
-  function toggleForm(event) {
-    if (
-      event.type === "click" ||
-      (event.type === "keydown" && event.key === "Escape")
-    ) {
-      show = !show;
-      if (!show) resetForm();
-    }
+  function closeModal() {
+    $showChallengeCreation = false; // Close the modal
   }
 </script>
 
-<!-- Floating form -->
-{#if show}
-  <div
-    class="modal-overlay"
-    on:click={toggleForm}
-    on:keydown={toggleForm}
-    role="dialog"
-    aria-modal="true"
-    tabindex="0"
-  >
-    <div class="modal-content" on:click|stopPropagation>
-      <h2>Create a Challenge</h2>
-      <form on:submit={createChallenge}>
-        <!-- Title -->
-        <label>
-          Title:
-          <input type="text" bind:value={title} required />
-        </label>
-
-        <!-- Type -->
-        <label>
-          Type:
-          <select bind:value={type}>
-            {#each challengeTypes as challengeType}
-              <option value={challengeType}>{challengeType}</option>
-            {/each}
-          </select>
-          {#if type === "Other"}
-            <input
-              type="text"
-              bind:value={customType}
-              placeholder="Custom Type"
-              required
-            />
-          {/if}
-        </label>
-
-        <!-- Participants -->
-        <label>
-          Max Participants (optional):
-          <input type="number" bind:value={maxParticipants} min="1" />
-        </label>
-        <label>
-          Allow Late Joins:
-          <input type="checkbox" bind:checked={allowLateJoins} />
-        </label>
-
-        <!-- Dates -->
-        <label>
-          Start Date:
-          <input type="datetime-local" bind:value={startDate} required />
-        </label>
-        <label>
-          End Date:
-          <input type="datetime-local" bind:value={endDate} required />
-        </label>
-
-        <!-- Join Cost -->
-        <label>
-          Join Cost ($):
-          <input type="number" bind:value={joinCost} step="0.01" min="0" />
-        </label>
-
-        <!-- Prize Distribution -->
-        <label>
-          Prize Distribution:
-          <select bind:value={prizeDistribution}>
-            <option value="even">Even Split</option>
-            <option value="tournament">Tournament Style</option>
-          </select>
-        </label>
-
-        <!-- Scoring System -->
-        <label>
-          Scoring System:
-          <select bind:value={scoringSystem}>
-            <option value="points">Points</option>
-            {#if type === "Fitness"}
-              <option value="duration">Duration</option>
-              <option value="distance">Distance</option>
-              <option value="consistency">Consistency</option>
-              <option value="weight_loss">Weight Loss</option>
-            {/if}
-            <option value="custom">Custom</option>
-          </select>
-          {#if scoringSystem === "custom"}
-            <input
-              type="text"
-              bind:value={customScoring}
-              placeholder="Custom Scoring Details"
-              required
-            />
-          {/if}
-        </label>
-
-        <!-- Privacy -->
-        <label>
-          Privacy:
-          <select bind:value={isPublic}>
-            <option value={true}>Public</option>
-            <option value={false}>Private</option>
-          </select>
-        </label>
-
-        <!-- Tasks -->
-        <h3>Tasks</h3>
-        {#each tasks as task, i}
-          <div class="task">
-            <label>
-              Description:
-              <input type="text" bind:value={task.description} required />
-            </label>
-            <label>
-              Point Value:
-              <input type="number" bind:value={task.pointValue} min="0" />
-            </label>
-            <label>
-              Verification Method:
-              <select bind:value={task.verificationMethod}>
-                <option value="none">None</option>
-                <option value="photo">Photo Upload</option>
-                <option value="time">Time Entry</option>
-                <option value="distance">Distance Entry</option>
-              </select>
-            </label>
-            {#if tasks.length > 1}
-              <button type="button" on:click={() => removeTask(i)}
-                >Remove</button
-              >
-            {/if}
-          </div>
-        {/each}
-        <button type="button" on:click={addTask}>Add Task</button>
-
-        <!-- Submit -->
-        <button type="submit">Create Challenge</button>
-      </form>
-      <button on:click={toggleForm}>Close</button>
-    </div>
+<div class="modal">
+  <div class="modal-content">
+    <h2>Create a New Challenge</h2>
+    <form on:submit|preventDefault={createChallenge}>
+      <label>
+        Title:
+        <input type="text" bind:value={title} required />
+      </label>
+      <label>
+        Type:
+        <select bind:value={type}>
+          <option value="Solo">Solo</option>
+          <option value="Group">Group</option>
+        </select>
+      </label>
+      <label>
+        Max Participants:
+        <input type="number" bind:value={participantsMax} min="1" required />
+      </label>
+      <label>
+        Cost ($):
+        <input type="number" bind:value={cost} min="0" step="0.01" required />
+      </label>
+      <label>
+        Prize Pool ($):
+        <input
+          type="number"
+          bind:value={prizePool}
+          min="0"
+          step="0.01"
+          required
+        />
+      </label>
+      <label>
+        Scoring Type:
+        <select bind:value={scoringType}>
+          <option value="Points">Points</option>
+          <option value="Time">Time</option>
+        </select>
+      </label>
+      <label>
+        Public:
+        <input type="checkbox" bind:checked={isPublic} />
+      </label>
+      <button type="submit">Create Challenge</button>
+      <button type="button" on:click={closeModal}>Cancel</button>
+    </form>
   </div>
-{/if}
+</div>
 
 <style>
-  .modal-overlay {
+  .modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -317,53 +106,44 @@
     align-items: center;
     z-index: 1000;
   }
-
   .modal-content {
     background: white;
     padding: 20px;
     border-radius: 8px;
-    max-width: 500px;
     width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
+    max-width: 500px;
   }
-
   form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
   }
-
   label {
     display: flex;
     flex-direction: column;
     gap: 5px;
   }
-
   input,
   select {
     padding: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid #ccc;
     border-radius: 4px;
   }
-
-  .task {
-    border: 1px solid #eee;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-  }
-
   button {
-    background-color: #ff6347;
+    padding: 10px;
+    background-color: #007bff;
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
   }
-
   button:hover {
-    background-color: #ff8566;
+    background-color: #0056b3;
+  }
+  button[type="button"] {
+    background-color: #6c757d;
+  }
+  button[type="button"]:hover {
+    background-color: #5a6268;
   }
 </style>
