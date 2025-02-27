@@ -3,8 +3,8 @@
   import { supabase } from "../supabase.js";
   import ChallengeTable from "./ChallengeTable.svelte";
 
-  let allChallenges = [];
-  let challenges = []; // This will be the filtered list
+  let allChallenges = []; // Unfiltered list
+  let challenges = []; // Filtered list passed to table
   let loading = true;
   let error = null;
   let searchQuery = "";
@@ -50,25 +50,31 @@
   }
 
   // Filter challenges based on search query
-  $: {
+  function filterChallenges() {
     const query = searchQuery.toLowerCase().trim();
+    console.log("Filtering with query:", query); // Debug log
     if (!query) {
       challenges = [...allChallenges];
     } else {
       challenges = allChallenges.filter((challenge) => {
-        return (
+        const matches =
           challenge.title.toLowerCase().includes(query) ||
           challenge.type.toLowerCase().includes(query) ||
-          challenge.cost.toString().includes(query)
-        );
+          challenge.cost.toString().includes(query);
+        console.log("Challenge:", challenge.title, "Matches:", matches); // Debug log
+        return matches;
       });
     }
+    console.log("Filtered challenges:", challenges); // Debug log
   }
+
+  // Reactively update challenges when searchQuery changes
+  $: searchQuery, filterChallenges();
 </script>
 
 <div class="challenge-lobby">
   <h2>Challenge Lobby</h2>
-  <ChallengeTable {challenges} {loading} {error} />
+  <ChallengeTable {challenges} {loading} {error} bind:searchQuery />
 </div>
 
 <style>

@@ -4,10 +4,10 @@
   export let challenges = [];
   export let loading = false;
   export let error = null;
+  export let searchQuery = ""; // Bound to parent
 
   let sortColumn = null;
   let sortDirection = "asc";
-  let searchQuery = ""; // Local search query for consistency
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
