@@ -107,44 +107,59 @@
     align-items: center;
     z-index: 1000;
   }
+
   .modal-content {
-    background: white;
-    padding: 20px;
+    background: var(--background);
+    color: var(--text);
+    padding: 2rem;
     border-radius: 8px;
-    width: 90%;
     max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
+
   form {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 1rem;
   }
+
   label {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 0.5rem;
   }
+
   input,
   select {
-    padding: 8px;
-    border: 1px solid #ccc;
+    padding: 0.5rem;
+    border: 1px solid var(--light-gray);
     border-radius: 4px;
+    background-color: var(--white);
+    color: var(--charcoal);
   }
+
   button {
-    padding: 10px;
-    background-color: #007bff;
-    color: white;
+    background-color: var(--tomato);
+    color: var(--background);
     border: none;
-    border-radius: 5px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 1rem;
   }
+
   button:hover {
-    background-color: #0056b3;
+    background-color: var(--tomato-light);
   }
+
   button[type="button"] {
-    background-color: #6c757d;
+    background-color: var(--gray);
   }
+
   button[type="button"]:hover {
-    background-color: #5a6268;
+    background-color: darken(var(--gray), 10%);
   }
 </style>

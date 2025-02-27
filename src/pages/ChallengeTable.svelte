@@ -80,57 +80,76 @@
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
+    background-color: var(--background);
+    color: var(--text);
   }
+
   h2 {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
+    color: var(--text);
   }
+
   table {
     width: 100%;
     border-collapse: collapse;
+    background-color: var(--white);
+    color: var(--charcoal);
   }
+
   th,
   td {
-    padding: 12px;
+    padding: 0.75rem;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--light-gray);
   }
+
   th {
-    background-color: #f4f4f4;
+    background-color: var(--charcoal);
+    color: var(--white);
   }
+
   .error {
-    color: red;
+    color: var(--tomato);
     text-align: center;
+    padding: 1rem;
   }
+
   .no-challenges {
     text-align: center;
-    padding: 20px;
+    padding: 2rem;
+    color: var(--gray);
   }
+
   button {
-    padding: 8px 16px;
-    background-color: #007bff;
-    color: white;
+    background-color: var(--tomato);
+    color: var(--background);
     border: none;
-    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 1rem;
   }
+
   button:disabled {
-    background-color: #ccc;
+    background-color: var(--gray);
     cursor: not-allowed;
   }
+
   button:hover:not(:disabled) {
-    background-color: #0056b3;
+    background-color: var(--tomato-light);
   }
+
   .create-btn {
-    background-color: #007bff;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 5px;
+    background-color: var(--tomato);
+    color: var(--background);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     cursor: pointer;
-    margin-left: 10px;
+    margin-left: 1rem;
   }
+
   .create-btn:hover {
-    background-color: #0056b3;
+    background-color: var(--tomato-light);
   }
 </style>
