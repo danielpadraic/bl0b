@@ -1,12 +1,13 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { navigate, Router, Route, Link } from "svelte-routing";
-  import { showChallengeCreation } from "./stores.js";
+  import { showChallengeCreation, user } from "./stores.js"; // Import user store
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
   import ChallengeCreation from "./pages/ChallengeCreation.svelte";
+  import Profile from "./pages/Profile.svelte";
   import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
@@ -22,7 +23,16 @@
     window.addEventListener("resize", handleResize);
     supabase.auth.onAuthStateChange((event, session) => {
       currentUser = session?.user ?? null;
+      $user = currentUser; // Update the user store
     });
+    // Check initial auth state
+    const {
+      data: { user: initialUser },
+    } = supabase.auth.getUser();
+    if (initialUser) {
+      currentUser = initialUser;
+      $user = initialUser;
+    }
   });
 
   onDestroy(() => {
@@ -42,6 +52,7 @@
   async function logout() {
     await supabase.auth.signOut();
     currentUser = null;
+    $user = null; // Clear user store
     navigate("/login");
     menuOpen = false;
   }
@@ -125,7 +136,7 @@
       <Route path="/" component={ChallengeLobby} />
       <Route path="/social" component={SocialFeed} />
       <Route path="/leaderboards" component={ChallengeLobby} />
-      <Route path="/profile" component={ChallengeLobby} />
+      <Route path="/profile" component={Profile} />
       <Route path="/tokens" component={ChallengeLobby} />
       <Route path="/signup" component={ChallengeLobby} />
       <Route path="/login" component={ChallengeLobby} />
