@@ -232,7 +232,7 @@
             <th>Participants</th><td
               >{challenge.participants_current ||
                 0}/{challenge.participants_max === 0
-                ? "Unlimited"
+                ? "∞"
                 : challenge.participants_max}</td
             >
             <th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td>
@@ -296,7 +296,8 @@
             <tr>
               <th>Action</th>
               <th>Frequency</th>
-              <th>Data Type</th>
+              <th>Verification Type</th>
+              <th>Attachment Required</th>
               <th>Notes</th>
               <th>Actions</th>
             </tr>
@@ -306,7 +307,8 @@
               <tr>
                 <td class="no-wrap">{task.action}</td>
                 <td>{task.frequency}</td>
-                <td>{task.data_type}</td>
+                <td>{task.verification_type}</td>
+                <td>{task.require_attachment ? "Yes" : "No"}</td>
                 <td>{task.notes || ""}</td>
                 <td>
                   {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}

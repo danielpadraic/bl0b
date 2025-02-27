@@ -10,12 +10,13 @@
   let frequency = "";
   let customValue = "";
   let customUnit = "days";
-  let dataType = "";
+  let verificationType = ""; // Changed from dataType
   let notes = "";
+  let requireAttachment = false; // New toggle state
   let errorMessage = "";
 
   async function createTask() {
-    if (!action || !frequency || !dataType) {
+    if (!action || !frequency || !verificationType) {
       errorMessage = "Please fill in all required fields.";
       return;
     }
@@ -33,8 +34,9 @@
       challenge_id: challengeId,
       action,
       frequency: finalFrequency,
-      data_type: dataType,
+      verification_type: verificationType, // Changed from data_type
       notes,
+      require_attachment: requireAttachment, // New field
     };
 
     const { error } = await supabase.from("tasks").insert([taskData]);
@@ -51,8 +53,9 @@
     frequency = "";
     customValue = "";
     customUnit = "days";
-    dataType = "";
+    verificationType = ""; // Changed from dataType
     notes = "";
+    requireAttachment = false; // Reset toggle
     errorMessage = "";
   }
 
@@ -105,15 +108,25 @@
       </div>
     {/if}
     <label>
-      Data Type:
-      <select bind:value={dataType} required>
-        <option value="">Select Data Type</option>
+      Verification Type:
+      <select bind:value={verificationType} required>
+        <option value="">Select Verification Type</option>
         <option value="Text Form">Text Form</option>
         <option value="Time Entry">Time Entry</option>
         <option value="Numerical Entry">Numerical Entry</option>
-        <option value="Attachment Upload">Attachment Upload</option>
         <option value="No Verification">No Verification</option>
       </select>
+    </label>
+    <label>
+      Require Attachment Upload:
+      <div class="toggle-switch">
+        <input
+          type="checkbox"
+          id="requireAttachment"
+          bind:checked={requireAttachment}
+        />
+        <label for="requireAttachment" class="slider"></label>
+      </div>
     </label>
     <label>
       Notes:
@@ -186,6 +199,53 @@
   textarea {
     resize: vertical;
     min-height: 100px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--gray);
+    transition: 0.4s;
+    border-radius: 20px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--white);
+    transition: 0.4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: var(--tomato);
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
   }
 
   .buttons {
