@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { createEventDispatcher } from "svelte";
-  import { supabase } from "../supabase.js"; // Adjust path to your Supabase client
+  import { supabase } from "../supabase.js"; // Adjust path if different
 
   const dispatch = createEventDispatcher();
 
@@ -59,7 +59,6 @@
   async function createChallenge(e) {
     e.preventDefault();
 
-    // Handle challenge type
     let typeId;
     if (type === "Other" && customType) {
       const { data, error } = await supabase
@@ -85,10 +84,8 @@
       typeId = data.id;
     }
 
-    // Update usage count
     await supabase.rpc("increment_usage_count", { type_id: typeId });
 
-    // Create challenge
     const challengeData = {
       title,
       type_id: typeId,
@@ -103,7 +100,7 @@
           ? { type: "custom", details: customScoring }
           : { type: scoringSystem },
       is_public: isPublic,
-      created_by: (await supabase.auth.getUser()).data.user.id, // Get authenticated user ID
+      created_by: (await supabase.auth.getUser()).data.user.id,
     };
 
     const { data: challenge, error: challengeError } = await supabase
@@ -116,7 +113,6 @@
       return;
     }
 
-    // Create tasks
     const taskInserts = tasks.map((task) => ({
       challenge_id: challenge.id,
       description: task.description,
@@ -131,7 +127,6 @@
       return;
     }
 
-    // Reset and close form
     showForm = false;
     resetForm();
     dispatch("challengeCreated", challenge);
@@ -154,10 +149,15 @@
     tasks = [{ description: "", pointValue: 0, verificationMethod: "none" }];
   }
 
-  // Toggle form visibility
-  function toggleForm() {
-    showForm = !showForm;
-    if (!showForm) resetForm();
+  // Toggle form visibility with click or Escape key
+  function toggleForm(event) {
+    if (
+      event.type === "click" ||
+      (event.type === "keydown" && event.key === "Escape")
+    ) {
+      showForm = !showForm;
+      if (!showForm) resetForm();
+    }
   }
 </script>
 
@@ -166,7 +166,14 @@
 
 <!-- Floating form -->
 {#if showForm}
-  <div class="modal-overlay" on:click={toggleForm}>
+  <div
+    class="modal-overlay"
+    on:click={toggleForm}
+    on:keydown={toggleForm}
+    role="dialog"
+    aria-modal="true"
+    tabindex="0"
+  >
     <div class="modal-content" on:click|stopPropagation>
       <h2>Create a Challenge</h2>
       <form on:submit={createChallenge}>
