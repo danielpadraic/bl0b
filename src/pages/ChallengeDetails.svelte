@@ -3,23 +3,27 @@
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
   import { navigate } from "svelte-routing";
+  import TaskCreation from "./TaskCreation.svelte";
 
   export let challengeId;
 
   let challenge = null;
   let contestants = [];
+  let tasks = [];
   let loading = true;
   let error = null;
   let editing = false;
   let editedChallenge = {};
   let timeLeft = "";
   let timer = null;
+  let showTaskCreation = false;
 
   onMount(async () => {
     console.log("ChallengeDetails mounted with challengeId:", challengeId);
     await fetchChallengeDetails();
     if (challenge) {
       await fetchContestants();
+      await fetchTasks();
       startCountdown();
     } else {
       console.log("No challenge found, skipping further fetches");
@@ -41,7 +45,7 @@
       console.log("Fetched challenge data:", data, "Error:", fetchError);
       if (fetchError) throw fetchError;
       challenge = data;
-      editedChallenge = { ...data }; // Clone for editing
+      editedChallenge = { ...data };
     } catch (err) {
       error = err.message;
       console.error("Fetch challenge error:", err);
@@ -73,7 +77,7 @@
           return {
             user_id: participant.user_id,
             username: profile ? profile.username : "Unknown",
-            position: Math.floor(Math.random() * 100), // Placeholder
+            position: Math.floor(Math.random() * 100),
           };
         });
 
@@ -98,6 +102,22 @@
     }
   }
 
+  async function fetchTasks() {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("challenge_id", challengeId)
+        .order("created_at", { ascending: true });
+      console.log("Fetched tasks:", data, "Error:", fetchError);
+      if (fetchError) throw fetchError;
+      tasks = data;
+    } catch (err) {
+      error = err.message;
+      console.error("Fetch tasks error:", err);
+    }
+  }
+
   function startCountdown() {
     if (!challenge || !challenge.start_datetime || !challenge.end_datetime)
       return;
@@ -105,7 +125,7 @@
     const start = new Date(challenge.start_datetime);
     const now = new Date();
 
-    if (now < start) return; // Before start, no countdown
+    if (now < start) return;
     if (now >= end) {
       timeLeft = "Challenge Ended";
       return;
@@ -131,11 +151,32 @@
 
   function toggleEdit() {
     editing = !editing;
-    if (!editing) editedChallenge = { ...challenge }; // Reset on cancel
+    if (!editing) editedChallenge = { ...challenge };
   }
 
   async function saveChallenge() {
     try {
+      const now = new Date();
+      const start = editedChallenge.start_datetime
+        ? new Date(editedChallenge.start_datetime)
+        : null;
+      const end = editedChallenge.end_datetime
+        ? new Date(editedChallenge.end_datetime)
+        : null;
+
+      if (start && start < now) {
+        error = "Start date and time cannot be in the past.";
+        return;
+      }
+      if (end && end < now) {
+        error = "End date and time cannot be in the past.";
+        return;
+      }
+      if (start && end && end <= start) {
+        error = "End date and time must be after start date and time.";
+        return;
+      }
+
       let coverUrl = editedChallenge.cover_media;
       if (editedChallenge.newCoverFile) {
         const fileName = `${Date.now()}-${editedChallenge.newCoverFile.name}`;
@@ -168,7 +209,7 @@
         .eq("id", challengeId);
       if (updateError) throw updateError;
 
-      await fetchChallengeDetails(); // Refresh data
+      await fetchChallengeDetails();
       editing = false;
     } catch (err) {
       error = err.message;
@@ -189,6 +230,54 @@
       .from("challenge_participants")
       .insert([{ challenge_id: challengeId, user_id: $user.id }])
       .then(() => fetchContestants());
+  }
+
+  function toggleTaskCreation() {
+    showTaskCreation = !showTaskCreation;
+  }
+
+  async function handleTaskCreated() {
+    await fetchTasks();
+  }
+
+  async function cancelChallenge() {
+    if (
+      confirm(
+        "Are you sure you want to cancel this challenge? This will delete all associated data."
+      )
+    ) {
+      try {
+        const { error: deleteError } = await supabase
+          .from("challenges")
+          .delete()
+          .eq("id", challengeId);
+        if (deleteError) throw deleteError;
+        navigate("/");
+      } catch (err) {
+        error = err.message;
+        console.error("Cancel challenge error:", err);
+      }
+    }
+  }
+
+  async function editTask(taskId) {
+    console.log("Edit task:", taskId);
+  }
+
+  async function removeTask(taskId) {
+    if (confirm("Are you sure you want to remove this task?")) {
+      try {
+        const { error: deleteError } = await supabase
+          .from("tasks")
+          .delete()
+          .eq("id", taskId);
+        if (deleteError) throw deleteError;
+        await fetchTasks();
+      } catch (err) {
+        error = err.message;
+        console.error("Remove task error:", err);
+      }
+    }
   }
 </script>
 
@@ -350,8 +439,26 @@
             <span>Time Left: {timeLeft}</span>
           </div>
         {/if}
+        {#if $user && $user.id === challenge.creator_id}
+          <div class="action-buttons">
+            <button class="add-task-btn" on:click={toggleTaskCreation}
+              >Add Task</button
+            >
+            <button class="cancel-btn" on:click={cancelChallenge}
+              >Cancel Challenge</button
+            >
+          </div>
+        {/if}
       {/if}
     </div>
+
+    {#if showTaskCreation}
+      <TaskCreation
+        {challengeId}
+        on:taskCreated={handleTaskCreated}
+        on:close={toggleTaskCreation}
+      />
+    {/if}
 
     {#if challenge.cover_media}
       <div class="cover-media">
@@ -393,8 +500,33 @@
         <button on:click={joinChallenge}>Join Challenge</button>
       {/if}
     </div>
-  {:else}
-    <p>Challenge not found.</p>
+
+    <div class="tasks">
+      <h2>Tasks</h2>
+      {#if tasks.length > 0}
+        <ul>
+          {#each tasks as task}
+            <li>
+              <strong>{task.action}</strong> - {task.frequency} - {task.data_type}
+              {#if task.notes}
+                <p>{task.notes}</p>
+              {/if}
+              {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
+                <button class="edit-task-btn" on:click={() => editTask(task.id)}
+                  >Edit</button
+                >
+                <button
+                  class="remove-task-btn"
+                  on:click={() => removeTask(task.id)}>Remove</button
+                >
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p>No tasks yet.</p>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -421,7 +553,9 @@
     margin-bottom: 1.5rem;
   }
 
-  .edit-btn {
+  .edit-btn,
+  .add-task-btn,
+  .cancel-btn {
     background-color: var(--carolina-blue);
     color: var(--white);
     padding: 0.5rem 1rem;
@@ -429,12 +563,22 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    margin-bottom: 1rem;
+    margin: 0.5rem;
   }
 
-  .edit-btn:hover {
+  .edit-btn:hover,
+  .add-task-btn:hover,
+  .cancel-btn:hover {
     background-color: #87ceeb;
     transform: translateY(-2px);
+  }
+
+  .cancel-btn {
+    background-color: #e74c3c;
+  }
+
+  .cancel-btn:hover {
+    background-color: #c0392b;
   }
 
   .header-table table {
@@ -542,6 +686,13 @@
     background-color: var(--light-gray);
   }
 
+  .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
   .countdown {
     margin-top: 1rem;
     font-size: 1.2rem;
@@ -567,7 +718,8 @@
     transform: scale(1.02);
   }
 
-  .contestants {
+  .contestants,
+  .tasks {
     margin-top: 2rem;
   }
 
@@ -611,6 +763,47 @@
   .contestants-table tr:hover td {
     background-color: var(--light-gray);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .tasks ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .tasks li {
+    background: var(--white);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tasks li strong {
+    font-size: 1.1rem;
+    color: var(--charcoal);
+  }
+
+  .tasks li p {
+    margin: 0.5rem 0;
+    color: var(--gray);
+  }
+
+  .edit-task-btn,
+  .remove-task-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+  }
+
+  .remove-task-btn {
+    background-color: #e74c3c;
+  }
+
+  .remove-task-btn:hover {
+    background-color: #c0392b;
   }
 
   button {
