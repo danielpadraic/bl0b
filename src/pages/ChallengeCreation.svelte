@@ -4,7 +4,7 @@
   import { v4 as uuidv4 } from "uuid";
 
   // Form variables
-  let title = ""; // Changed from challengeName to title
+  let title = "";
   let challengeType = "Fitness";
   let otherType = "";
   let maxParticipants = 0;
@@ -23,7 +23,6 @@
 
     // Validate required fields
     if (!title) {
-      // Updated from challengeName
       alert("Challenge Title is required.");
       return;
     }
@@ -61,8 +60,8 @@
 
     // Prepare data for Supabase
     const challengeData = {
-      title, // Updated from challenge_name to title
-      challenge_type: finalChallengeType,
+      title,
+      type: finalChallengeType, // Changed from challenge_type to type
       max_participants: maxParticipants === 0 ? null : maxParticipants,
       buy_in_cost: parseFloat(buyInCost) || 0,
       additional_prize_money: parseFloat(additionalPrizeMoney) || 0,
@@ -92,7 +91,7 @@
 
   // Reset form fields
   function resetForm() {
-    title = ""; // Updated from challengeName
+    title = "";
     challengeType = "Fitness";
     otherType = "";
     maxParticipants = 0;
@@ -130,7 +129,7 @@
     <div class="modal-content" on:click|stopPropagation>
       <h2>Create a New Challenge</h2>
       <form on:submit={createChallenge}>
-        <!-- Challenge Name (now Title) -->
+        <!-- Challenge Title -->
         <label>
           Challenge Title:
           <input
