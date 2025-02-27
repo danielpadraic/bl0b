@@ -53,8 +53,8 @@
       // Pre-fill form with challenge data in edit mode
       title = challenge.title || "";
       challengeType =
-        challenge.type === "Other" ? "Other" : challenge.type || "Fitness";
-      otherType = challenge.type === "Other" ? challenge.type : "";
+        challenge.type && challenge.type !== "Fitness" ? "Other" : "Fitness";
+      otherType = challengeType === "Other" ? challenge.type : "";
       maxParticipants = challenge.participants_max || 0;
       creatorParticipating = challenge.creator_participating ? "yes" : "no";
       buyInCost = challenge.buy_in_cost || 0;
@@ -63,11 +63,16 @@
       prizeAmount = challenge.prize_amount || 0;
       numberOfWinners = challenge.number_of_winners || 1;
       scoringType =
-        challenge.scoring_type === "Other"
+        challenge.scoring_type &&
+        challenge.scoring_type !== "Consistency" &&
+        challenge.scoring_type !== "Time (High)" &&
+        challenge.scoring_type !== "Time (Low)" &&
+        challenge.scoring_type !== "Distance" &&
+        challenge.scoring_type !== "Points" &&
+        challenge.scoring_type !== "None"
           ? "Other"
           : challenge.scoring_type || "Consistency";
-      otherScoringType =
-        challenge.scoring_type === "Other" ? challenge.scoring_type : "";
+      otherScoringType = scoringType === "Other" ? challenge.scoring_type : "";
       isPrivate = challenge.is_private || false;
       coverFile = null; // Reset file input; can't pre-fill
       startDateTime = challenge.start_datetime
@@ -78,22 +83,24 @@
         : "";
     } else {
       // Restore persisted data for create mode
-      $formData.title = title;
-      $formData.challengeType = challengeType;
-      $formData.otherType = otherType;
-      $formData.maxParticipants = maxParticipants;
-      $formData.creatorParticipating = creatorParticipating;
-      $formData.buyInCost = buyInCost;
-      $formData.additionalPrizeMoney = additionalPrizeMoney;
-      $formData.prizeType = prizeType;
-      $formData.prizeAmount = prizeAmount;
-      $formData.numberOfWinners = numberOfWinners;
-      $formData.scoringType = scoringType;
-      $formData.otherScoringType = otherScoringType;
-      $formData.isPrivate = isPrivate;
-      $formData.coverFile = coverFile;
-      $formData.startDateTime = startDateTime;
-      $formData.endDateTime = endDateTime;
+      formData.subscribe((data) => {
+        title = data.title;
+        challengeType = data.challengeType;
+        otherType = data.otherType;
+        maxParticipants = data.maxParticipants;
+        creatorParticipating = data.creatorParticipating;
+        buyInCost = data.buyInCost;
+        additionalPrizeMoney = data.additionalPrizeMoney;
+        prizeType = data.prizeType;
+        prizeAmount = data.prizeAmount;
+        numberOfWinners = data.numberOfWinners;
+        scoringType = data.scoringType;
+        otherScoringType = data.otherScoringType;
+        isPrivate = data.isPrivate;
+        coverFile = data.coverFile;
+        startDateTime = data.startDateTime;
+        endDateTime = data.endDateTime;
+      });
     }
   });
 
@@ -347,6 +354,7 @@
                 type="radio"
                 bind:group={creatorParticipating}
                 value="yes"
+                checked={creatorParticipating === "yes"}
               />
               Yes
             </label>
@@ -355,6 +363,7 @@
                 type="radio"
                 bind:group={creatorParticipating}
                 value="no"
+                checked={creatorParticipating === "no"}
               />
               No
             </label>

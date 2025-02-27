@@ -330,7 +330,7 @@
     </div>
 
     {#if challenge.cover_media}
-      <div class="cover-media">
+      <div class="cover-container">
         {#if challenge.cover_media.match(/\.(jpg|jpeg|png|gif)$/i)}
           <img src={challenge.cover_media} alt="Challenge Cover" />
         {:else if challenge.cover_media.match(/\.(mp4|webm)$/i)}
@@ -480,21 +480,27 @@
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
   }
 
-  .cover-media {
-    margin: 2rem 0;
-    text-align: center;
-  }
-
-  .cover-media img,
-  .cover-media video {
-    max-width: 100%;
+  .cover-container {
+    margin: 2rem auto;
+    max-width: 700px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
     border-radius: 8px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .cover-container img,
+  .cover-container video {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
     transition: transform 0.3s ease;
   }
 
-  .cover-media img:hover,
-  .cover-media video:hover {
+  .cover-container img:hover,
+  .cover-container video:hover {
     transform: scale(1.02);
   }
 
