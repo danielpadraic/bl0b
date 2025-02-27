@@ -1,76 +1,58 @@
 <script>
   import { onMount } from "svelte";
-  import { user } from "../stores/user.js";
   import { supabase } from "../supabase.js";
   import ChallengeTable from "./ChallengeTable.svelte";
-  import ChannelSidebar from "./ChannelSidebar.svelte";
 
   let challenges = [];
-  let showSidebar = false;
-  let selectedChannel = null;
   let loading = true;
   let error = null;
 
   onMount(async () => {
-    const { data, error: fetchError } = await supabase
-      .from("challenges")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (fetchError) {
-      error = fetchError.message;
-    } else {
-      challenges = data;
-    }
-    loading = false;
+    await fetchChallenges();
   });
 
-  function toggleSidebar() {
-    showSidebar = !showSidebar;
-  }
+  async function fetchChallenges() {
+    try {
+      loading = true;
+      const { data, error: fetchError } = await supabase
+        .from("challenges")
+        .select(
+          "title, type, max_participants, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
+        )
+        .order("created_at", { ascending: false });
 
-  function handleChannelSelect(event) {
-    selectedChannel = event.detail;
-    showSidebar = false;
+      if (fetchError) throw fetchError;
+
+      challenges = data.map((challenge) => ({
+        title: challenge.title,
+        type: challenge.type,
+        participants_max: challenge.max_participants || "Unlimited", // Handle null as "Unlimited"
+        cost: challenge.buy_in_cost || 0,
+        prize_pool:
+          (challenge.buy_in_cost || 0) +
+          (challenge.additional_prize_money || 0), // Placeholder calculation
+        scoring_type: challenge.scoring_type || "None",
+        is_public: !challenge.is_private, // Inverse of is_private
+        participants_current: challenge.participants_current || 0,
+      }));
+      error = null;
+    } catch (err) {
+      error = err.message;
+      console.error("Error fetching challenges:", err);
+    } finally {
+      loading = false;
+    }
   }
 </script>
 
 <div class="challenge-lobby">
-  <main class="main-content">
-    {#if showSidebar}
-      <ChannelSidebar on:select={handleChannelSelect} />
-    {/if}
-    <section class="challenge-table">
-      {#if !$user}
-        <p class="signup-prompt">
-          Please <a href="/signup">sign up</a> to join challenges or participate!
-        </p>
-      {/if}
-      <ChallengeTable {challenges} {loading} {error} />
-    </section>
-  </main>
+  <ChallengeTable {challenges} {loading} {error} />
 </div>
 
 <style>
   .challenge-lobby {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-
-  .main-content {
-    flex: 1;
-    overflow: hidden;
-    margin-top: 60px; /* Space for header */
-  }
-
-  .challenge-table {
-    flex: 2;
-    overflow-y: auto;
-  }
-
-  .signup-prompt {
-    text-align: center;
     padding: 1rem;
+    background-color: var(--background);
+    color: var(--text);
   }
 </style>

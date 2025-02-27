@@ -61,7 +61,8 @@
                 <button
                   on:click={() => joinChallenge(challenge.id)}
                   disabled={challenge.participants_current >=
-                    challenge.participants_max}
+                    challenge.participants_max &&
+                    challenge.participants_max !== "Unlimited"}
                 >
                   Join
                 </button>
