@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { navigate, Router, Route, Link } from "svelte-routing";
-  import { showChallengeCreation, user } from "./stores.js"; // Import user store
+  import { showChallengeCreation, user } from "./stores.js";
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
@@ -23,9 +23,8 @@
     window.addEventListener("resize", handleResize);
     supabase.auth.onAuthStateChange((event, session) => {
       currentUser = session?.user ?? null;
-      $user = currentUser; // Update the user store
+      $user = currentUser;
     });
-    // Check initial auth state
     const {
       data: { user: initialUser },
     } = supabase.auth.getUser();
@@ -41,18 +40,16 @@
 
   function toggleMenu() {
     menuOpen = !menuOpen;
-    console.log("Toggling menu, new state:", menuOpen);
   }
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
-    console.log("Toggling challenge creation modal:", $showChallengeCreation);
   }
 
   async function logout() {
     await supabase.auth.signOut();
     currentUser = null;
-    $user = null; // Clear user store
+    $user = null;
     navigate("/login");
     menuOpen = false;
   }
@@ -174,6 +171,8 @@
     color: var(--white);
     width: 100%;
     z-index: 10;
+    position: sticky;
+    top: 0;
   }
 
   .logo img {
@@ -293,6 +292,6 @@
   main {
     flex: 1;
     padding: 1rem;
-    overflow-y: auto;
+    overflow-y: auto; /* Ensure single scrollable content area */
   }
 </style>
