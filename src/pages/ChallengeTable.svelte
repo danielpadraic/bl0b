@@ -13,17 +13,12 @@
 
   let sortColumn = null;
   let sortDirection = "asc";
+  let resizing = false;
+  let startX, startWidth, targetTh;
 
   const tabs = ["All", "Fitness", "Other", "Friends", "Public", "Private"];
 
-  function toggleChallengeCreation() {
-    dispatch("onCreate");
-  }
-
-  function joinChallenge(challengeId) {
-    dispatch("onJoin", challengeId);
-  }
-
+  // Sorting function
   function sortChallenges(column) {
     if (sortColumn === column) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
@@ -55,6 +50,53 @@
     });
   }
 
+  // Resizing functions
+  function startResize(event, th) {
+    event.preventDefault(); // Prevent text selection
+    resizing = true;
+    startX = event.pageX;
+    startWidth = th.getBoundingClientRect().width;
+    targetTh = th;
+    console.log("Start resizing:", { startX, startWidth });
+  }
+
+  function resize(event) {
+    if (resizing && targetTh) {
+      const width = startWidth + (event.pageX - startX);
+      targetTh.style.width = `${Math.max(width, 50)}px`; // Minimum width of 50px
+      console.log("Resizing to:", targetTh.style.width);
+    }
+  }
+
+  function stopResize() {
+    if (resizing) {
+      console.log("Stopped resizing, final width:", targetTh.style.width);
+      resizing = false;
+      targetTh = null;
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResize);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResize);
+    };
+  });
+
+  function toggleChallengeCreation() {
+    console.log("Create Challenge clicked, user:", $user);
+    dispatch("onCreate");
+    console.log("Dispatched onCreate event");
+  }
+
+  function joinChallenge(challengeId) {
+    console.log("Join clicked for challenge:", challengeId, "user:", $user);
+    dispatch("onJoin", challengeId);
+    console.log("Dispatched onJoin event for challenge:", challengeId);
+  }
+
   $: filteredChallenges = challenges.filter((challenge) => {
     if (selectedTab === "All") return true;
     if (selectedTab === "Fitness") return challenge.type === "Fitness";
@@ -62,7 +104,7 @@
     if (selectedTab === "Public") return challenge.is_public;
     if (selectedTab === "Private") return !challenge.is_public;
     if (selectedTab === "Friends") {
-      // Placeholder: Add logic for friends' challenges later
+      // Placeholder for friends' challenges
       return false;
     }
     return true;
@@ -85,16 +127,57 @@
     <table>
       <thead>
         <tr>
-          <th on:click={() => sortChallenges("title")}>Title</th>
-          <th on:click={() => sortChallenges("type")}>Type</th>
-          <th on:click={() => sortChallenges("participants_current")}
-            >Players</th
-          >
-          <th on:click={() => sortChallenges("cost")}>Cost</th>
-          <th on:click={() => sortChallenges("prize_pool")}>Prize</th>
-          <th on:click={() => sortChallenges("scoring_type")}>Scoring</th>
-          <th on:click={() => sortChallenges("is_public")}>Access</th>
+          <th on:click={() => sortChallenges("title")}>
+            Title
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
+          <th on:click={() => sortChallenges("type")}>
+            Type
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
+          <th on:click={() => sortChallenges("participants_current")}>
+            Players
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
+          <th on:click={() => sortChallenges("cost")}>
+            Cost
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
+          <th on:click={() => sortChallenges("prize_pool")}>
+            Prize
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
+          <th on:click={() => sortChallenges("scoring_type")}>
+            Scoring
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
+          <th on:click={() => sortChallenges("is_public")}>
+            Access
+            <div
+              class="resize-handle"
+              on:mousedown={(e) => startResize(e, e.target.parentElement)}
+            ></div>
+          </th>
           <th>Join</th>
+          <!-- No resize handle for action column -->
         </tr>
       </thead>
       <tbody>
@@ -202,16 +285,19 @@
 
   table {
     width: 100%;
-    min-width: 600px;
+    table-layout: fixed; /* Enables explicit width control */
     border-collapse: collapse;
     font-size: 0.8rem;
   }
 
   th,
   td {
-    padding: 6px 10px;
+    padding: 6px 10px; /* Padding on either side */
     text-align: left;
     border-bottom: 1px solid var(--light-gray);
+    white-space: nowrap; /* Prevents text wrapping */
+    overflow: hidden; /* Hides overflowing content */
+    text-overflow: ellipsis; /* Adds ellipsis for hidden text */
   }
 
   th {
@@ -220,9 +306,25 @@
     font-size: 0.85rem;
     cursor: pointer;
     transition: background-color 0.3s;
+    position: relative; /* For resize handle */
+    width: auto; /* Default to content width */
   }
 
   th:hover {
+    background-color: var(--tomato-light);
+  }
+
+  .resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+  }
+
+  .resize-handle:hover {
     background-color: var(--tomato-light);
   }
 
