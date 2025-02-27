@@ -1,12 +1,12 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { navigate, Router, Route, Link } from "svelte-routing";
-  import { user, showChallengeCreation } from "./stores.js"; // Import the store
+  import { showChallengeCreation } from "./stores.js";
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
-  import ChallengeCreation from "./pages/ChallengeCreation.svelte"; // Ensure this import exists
+  import ChallengeCreation from "./pages/ChallengeCreation.svelte";
   import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
@@ -19,11 +19,9 @@
   }
 
   onMount(() => {
-    currentUser = $user;
     window.addEventListener("resize", handleResize);
     supabase.auth.onAuthStateChange((event, session) => {
       currentUser = session?.user ?? null;
-      $user = currentUser;
     });
   });
 
@@ -35,9 +33,12 @@
     menuOpen = !menuOpen;
   }
 
+  function toggleChallengeCreation() {
+    $showChallengeCreation = !$showChallengeCreation;
+  }
+
   async function logout() {
     await supabase.auth.signOut();
-    $user = null;
     currentUser = null;
     navigate("/login");
     menuOpen = false;
@@ -46,10 +47,6 @@
   function goHome() {
     navigate("/");
     menuOpen = false;
-  }
-
-  function toggleChallengeCreation() {
-    $showChallengeCreation = !$showChallengeCreation; // Toggle the modal state
   }
 </script>
 
@@ -140,17 +137,81 @@
       />
     {/if}
 
-    <!-- Render the ChallengeCreation modal -->
     {#if $showChallengeCreation}
-      <ChallengeCreation />
+      <ChallengeCreation
+        on:challengeCreated={() => ($showChallengeCreation = false)}
+      />
     {/if}
   </Router>
 </div>
 
 <style>
-  /* Keep your existing styles */
   .app {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #f8f9fa;
+  }
+  .logo img {
+    height: 40px;
+    cursor: pointer;
+  }
+  .top-nav {
+    display: flex;
+    gap: 20px;
+  }
+  .top-nav a {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    color: #333;
+  }
+  .top-nav a.active {
+    color: #007bff;
+    font-weight: bold;
+  }
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .bar {
+    width: 25px;
+    height: 3px;
+    background-color: #333;
+  }
+  .nav-menu {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 20px;
+    border-radius: 5px;
+    z-index: 1000;
+  }
+  .nav-menu a {
+    display: block;
+    margin: 10px 0;
+    color: white;
+    text-decoration: none;
+  }
+  .dark-bg-text {
+    color: white;
+  }
+  main {
+    flex: 1;
+    padding: 20px;
   }
   .create-btn {
     background-color: #007bff;

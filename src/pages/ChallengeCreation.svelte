@@ -1,5 +1,5 @@
 <script>
-  import { showChallengeCreation, user } from "../stores.js";
+  import { showChallengeCreation } from "../stores.js";
   import { supabase } from "../supabase.js";
 
   let title = "";
@@ -11,7 +11,8 @@
   let isPublic = true;
 
   async function createChallenge() {
-    if (!$user) {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) {
       console.error("User not logged in");
       return;
     }
@@ -25,7 +26,7 @@
         prize_pool: prizePool,
         scoring_type: scoringType,
         is_public: isPublic,
-        created_by: $user.id,
+        created_by: user.id,
         participants_current: 1,
       },
     ]);
@@ -34,12 +35,12 @@
       console.error("Error creating challenge:", error);
     } else {
       console.log("Challenge created:", data);
-      $showChallengeCreation = false; // Close the modal
+      $showChallengeCreation = false;
     }
   }
 
   function closeModal() {
-    $showChallengeCreation = false; // Close the modal
+    $showChallengeCreation = false;
   }
 </script>
 

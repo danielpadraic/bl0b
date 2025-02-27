@@ -1,18 +1,16 @@
 <script>
-  import { user, showChallengeCreation } from "../stores.js"; // Import the store
-  import { navigate } from "svelte-routing";
+  import { showChallengeCreation } from "../stores.js";
 
   export let challenges = [];
   export let loading = false;
   export let error = null;
 
-  function joinChallenge(challengeId) {
-    if (!$user) return;
-    console.log(`Joining challenge ${challengeId}`);
+  function toggleChallengeCreation() {
+    $showChallengeCreation = !$showChallengeCreation;
   }
 
-  function toggleChallengeCreation() {
-    $showChallengeCreation = true; // Open the modal
+  function joinChallenge(challengeId) {
+    console.log(`Joining challenge ${challengeId}`);
   }
 </script>
 
@@ -28,19 +26,17 @@
         <th>Prize Pool</th>
         <th>Scoring Type</th>
         <th>Public/Private</th>
-        {#if $user}
-          <th>Action</th>
-        {/if}
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
       {#if loading}
         <tr>
-          <td colspan={$user ? 8 : 7}>Loading challenges...</td>
+          <td colspan="8">Loading challenges...</td>
         </tr>
       {:else if error}
         <tr>
-          <td colspan={$user ? 8 : 7} class="error">Error: {error}</td>
+          <td colspan="8" class="error">Error: {error}</td>
         </tr>
       {:else if challenges.length > 0}
         {#each challenges as challenge}
@@ -54,22 +50,20 @@
             <td>${challenge.prize_pool.toFixed(2)}</td>
             <td>{challenge.scoring_type}</td>
             <td>{challenge.is_public ? "Public" : "Private"}</td>
-            {#if $user}
-              <td>
-                <button
-                  on:click={() => joinChallenge(challenge.id)}
-                  disabled={challenge.participants_current >=
-                    challenge.participants_max}
-                >
-                  Join
-                </button>
-              </td>
-            {/if}
+            <td>
+              <button
+                on:click={() => joinChallenge(challenge.id)}
+                disabled={challenge.participants_current >=
+                  challenge.participants_max}
+              >
+                Join
+              </button>
+            </td>
           </tr>
         {/each}
       {:else}
         <tr>
-          <td colspan={$user ? 8 : 7} class="no-challenges">
+          <td colspan="8" class="no-challenges">
             No Challenges Available
             <button on:click={toggleChallengeCreation} class="create-btn"
               >Create Challenge</button
@@ -82,7 +76,51 @@
 </div>
 
 <style>
-  /* Keep your existing styles */
+  .challenge-table {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h2 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+  th {
+    background-color: #f4f4f4;
+  }
+  .error {
+    color: red;
+    text-align: center;
+  }
+  .no-challenges {
+    text-align: center;
+    padding: 20px;
+  }
+  button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  button:hover:not(:disabled) {
+    background-color: #0056b3;
+  }
   .create-btn {
     background-color: #007bff;
     color: white;
