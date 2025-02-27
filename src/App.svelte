@@ -31,14 +31,12 @@
 
   function toggleMenu() {
     menuOpen = !menuOpen;
+    console.log("Toggling menu, new state:", menuOpen);
   }
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
-  }
-
-  function openChallengeCreation() {
-    $showChallengeCreation = true;
+    console.log("Toggling challenge creation modal:", $showChallengeCreation);
   }
 
   async function logout() {
@@ -142,9 +140,7 @@
     {/if}
 
     {#if $showChallengeCreation}
-      <ChallengeCreation
-        on:challengeCreated={() => ($showChallengeCreation = false)}
-      />
+      <ChallengeCreation />
     {/if}
   </Router>
 </div>
@@ -176,19 +172,19 @@
 
   .top-nav {
     display: flex;
-    flex-direction: row; /* Horizontal layout */
-    justify-content: space-evenly; /* Even spacing */
+    flex-direction: row;
+    justify-content: space-evenly;
     align-items: center;
-    gap: 2rem; /* Consistent spacing */
+    gap: 2rem;
     width: 100%;
-    max-width: 400px; /* Limits width for better spacing */
+    max-width: 400px;
   }
 
   :global(.top-nav a) {
     color: var(--carolina-blue) !important;
     text-decoration: none !important;
     display: flex;
-    flex-direction: column !important; /* Keeps icon above text */
+    flex-direction: column !important;
     align-items: center !important;
     font-size: clamp(0.8rem, 2vw, 1rem) !important;
   }

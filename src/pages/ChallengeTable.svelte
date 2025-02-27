@@ -7,6 +7,10 @@
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
+    console.log(
+      "Toggling challenge creation modal from table:",
+      $showChallengeCreation
+    );
   }
 
   function joinChallenge(challengeId) {
@@ -119,8 +123,8 @@
   }
 
   th {
-    background-color: var(--carolina-blue); /* Updated header background */
-    color: var(--charcoal); /* Updated header text color */
+    background-color: var(--carolina-blue);
+    color: var(--charcoal);
     font-size: clamp(0.8rem, 2.5vw, 1.2rem);
     text-align: center;
   }

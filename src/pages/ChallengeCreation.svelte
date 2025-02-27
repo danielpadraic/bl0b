@@ -4,7 +4,7 @@
   import { v4 as uuidv4 } from "uuid";
 
   // Form variables
-  let challengeName = "";
+  let title = ""; // Changed from challengeName to title
   let challengeType = "Fitness";
   let otherType = "";
   let maxParticipants = 0;
@@ -22,8 +22,9 @@
     e.preventDefault();
 
     // Validate required fields
-    if (!challengeName) {
-      alert("Challenge Name is required.");
+    if (!title) {
+      // Updated from challengeName
+      alert("Challenge Title is required.");
       return;
     }
     if (challengeType === "Other" && !otherType) {
@@ -60,9 +61,9 @@
 
     // Prepare data for Supabase
     const challengeData = {
-      challenge_name: challengeName,
+      title, // Updated from challenge_name to title
       challenge_type: finalChallengeType,
-      max_participants: maxParticipants === 0 ? null : maxParticipants, // Null for unlimited
+      max_participants: maxParticipants === 0 ? null : maxParticipants,
       buy_in_cost: parseFloat(buyInCost) || 0,
       additional_prize_money: parseFloat(additionalPrizeMoney) || 0,
       prize_type: prizeType,
@@ -73,7 +74,7 @@
       scoring_type: finalScoringType,
       is_private: isPrivate,
       invitation_link: invitationLink,
-      created_by: (await supabase.auth.getUser()).data.user?.id, // Assumes user is logged in
+      created_by: (await supabase.auth.getUser()).data.user?.id,
     };
 
     // Insert into Supabase
@@ -91,7 +92,7 @@
 
   // Reset form fields
   function resetForm() {
-    challengeName = "";
+    title = ""; // Updated from challengeName
     challengeType = "Fitness";
     otherType = "";
     maxParticipants = 0;
@@ -129,14 +130,14 @@
     <div class="modal-content" on:click|stopPropagation>
       <h2>Create a New Challenge</h2>
       <form on:submit={createChallenge}>
-        <!-- Challenge Name -->
+        <!-- Challenge Name (now Title) -->
         <label>
-          Challenge Name:
+          Challenge Title:
           <input
             type="text"
-            bind:value={challengeName}
+            bind:value={title}
             required
-            placeholder="Enter challenge name"
+            placeholder="Enter challenge title"
           />
         </label>
 
