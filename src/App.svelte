@@ -292,6 +292,6 @@
   main {
     flex: 1;
     padding: 1rem;
-    overflow-y: auto; /* Ensure single scrollable content area */
+    overflow-y: auto;
   }
 </style>
