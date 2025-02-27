@@ -8,6 +8,8 @@
 
   let action = "";
   let frequency = "";
+  let customValue = "";
+  let customUnit = "days";
   let dataType = "";
   let notes = "";
   let errorMessage = "";
@@ -18,10 +20,19 @@
       return;
     }
 
+    let finalFrequency = frequency;
+    if (frequency === "Custom") {
+      if (!customValue || isNaN(customValue) || customValue <= 0) {
+        errorMessage = "Please enter a valid number for custom frequency.";
+        return;
+      }
+      finalFrequency = `Every ${customValue} ${customUnit}`;
+    }
+
     const taskData = {
       challenge_id: challengeId,
       action,
-      frequency,
+      frequency: finalFrequency,
       data_type: dataType,
       notes,
     };
@@ -38,6 +49,8 @@
   function resetForm() {
     action = "";
     frequency = "";
+    customValue = "";
+    customUnit = "days";
     dataType = "";
     notes = "";
     errorMessage = "";
@@ -66,9 +79,31 @@
         <option value="per day">Per Day</option>
         <option value="per week">Per Week</option>
         <option value="per month">Per Month</option>
-        <option value="specific days">Specific Number of Days</option>
+        <option value="per challenge">Per Challenge</option>
+        <option value="Custom">Custom</option>
       </select>
     </label>
+    {#if frequency === "Custom"}
+      <div class="custom-frequency">
+        <label>
+          Every:
+          <input
+            type="number"
+            bind:value={customValue}
+            min="1"
+            required
+            placeholder="e.g., 5"
+          />
+          <select bind:value={customUnit} required>
+            <option value="minutes">Minutes</option>
+            <option value="hours">Hours</option>
+            <option value="days">Days</option>
+            <option value="weeks">Weeks</option>
+            <option value="months">Months</option>
+          </select>
+        </label>
+      </div>
+    {/if}
     <label>
       Data Type:
       <select bind:value={dataType} required>
@@ -132,6 +167,20 @@
     border: 1px solid var(--light-gray);
     border-radius: 4px;
     font-size: 0.9rem;
+  }
+
+  .custom-frequency {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .custom-frequency input {
+    width: 60px;
+  }
+
+  .custom-frequency select {
+    flex: 1;
   }
 
   textarea {

@@ -460,6 +460,47 @@
       />
     {/if}
 
+    <div class="tasks">
+      <h2>Tasks</h2>
+      {#if tasks.length > 0}
+        <table class="tasks-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Frequency</th>
+              <th>Data Type</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each tasks as task}
+              <tr>
+                <td class="no-wrap">{task.action}</td>
+                <td>{task.frequency}</td>
+                <td>{task.data_type}</td>
+                <td>{task.notes || ""}</td>
+                <td>
+                  {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
+                    <button
+                      class="edit-task-btn"
+                      on:click={() => editTask(task.id)}>Edit</button
+                    >
+                    <button
+                      class="remove-task-btn"
+                      on:click={() => removeTask(task.id)}>Remove</button
+                    >
+                  {/if}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {:else}
+        <p>No tasks yet.</p>
+      {/if}
+    </div>
+
     {#if challenge.cover_media}
       <div class="cover-media">
         {#if challenge.cover_media.match(/\.(jpg|jpeg|png|gif)$/i)}
@@ -498,33 +539,6 @@
       {/if}
       {#if !$user || !contestants.some((c) => c.user_id === $user.id)}
         <button on:click={joinChallenge}>Join Challenge</button>
-      {/if}
-    </div>
-
-    <div class="tasks">
-      <h2>Tasks</h2>
-      {#if tasks.length > 0}
-        <ul>
-          {#each tasks as task}
-            <li>
-              <strong>{task.action}</strong> - {task.frequency} - {task.data_type}
-              {#if task.notes}
-                <p>{task.notes}</p>
-              {/if}
-              {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
-                <button class="edit-task-btn" on:click={() => editTask(task.id)}
-                  >Edit</button
-                >
-                <button
-                  class="remove-task-btn"
-                  on:click={() => removeTask(task.id)}>Remove</button
-                >
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p>No tasks yet.</p>
       {/if}
     </div>
   {/if}
@@ -718,8 +732,8 @@
     transform: scale(1.02);
   }
 
-  .contestants,
-  .tasks {
+  .tasks,
+  .contestants {
     margin-top: 2rem;
   }
 
@@ -728,6 +742,45 @@
     color: var(--charcoal);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
+  }
+
+  .tasks-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .tasks-table th,
+  .tasks-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--light-gray);
+    text-align: left;
+    font-size: 0.9rem;
+  }
+
+  .tasks-table th {
+    background: linear-gradient(to bottom, var(--tomato), var(--tomato-light));
+    color: var(--white);
+    font-weight: bold;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  }
+
+  .tasks-table td {
+    background-color: var(--white);
+    color: var(--charcoal);
+    transition: background-color 0.3s ease;
+  }
+
+  .tasks-table tr:hover td {
+    background-color: var(--light-gray);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .tasks-table .no-wrap {
+    white-space: nowrap;
   }
 
   .contestants-table {
@@ -763,32 +816,6 @@
   .contestants-table tr:hover td {
     background-color: var(--light-gray);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .tasks ul {
-    list-style: none;
-    padding: 0;
-  }
-
-  .tasks li {
-    background: var(--white);
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .tasks li strong {
-    font-size: 1.1rem;
-    color: var(--charcoal);
-  }
-
-  .tasks li p {
-    margin: 0.5rem 0;
-    color: var(--gray);
   }
 
   .edit-task-btn,

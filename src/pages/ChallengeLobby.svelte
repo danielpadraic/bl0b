@@ -92,7 +92,6 @@
       console.log("User authenticated, proceeding with action:", action);
       if (action === "create") {
         $showChallengeCreation = true;
-        setTimeout(fetchChallenges, 1000); // Refresh after creation
       } else if (action === "join" && challengeId) {
         joinChallenge(challengeId);
       }
