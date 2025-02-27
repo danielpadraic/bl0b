@@ -1,9 +1,10 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { supabase } from "../supabase.js";
-  import { user } from "../stores.js";
+  import { user, showChallengeCreation } from "../stores.js";
   import { navigate } from "svelte-routing";
   import TaskCreation from "./TaskCreation.svelte";
+  import ChallengeCreation from "./ChallengeCreation.svelte";
 
   export let challengeId;
 
@@ -12,8 +13,6 @@
   let tasks = [];
   let loading = true;
   let error = null;
-  let editing = false;
-  let editedChallenge = {};
   let timeLeft = "";
   let timer = null;
   let showTaskCreation = false;
@@ -45,7 +44,6 @@
       console.log("Fetched challenge data:", data, "Error:", fetchError);
       if (fetchError) throw fetchError;
       challenge = data;
-      editedChallenge = { ...data };
     } catch (err) {
       error = err.message;
       console.error("Fetch challenge error:", err);
@@ -150,75 +148,7 @@
   }
 
   function toggleEdit() {
-    editing = !editing;
-    if (!editing) editedChallenge = { ...challenge };
-  }
-
-  async function saveChallenge() {
-    try {
-      const now = new Date();
-      const start = editedChallenge.start_datetime
-        ? new Date(editedChallenge.start_datetime)
-        : null;
-      const end = editedChallenge.end_datetime
-        ? new Date(editedChallenge.end_datetime)
-        : null;
-
-      if (start && start < now) {
-        error = "Start date and time cannot be in the past.";
-        return;
-      }
-      if (end && end < now) {
-        error = "End date and time cannot be in the past.";
-        return;
-      }
-      if (start && end && end <= start) {
-        error = "End date and time must be after start date and time.";
-        return;
-      }
-
-      let coverUrl = editedChallenge.cover_media;
-      if (editedChallenge.newCoverFile) {
-        const fileName = `${Date.now()}-${editedChallenge.newCoverFile.name}`;
-        const { data, error: uploadError } = await supabase.storage
-          .from("challenge-covers")
-          .upload(fileName, editedChallenge.newCoverFile);
-        if (uploadError) throw uploadError;
-        coverUrl = `${supabase.storageUrl}/object/public/challenge-covers/${fileName}`;
-      }
-
-      const updatedData = {
-        title: editedChallenge.title,
-        type: editedChallenge.type,
-        participants_max: editedChallenge.participants_max,
-        buy_in_cost: editedChallenge.buy_in_cost,
-        additional_prize_money: editedChallenge.additional_prize_money,
-        prize_type: editedChallenge.prize_type,
-        prize_amount: editedChallenge.prize_amount,
-        number_of_winners: editedChallenge.number_of_winners,
-        scoring_type: editedChallenge.scoring_type,
-        is_private: editedChallenge.is_private,
-        start_datetime: editedChallenge.start_datetime,
-        end_datetime: editedChallenge.end_datetime,
-        cover_media: coverUrl,
-      };
-
-      const { error: updateError } = await supabase
-        .from("challenges")
-        .update(updatedData)
-        .eq("id", challengeId);
-      if (updateError) throw updateError;
-
-      await fetchChallengeDetails();
-      editing = false;
-    } catch (err) {
-      error = err.message;
-      console.error("Update challenge error:", err);
-    }
-  }
-
-  function handleFileChange(event) {
-    editedChallenge.newCoverFile = event.target.files[0];
+    $showChallengeCreation = true;
   }
 
   function joinChallenge() {
@@ -289,166 +219,61 @@
   {:else if challenge}
     <div class="header-section">
       <h1>Challenge Details</h1>
-      {#if !editing && $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
+      {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
         <button class="edit-btn" on:click={toggleEdit}>Edit Challenge</button>
       {/if}
-      {#if editing}
-        <form on:submit|preventDefault={saveChallenge}>
-          <div class="header-table">
-            <table>
-              <tr>
-                <th>Title</th><td
-                  ><input
-                    type="text"
-                    bind:value={editedChallenge.title}
-                    required
-                  /></td
-                >
-                <th>Type</th><td
-                  ><input
-                    type="text"
-                    bind:value={editedChallenge.type}
-                    required
-                  /></td
-                >
-              </tr>
-              <tr>
-                <th>Participants</th><td
-                  ><input
-                    type="number"
-                    bind:value={editedChallenge.participants_max}
-                    min="0"
-                    required
-                  /></td
-                >
-                <th>Cost</th><td
-                  ><input
-                    type="number"
-                    bind:value={editedChallenge.buy_in_cost}
-                    step="0.01"
-                    min="0"
-                    required
-                  /></td
-                >
-              </tr>
-              <tr>
-                <th>Prize</th><td
-                  ><input
-                    type="number"
-                    bind:value={editedChallenge.prize_pool}
-                    step="0.01"
-                    min="0"
-                    required
-                  /></td
-                >
-                <th>Scoring</th><td
-                  ><input
-                    type="text"
-                    bind:value={editedChallenge.scoring_type}
-                    required
-                  /></td
-                >
-              </tr>
-              <tr>
-                <th>Access</th><td
-                  ><input
-                    type="checkbox"
-                    bind:checked={editedChallenge.is_private}
-                  /></td
-                >
-                <th>Creator</th><td
-                  >{challenge.profiles.username || "Unknown"}</td
-                >
-              </tr>
-              <tr>
-                <th>Start</th><td
-                  ><input
-                    type="datetime-local"
-                    bind:value={editedChallenge.start_datetime}
-                    required
-                  /></td
-                >
-                <th>End</th><td
-                  ><input
-                    type="datetime-local"
-                    bind:value={editedChallenge.end_datetime}
-                    required
-                  /></td
-                >
-              </tr>
-            </table>
-          </div>
-          <div class="edit-media">
-            <label>
-              Update Cover Photo/Video:
-              <input
-                type="file"
-                accept="image/*,video/*"
-                on:change={handleFileChange}
-              />
-            </label>
-          </div>
-          <div class="edit-buttons">
-            <button type="submit">Save</button>
-            <button type="button" on:click={toggleEdit}>Cancel</button>
-          </div>
-        </form>
-      {:else}
-        <div class="header-table">
-          <table>
-            <tr>
-              <th>Title</th><td>{challenge.title}</td>
-              <th>Type</th><td>{challenge.type}</td>
-            </tr>
-            <tr>
-              <th>Participants</th><td
-                >{challenge.participants_current ||
-                  0}/{challenge.participants_max === 0
-                  ? "Unlimited"
-                  : challenge.participants_max}</td
-              >
-              <th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td>
-              <th>Scoring</th><td>{challenge.scoring_type}</td>
-            </tr>
-            <tr>
-              <th>Access</th><td
-                >{challenge.is_private ? "Private" : "Public"}</td
-              >
-              <th>Creator</th><td>{challenge.profiles.username || "Unknown"}</td
-              >
-            </tr>
-            <tr>
-              <th>Start</th><td
-                >{challenge.start_datetime
-                  ? new Date(challenge.start_datetime).toLocaleString()
-                  : "Not set"}</td
-              >
-              <th>End</th><td
-                >{challenge.end_datetime
-                  ? new Date(challenge.end_datetime).toLocaleString()
-                  : "Not set"}</td
-              >
-            </tr>
-          </table>
+      <div class="header-table">
+        <table>
+          <tr>
+            <th>Title</th><td>{challenge.title}</td>
+            <th>Type</th><td>{challenge.type}</td>
+          </tr>
+          <tr>
+            <th>Participants</th><td
+              >{challenge.participants_current ||
+                0}/{challenge.participants_max === 0
+                ? "Unlimited"
+                : challenge.participants_max}</td
+            >
+            <th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td>
+            <th>Scoring</th><td>{challenge.scoring_type}</td>
+          </tr>
+          <tr>
+            <th>Access</th><td>{challenge.is_private ? "Private" : "Public"}</td
+            >
+            <th>Creator</th><td>{challenge.profiles.username || "Unknown"}</td>
+          </tr>
+          <tr>
+            <th>Start</th><td
+              >{challenge.start_datetime
+                ? new Date(challenge.start_datetime).toLocaleString()
+                : "Not set"}</td
+            >
+            <th>End</th><td
+              >{challenge.end_datetime
+                ? new Date(challenge.end_datetime).toLocaleString()
+                : "Not set"}</td
+            >
+          </tr>
+        </table>
+      </div>
+      {#if timeLeft}
+        <div class="countdown">
+          <span>Time Left: {timeLeft}</span>
         </div>
-        {#if timeLeft}
-          <div class="countdown">
-            <span>Time Left: {timeLeft}</span>
-          </div>
-        {/if}
-        {#if $user && $user.id === challenge.creator_id}
-          <div class="action-buttons">
-            <button class="add-task-btn" on:click={toggleTaskCreation}
-              >Add Task</button
-            >
-            <button class="cancel-btn" on:click={cancelChallenge}
-              >Cancel Challenge</button
-            >
-          </div>
-        {/if}
+      {/if}
+      {#if $user && $user.id === challenge.creator_id}
+        <div class="action-buttons">
+          <button class="add-task-btn" on:click={toggleTaskCreation}
+            >Add Task</button
+          >
+          <button class="cancel-btn" on:click={cancelChallenge}
+            >Cancel Challenge</button
+          >
+        </div>
       {/if}
     </div>
 
@@ -458,6 +283,9 @@
         on:taskCreated={handleTaskCreated}
         on:close={toggleTaskCreation}
       />
+    {/if}
+    {#if $showChallengeCreation}
+      <ChallengeCreation {challenge} editMode={true} />
     {/if}
 
     <div class="tasks">
@@ -636,68 +464,6 @@
     background-color: var(--light-gray);
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .header-table input[type="text"],
-  .header-table input[type="number"],
-  .header-table input[type="datetime-local"] {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--light-gray);
-    border-radius: 4px;
-    background-color: var(--white);
-    color: var(--charcoal);
-    font-size: 0.9rem;
-  }
-
-  .header-table input[type="checkbox"] {
-    margin: 0 auto;
-    display: block;
-  }
-
-  .edit-media {
-    margin: 1rem 0;
-    text-align: left;
-  }
-
-  .edit-media label {
-    display: block;
-    font-size: 0.9rem;
-    color: var(--charcoal);
-  }
-
-  .edit-media input[type="file"] {
-    margin-top: 0.5rem;
-  }
-
-  .edit-buttons {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1rem;
-  }
-
-  .edit-buttons button {
-    padding: 0.5rem 1rem;
-    background-color: var(--tomato);
-    color: var(--white);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  .edit-buttons button:hover {
-    background-color: var(--tomato-light);
-    transform: translateY(-2px);
-  }
-
-  .edit-buttons button[type="button"] {
-    background-color: var(--gray);
-  }
-
-  .edit-buttons button[type="button"]:hover {
-    background-color: var(--light-gray);
   }
 
   .action-buttons {

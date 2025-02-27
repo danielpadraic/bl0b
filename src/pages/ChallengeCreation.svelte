@@ -5,6 +5,9 @@
   import { showChallengeCreation, user } from "../stores.js";
   import { supabase } from "../supabase.js";
 
+  export let challenge = null; // Challenge data for editing
+  export let editMode = false; // Flag to switch between create/edit
+
   // Persistent form data store
   const formData = writable({
     title: "",
@@ -46,50 +49,79 @@
   let showEndPicker = false;
 
   onMount(() => {
-    // Restore form data when modal opens
-    formData.subscribe((data) => {
-      title = data.title;
-      challengeType = data.challengeType;
-      otherType = data.otherType;
-      maxParticipants = data.maxParticipants;
-      creatorParticipating = data.creatorParticipating;
-      buyInCost = data.buyInCost;
-      additionalPrizeMoney = data.additionalPrizeMoney;
-      prizeType = data.prizeType;
-      prizeAmount = data.prizeAmount;
-      numberOfWinners = data.numberOfWinners;
-      scoringType = data.scoringType;
-      otherScoringType = data.otherScoringType;
-      isPrivate = data.isPrivate;
-      coverFile = data.coverFile;
-      startDateTime = data.startDateTime;
-      endDateTime = data.endDateTime;
-    });
+    if (editMode && challenge) {
+      // Pre-fill form with challenge data in edit mode
+      title = challenge.title || "";
+      challengeType =
+        challenge.type === "Other" ? "Other" : challenge.type || "Fitness";
+      otherType = challenge.type === "Other" ? challenge.type : "";
+      maxParticipants = challenge.participants_max || 0;
+      creatorParticipating = challenge.creator_participating ? "yes" : "no";
+      buyInCost = challenge.buy_in_cost || 0;
+      additionalPrizeMoney = challenge.additional_prize_money || 0;
+      prizeType = challenge.prize_type || "just_for_fun";
+      prizeAmount = challenge.prize_amount || 0;
+      numberOfWinners = challenge.number_of_winners || 1;
+      scoringType =
+        challenge.scoring_type === "Other"
+          ? "Other"
+          : challenge.scoring_type || "Consistency";
+      otherScoringType =
+        challenge.scoring_type === "Other" ? challenge.scoring_type : "";
+      isPrivate = challenge.is_private || false;
+      coverFile = null; // Reset file input; can't pre-fill
+      startDateTime = challenge.start_datetime
+        ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
+        : "";
+      endDateTime = challenge.end_datetime
+        ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
+        : "";
+    } else {
+      // Restore persisted data for create mode
+      $formData.title = title;
+      $formData.challengeType = challengeType;
+      $formData.otherType = otherType;
+      $formData.maxParticipants = maxParticipants;
+      $formData.creatorParticipating = creatorParticipating;
+      $formData.buyInCost = buyInCost;
+      $formData.additionalPrizeMoney = additionalPrizeMoney;
+      $formData.prizeType = prizeType;
+      $formData.prizeAmount = prizeAmount;
+      $formData.numberOfWinners = numberOfWinners;
+      $formData.scoringType = scoringType;
+      $formData.otherScoringType = otherScoringType;
+      $formData.isPrivate = isPrivate;
+      $formData.coverFile = coverFile;
+      $formData.startDateTime = startDateTime;
+      $formData.endDateTime = endDateTime;
+    }
   });
 
   onDestroy(() => {
-    // Save form data when modal closes
-    formData.set({
-      title,
-      challengeType,
-      otherType,
-      maxParticipants,
-      creatorParticipating,
-      buyInCost,
-      additionalPrizeMoney,
-      prizeType,
-      prizeAmount,
-      numberOfWinners,
-      scoringType,
-      otherScoringType,
-      isPrivate,
-      coverFile,
-      startDateTime,
-      endDateTime,
-    });
+    if (!editMode) {
+      // Save form data only in create mode
+      formData.set({
+        title,
+        challengeType,
+        otherType,
+        maxParticipants,
+        creatorParticipating,
+        buyInCost,
+        additionalPrizeMoney,
+        prizeType,
+        prizeAmount,
+        numberOfWinners,
+        scoringType,
+        otherScoringType,
+        isPrivate,
+        coverFile,
+        startDateTime,
+        endDateTime,
+      });
+    }
   });
 
-  async function createChallenge(event) {
+  async function submitChallenge(event) {
     event.preventDefault();
 
     const now = new Date();
@@ -110,7 +142,7 @@
     }
 
     try {
-      let coverUrl = null;
+      let coverUrl = challenge ? challenge.cover_media : null;
       if (coverFile) {
         const fileName = `${Date.now()}-${coverFile.name}`;
         console.log(
@@ -156,17 +188,30 @@
         end_datetime: endDateTime || null,
       };
 
-      const { data: newChallenge, error } = await supabase
-        .from("challenges")
-        .insert([challengeData])
-        .select()
-        .single();
-      if (error) throw error;
+      let newChallenge;
+      if (editMode && challenge) {
+        const { data, error } = await supabase
+          .from("challenges")
+          .update(challengeData)
+          .eq("id", challenge.id)
+          .select()
+          .single();
+        if (error) throw error;
+        newChallenge = data;
+      } else {
+        const { data, error } = await supabase
+          .from("challenges")
+          .insert([challengeData])
+          .select()
+          .single();
+        if (error) throw error;
+        newChallenge = data;
 
-      if (creatorParticipating === "yes") {
-        await supabase
-          .from("challenge_participants")
-          .insert([{ challenge_id: newChallenge.id, user_id: $user.id }]);
+        if (creatorParticipating === "yes") {
+          await supabase
+            .from("challenge_participants")
+            .insert([{ challenge_id: newChallenge.id, user_id: $user.id }]);
+        }
       }
 
       $showChallengeCreation = false;
@@ -174,7 +219,7 @@
       navigate(`/challenge/${newChallenge.id}`);
     } catch (error) {
       errorMessage = error.message;
-      console.error("Challenge creation error:", error);
+      console.error("Challenge submission error:", error);
     }
   }
 
@@ -198,24 +243,26 @@
     errorMessage = "";
     showStartPicker = false;
     showEndPicker = false;
-    formData.set({
-      title: "",
-      challengeType: "Fitness",
-      otherType: "",
-      maxParticipants: 0,
-      creatorParticipating: "yes",
-      buyInCost: 0,
-      additionalPrizeMoney: 0,
-      prizeType: "just_for_fun",
-      prizeAmount: 0,
-      numberOfWinners: 1,
-      scoringType: "Consistency",
-      otherScoringType: "",
-      isPrivate: false,
-      coverFile: null,
-      startDateTime: "",
-      endDateTime: "",
-    });
+    if (!editMode) {
+      formData.set({
+        title: "",
+        challengeType: "Fitness",
+        otherType: "",
+        maxParticipants: 0,
+        creatorParticipating: "yes",
+        buyInCost: 0,
+        additionalPrizeMoney: 0,
+        prizeType: "just_for_fun",
+        prizeAmount: 0,
+        numberOfWinners: 1,
+        scoringType: "Consistency",
+        otherScoringType: "",
+        isPrivate: false,
+        coverFile: null,
+        startDateTime: "",
+        endDateTime: "",
+      });
+    }
   }
 
   function closeModal(event) {
@@ -224,7 +271,6 @@
       (event.type === "keydown" && event.key === "Escape")
     ) {
       $showChallengeCreation = false;
-      // Data is already saved via onDestroy
     }
   }
 
@@ -249,11 +295,11 @@
       on:click|stopPropagation
       on:keydown|stopPropagation={() => {}}
     >
-      <h2>Create a New Challenge</h2>
+      <h2>{editMode ? "Edit Challenge" : "Create a New Challenge"}</h2>
       {#if errorMessage}
         <p class="error">{errorMessage}</p>
       {/if}
-      <form on:submit={createChallenge}>
+      <form on:submit={submitChallenge}>
         <label>
           Challenge Title:
           <input
@@ -301,7 +347,6 @@
                 type="radio"
                 bind:group={creatorParticipating}
                 value="yes"
-                checked
               />
               Yes
             </label>
@@ -437,10 +482,18 @@
             accept="image/*,video/*"
             on:change={handleFileChange}
           />
+          {#if editMode && challenge.cover_media && !coverFile}
+            <small
+              >Current: <a href={challenge.cover_media} target="_blank">View</a
+              ></small
+            >
+          {/if}
         </label>
 
         <div class="buttons">
-          <button type="submit">Create Challenge</button>
+          <button type="submit"
+            >{editMode ? "Save Changes" : "Create Challenge"}</button
+          >
           <button type="button" on:click={closeModal}>Cancel</button>
         </div>
       </form>
