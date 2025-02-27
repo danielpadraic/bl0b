@@ -2,8 +2,13 @@
   import { showChallengeCreation } from "../stores.js";
 
   export let challenges = [];
+  export let filteredChallenges = [];
   export let loading = false;
   export let error = null;
+  export let searchQuery = "";
+
+  let sortColumn = null;
+  let sortDirection = "asc";
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
@@ -16,21 +21,55 @@
   function joinChallenge(challengeId) {
     console.log(`Joining challenge ${challengeId}`);
   }
+
+  // Sort challenges when a column header is clicked
+  function sortChallenges(column) {
+    if (sortColumn === column) {
+      sortDirection = sortDirection === "asc" ? "desc" : "asc";
+    } else {
+      sortColumn = column;
+      sortDirection = "asc";
+    }
+
+    filteredChallenges = [...filteredChallenges].sort((a, b) => {
+      let valueA = a[column];
+      let valueB = b[column];
+
+      // Handle special cases
+      if (column === "participants_max") {
+        valueA = valueA === "Unlimited" ? Infinity : valueA;
+        valueB = valueB === "Unlimited" ? Infinity : valueB;
+      } else if (column === "is_public") {
+        valueA = valueA ? 1 : 0;
+        valueB = valueB ? 1 : 0;
+      }
+
+      if (typeof valueA === "string") valueA = valueA.toLowerCase();
+      if (typeof valueB === "string") valueB = valueB.toLowerCase();
+
+      if (sortDirection === "asc") {
+        return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+      } else {
+        return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+      }
+    });
+  }
 </script>
 
 <div class="challenge-table">
-  <h2>Challenge Lobby</h2>
   <div class="table-wrapper">
     <table>
       <thead>
         <tr>
-          <th>Title</th>
-          <th>Type</th>
-          <th>Participants</th>
-          <th>Cost</th>
-          <th>Prize</th>
-          <th>Scoring Type</th>
-          <th>Privacy</th>
+          <th on:click={() => sortChallenges("title")}>Title</th>
+          <th on:click={() => sortChallenges("type")}>Type</th>
+          <th on:click={() => sortChallenges("participants_current")}
+            >Participants</th
+          >
+          <th on:click={() => sortChallenges("cost")}>Cost</th>
+          <th on:click={() => sortChallenges("prize_pool")}>Prize</th>
+          <th on:click={() => sortChallenges("scoring_type")}>Scoring Type</th>
+          <th on:click={() => sortChallenges("is_public")}>Privacy</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -43,9 +82,9 @@
           <tr>
             <td colspan="8" class="error">Error: {error}</td>
           </tr>
-        {:else if challenges.length > 0}
-          {#each challenges as challenge}
-            <tr>
+        {:else if filteredChallenges.length > 0}
+          {#each filteredChallenges as challenge, index}
+            <tr class={index % 2 === 0 ? "even-row" : "odd-row"}>
               <td data-label="Title">{challenge.title}</td>
               <td data-label="Type">{challenge.type}</td>
               <td data-label="Participants"
@@ -60,9 +99,9 @@
               <td data-label="Action">
                 <button
                   on:click={() => joinChallenge(challenge.id)}
-                  disabled={challenge.participants_current >=
-                    challenge.participants_max &&
-                    challenge.participants_max !== "Unlimited"}
+                  disabled={challenge.participants_max !== "Unlimited" &&
+                    challenge.participants_current >=
+                      challenge.participants_max}
                 >
                   Join
                 </button>
@@ -84,6 +123,19 @@
       </tbody>
     </table>
   </div>
+  <div class="footer">
+    <input
+      type="text"
+      bind:value={searchQuery}
+      placeholder="Search by title, type, or cost..."
+      class="search-input"
+    />
+    {#if challenges.length > 0}
+      <button on:click={toggleChallengeCreation} class="create-btn"
+        >Create Challenge</button
+      >
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -94,13 +146,6 @@
     padding: 1rem;
     background-color: var(--background);
     color: var(--text);
-  }
-
-  h2 {
-    text-align: center;
-    margin-bottom: 1rem;
-    color: var(--text);
-    font-size: clamp(1rem, 4vw, 2rem);
   }
 
   .table-wrapper {
@@ -128,6 +173,19 @@
     color: var(--charcoal);
     font-size: clamp(0.8rem, 2.5vw, 1.2rem);
     text-align: center;
+    cursor: pointer;
+  }
+
+  th:hover {
+    background-color: var(--tomato-light);
+  }
+
+  .even-row {
+    background-color: var(--white);
+  }
+
+  .odd-row {
+    background-color: var(--light-gray); /* Alternating color from global.css */
   }
 
   td {
@@ -151,6 +209,25 @@
     flex-direction: column;
     align-items: center;
     gap: 1rem;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    gap: 1rem;
+  }
+
+  .search-input {
+    padding: 0.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+    max-width: 300px;
+    background-color: var(--white);
+    color: var(--charcoal);
   }
 
   button {

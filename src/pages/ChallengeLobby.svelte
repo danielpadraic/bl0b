@@ -4,8 +4,10 @@
   import ChallengeTable from "./ChallengeTable.svelte";
 
   let challenges = [];
+  let filteredChallenges = [];
   let loading = true;
   let error = null;
+  let searchQuery = "";
 
   onMount(async () => {
     await fetchChallenges();
@@ -17,7 +19,7 @@
       const { data, error: fetchError } = await supabase
         .from("challenges")
         .select(
-          "title, type, max_participants, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
+          "title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
         )
         .order("created_at", { ascending: false });
 
@@ -26,15 +28,18 @@
       challenges = data.map((challenge) => ({
         title: challenge.title,
         type: challenge.type,
-        participants_max: challenge.max_participants || "Unlimited", // Handle null as "Unlimited"
+        participants_max:
+          challenge.participants_max === 0
+            ? "Unlimited"
+            : challenge.participants_max,
+        participants_current: challenge.participants_current || 0,
         cost: challenge.buy_in_cost || 0,
         prize_pool:
-          (challenge.buy_in_cost || 0) +
-          (challenge.additional_prize_money || 0), // Placeholder calculation
+          (challenge.buy_in_cost || 0) * (challenge.participants_current || 0),
         scoring_type: challenge.scoring_type || "None",
-        is_public: !challenge.is_private, // Inverse of is_private
-        participants_current: challenge.participants_current || 0,
+        is_public: !challenge.is_private,
       }));
+      filteredChallenges = challenges;
       error = null;
     } catch (err) {
       error = err.message;
@@ -43,10 +48,34 @@
       loading = false;
     }
   }
+
+  function filterChallenges() {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) {
+      filteredChallenges = challenges;
+    } else {
+      filteredChallenges = challenges.filter((challenge) => {
+        return (
+          challenge.title.toLowerCase().includes(query) ||
+          challenge.type.toLowerCase().includes(query) ||
+          challenge.cost.toString().includes(query)
+        );
+      });
+    }
+  }
+
+  $: searchQuery, filterChallenges();
 </script>
 
 <div class="challenge-lobby">
-  <ChallengeTable {challenges} {loading} {error} />
+  <h2>Challenge Lobby</h2>
+  <ChallengeTable
+    {challenges}
+    {filteredChallenges}
+    {loading}
+    {error}
+    {searchQuery}
+  />
 </div>
 
 <style>
@@ -54,5 +83,11 @@
     padding: 1rem;
     background-color: var(--background);
     color: var(--text);
+  }
+
+  h2 {
+    margin: 0 0 1rem 0;
+    font-size: clamp(1rem, 4vw, 2rem);
+    text-align: left;
   }
 </style>

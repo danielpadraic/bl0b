@@ -16,6 +16,7 @@
   let scoringType = "Consistency";
   let otherScoringType = "";
   let isPrivate = false;
+  let creatorParticipating = "yes"; // Default to "Yes"
 
   // Handle form submission
   async function createChallenge(e) {
@@ -61,11 +62,14 @@
       invitationLink = `/join/${uuid}`;
     }
 
+    // Determine participants_current based on creator participation
+    const participantsCurrent = creatorParticipating === "yes" ? 1 : 0;
+
     // Prepare data for Supabase
     const challengeData = {
       title,
       type: finalChallengeType,
-      max_participants: maxParticipants === 0 ? null : maxParticipants,
+      participants_max: maxParticipants,
       buy_in_cost: parseFloat(buyInCost) || 0,
       additional_prize_money: parseFloat(additionalPrizeMoney) || 0,
       prize_type: prizeType,
@@ -77,6 +81,7 @@
       is_private: isPrivate,
       invitation_link: invitationLink,
       created_by: (await supabase.auth.getUser()).data.user?.id,
+      participants_current: participantsCurrent,
     };
 
     // Insert into Supabase
@@ -106,6 +111,7 @@
     scoringType = "Consistency";
     otherScoringType = "";
     isPrivate = false;
+    creatorParticipating = "yes"; // Reset to default "Yes"
   }
 
   // Close modal without saving
@@ -172,6 +178,30 @@
           {#if maxParticipants === 1}
             <small>Only you can join this challenge.</small>
           {/if}
+        </label>
+
+        <!-- Creator Participation -->
+        <label>
+          Will you be participating in this Challenge?
+          <div class="radio-group">
+            <label>
+              <input
+                type="radio"
+                bind:group={creatorParticipating}
+                value="yes"
+                checked
+              />
+              Yes
+            </label>
+            <label>
+              <input
+                type="radio"
+                bind:group={creatorParticipating}
+                value="no"
+              />
+              No
+            </label>
+          </div>
         </label>
 
         <!-- Buy-In Cost -->
@@ -326,6 +356,18 @@
     font-size: 1rem;
     background-color: var(--white);
     color: var(--charcoal);
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .radio-group label {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   small {
