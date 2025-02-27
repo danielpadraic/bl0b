@@ -2,13 +2,12 @@
   import { showChallengeCreation } from "../stores.js";
 
   export let challenges = [];
-  export let filteredChallenges = [];
   export let loading = false;
   export let error = null;
-  export let searchQuery = "";
 
   let sortColumn = null;
   let sortDirection = "asc";
+  let searchQuery = ""; // Local search query for consistency
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
@@ -22,7 +21,6 @@
     console.log(`Joining challenge ${challengeId}`);
   }
 
-  // Sort challenges when a column header is clicked
   function sortChallenges(column) {
     if (sortColumn === column) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
@@ -31,11 +29,10 @@
       sortDirection = "asc";
     }
 
-    filteredChallenges = [...filteredChallenges].sort((a, b) => {
+    challenges = [...challenges].sort((a, b) => {
       let valueA = a[column];
       let valueB = b[column];
 
-      // Handle special cases
       if (column === "participants_max") {
         valueA = valueA === "Unlimited" ? Infinity : valueA;
         valueB = valueB === "Unlimited" ? Infinity : valueB;
@@ -82,8 +79,8 @@
           <tr>
             <td colspan="8" class="error">Error: {error}</td>
           </tr>
-        {:else if filteredChallenges.length > 0}
-          {#each filteredChallenges as challenge, index}
+        {:else if challenges.length > 0}
+          {#each challenges as challenge, index}
             <tr class={index % 2 === 0 ? "even-row" : "odd-row"}>
               <td data-label="Title">{challenge.title}</td>
               <td data-label="Type">{challenge.type}</td>
@@ -185,7 +182,7 @@
   }
 
   .odd-row {
-    background-color: var(--light-gray); /* Alternating color from global.css */
+    background-color: var(--light-gray);
   }
 
   td {

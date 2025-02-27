@@ -3,8 +3,8 @@
   import { supabase } from "../supabase.js";
   import ChallengeTable from "./ChallengeTable.svelte";
 
-  let challenges = [];
-  let filteredChallenges = [];
+  let allChallenges = [];
+  let challenges = []; // This will be the filtered list
   let loading = true;
   let error = null;
   let searchQuery = "";
@@ -25,7 +25,7 @@
 
       if (fetchError) throw fetchError;
 
-      challenges = data.map((challenge) => ({
+      allChallenges = data.map((challenge) => ({
         title: challenge.title,
         type: challenge.type,
         participants_max:
@@ -39,7 +39,7 @@
         scoring_type: challenge.scoring_type || "None",
         is_public: !challenge.is_private,
       }));
-      filteredChallenges = challenges;
+      challenges = [...allChallenges]; // Initialize with all challenges
       error = null;
     } catch (err) {
       error = err.message;
@@ -49,12 +49,13 @@
     }
   }
 
-  function filterChallenges() {
+  // Filter challenges based on search query
+  $: {
     const query = searchQuery.toLowerCase().trim();
     if (!query) {
-      filteredChallenges = challenges;
+      challenges = [...allChallenges];
     } else {
-      filteredChallenges = challenges.filter((challenge) => {
+      challenges = allChallenges.filter((challenge) => {
         return (
           challenge.title.toLowerCase().includes(query) ||
           challenge.type.toLowerCase().includes(query) ||
@@ -63,19 +64,11 @@
       });
     }
   }
-
-  $: searchQuery, filterChallenges();
 </script>
 
 <div class="challenge-lobby">
   <h2>Challenge Lobby</h2>
-  <ChallengeTable
-    {challenges}
-    {filteredChallenges}
-    {loading}
-    {error}
-    {searchQuery}
-  />
+  <ChallengeTable {challenges} {loading} {error} />
 </div>
 
 <style>
