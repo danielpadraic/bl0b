@@ -1,92 +1,160 @@
 <script>
-  import { onMount } from "svelte";
   import { supabase } from "../supabase.js";
-  import ChallengeTable from "./ChallengeTable.svelte";
+  import { user } from "../stores.js"; // Your user store (adjust the path if needed)
+  import { navigate } from "svelte-routing"; // For navigation
+  import { onMount } from "svelte";
 
-  let allChallenges = []; // Unfiltered list
-  let challenges = []; // Filtered list passed to table
-  let loading = true;
-  let error = null;
-  let searchQuery = "";
+  console.log("User status:", $user);
+  let challenges = []; // List of challenges
+  let loading = true; // Loading state
+  let error = null; // Error state
+  let showAuthPrompt = false; // Controls the sign-up/login prompt
 
+  // Fetch public challenges when the page loads
   onMount(async () => {
-    await fetchChallenges();
-  });
-
-  async function fetchChallenges() {
     try {
-      loading = true;
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from("challenges")
-        .select(
-          "title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
-        )
-        .order("created_at", { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      allChallenges = data.map((challenge) => ({
-        title: challenge.title,
-        type: challenge.type,
-        participants_max:
-          challenge.participants_max === 0
-            ? "Unlimited"
-            : challenge.participants_max,
-        participants_current: challenge.participants_current || 0,
-        cost: challenge.buy_in_cost || 0,
-        prize_pool:
-          (challenge.buy_in_cost || 0) * (challenge.participants_current || 0),
-        scoring_type: challenge.scoring_type || "None",
-        is_public: !challenge.is_private,
-      }));
-      challenges = [...allChallenges]; // Initialize with all challenges
-      error = null;
+        .select("*")
+        .eq("is_private", false);
+      if (error) throw error;
+      challenges = data;
     } catch (err) {
       error = err.message;
-      console.error("Error fetching challenges:", err);
     } finally {
       loading = false;
     }
-  }
+  });
 
-  // Filter challenges based on search query
-  function filterChallenges() {
-    const query = searchQuery.toLowerCase().trim();
-    console.log("Filtering with query:", query); // Debug log
-    if (!query) {
-      challenges = [...allChallenges];
+  // Handle interactions (create, join, view)
+  function handleInteraction(action) {
+    if (!$user) {
+      showAuthPrompt = true; // Show prompt if not logged in
     } else {
-      challenges = allChallenges.filter((challenge) => {
-        const matches =
-          challenge.title.toLowerCase().includes(query) ||
-          challenge.type.toLowerCase().includes(query) ||
-          challenge.cost.toString().includes(query);
-        console.log("Challenge:", challenge.title, "Matches:", matches); // Debug log
-        return matches;
-      });
+      // Add your logic for logged-in users here later
+      if (action === "create") {
+        alert("Create challenge (add your logic here)");
+      } else if (action === "join") {
+        alert("Join challenge (add your logic here)");
+      } else if (action === "view") {
+        alert("View challenge (add your logic here)");
+      }
     }
-    console.log("Filtered challenges:", challenges); // Debug log
   }
 
-  // Reactively update challenges when searchQuery changes
-  $: searchQuery, filterChallenges();
+  // Close the prompt
+  function closePrompt() {
+    showAuthPrompt = false;
+  }
+
+  // Navigate to sign-up or login pages
+  function goToSignUp() {
+    navigate("/signup");
+  }
+
+  function goToLogin() {
+    navigate("/login");
+  }
 </script>
 
 <div class="challenge-lobby">
   <h2>Challenge Lobby</h2>
-  <ChallengeTable {challenges} {loading} {error} bind:searchQuery />
+
+  <!-- Prompt for unauthenticated users -->
+  {#if showAuthPrompt}
+    <div class="auth-prompt">
+      <p>Please sign up or log in to {handleInteraction.action} challenges.</p>
+      <button on:click={goToSignUp}>Sign Up</button>
+      <button on:click={goToLogin}>Log In</button>
+      <button on:click={closePrompt}>Close</button>
+    </div>
+  {/if}
+
+  <!-- Display challenges -->
+  {#if loading}
+    <p>Loading challenges...</p>
+  {:else if error}
+    <p>Error: {error}</p>
+  {:else}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each challenges as challenge}
+          <tr>
+            <td>{challenge.name}</td>
+            <td>
+              {#if $user}
+                <button on:click={() => handleInteraction("join")}>Join</button>
+                <button on:click={() => handleInteraction("view")}>View</button>
+              {:else}
+                <button on:click={() => handleInteraction("join")}
+                  >Join (Login Required)</button
+                >
+                <button on:click={() => handleInteraction("view")}
+                  >View (Login Required)</button
+                >
+              {/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {/if}
+
+  <!-- Create Challenge button -->
+  {#if $user}
+    <button on:click={() => handleInteraction("create")}
+      >Create Challenge</button
+    >
+  {:else}
+    <button on:click={() => handleInteraction("create")}
+      >Create Challenge (Login Required)</button
+    >
+  {/if}
+
+  <!-- Create an Account link for visitors -->
+  {#if !$user}
+    <div class="create-account-link">
+      <p>Not a member yet?</p>
+      <button on:click={goToSignUp}>Create an Account</button>
+    </div>
+  {/if}
 </div>
 
 <style>
   .challenge-lobby {
-    padding: 1rem;
-    background-color: var(--background);
-    color: var(--text);
+    padding: 20px;
   }
-
-  h2 {
-    margin: 0 0 1rem 0;
-    font-size: clamp(1rem, 4vw, 2rem);
+  .auth-prompt {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 10px 0;
+    background: #f9f9f9;
+  }
+  .create-account-link {
+    margin-top: 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+  th,
+  td {
+    border: 1px solid #ddd;
+    padding: 8px;
     text-align: left;
+  }
+  th {
+    background: #f2f2f2;
+  }
+  button {
+    margin: 0 5px;
+    padding: 5px 10px;
   }
 </style>
