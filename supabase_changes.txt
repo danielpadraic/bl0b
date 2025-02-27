@@ -1,0 +1,1 @@
+Fixed RLS policies for user_challenge_logs by splitting UPDATE and DELETE
