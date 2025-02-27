@@ -1,209 +1,375 @@
 <script>
   import { onMount } from "svelte";
+  import { navigate } from "svelte-routing"; // Add this
+  import { showChallengeCreation, user } from "../stores.js";
   import { supabase } from "../supabase.js";
-  import { user } from "../stores.js";
-  import { navigate } from "svelte-routing";
 
-  export let challengeId; // Passed via route params
+  let title = "";
+  let challengeType = "Fitness";
+  let otherType = "";
+  let maxParticipants = 0;
+  let creatorParticipating = "yes";
+  let buyInCost = 0;
+  let additionalPrizeMoney = 0;
+  let prizeType = "just_for_fun";
+  let prizeAmount = 0;
+  let numberOfWinners = 1;
+  let scoringType = "Consistency";
+  let otherScoringType = "";
+  let isPrivate = false;
+  let coverFile = null;
+  let errorMessage = "";
 
-  let challenge = null;
-  let contestants = [];
-  let loading = true;
-  let error = null;
+  function resetForm() {
+    title = "";
+    challengeType = "Fitness";
+    otherType = "";
+    maxParticipants = 0;
+    creatorParticipating = "yes";
+    buyInCost = 0;
+    additionalPrizeMoney = 0;
+    prizeType = "just_for_fun";
+    prizeAmount = 0;
+    numberOfWinners = 1;
+    scoringType = "Consistency";
+    otherScoringType = "";
+    isPrivate = false;
+    coverFile = null;
+    errorMessage = "";
+  }
 
-  onMount(async () => {
-    await fetchChallengeDetails();
-    await fetchContestants();
-    loading = false;
-  });
-
-  async function fetchChallengeDetails() {
+  async function createChallenge(event) {
+    event.preventDefault();
     try {
-      const { data, error: fetchError } = await supabase
+      let coverUrl = null;
+      if (coverFile) {
+        const fileName = `${Date.now()}-${coverFile.name}`;
+        const { data, error: uploadError } = await supabase.storage
+          .from("challenge-covers")
+          .upload(fileName, coverFile);
+        if (uploadError) throw uploadError;
+        coverUrl = `${supabase.storageUrl}/object/public/challenge-covers/${fileName}`;
+      }
+
+      const challengeData = {
+        title,
+        type: challengeType === "Other" ? otherType : challengeType,
+        participants_max: maxParticipants,
+        creator_participating: creatorParticipating === "yes",
+        buy_in_cost: buyInCost,
+        additional_prize_money: additionalPrizeMoney,
+        prize_type: prizeType,
+        prize_amount: prizeType === "set_amount" ? prizeAmount : null,
+        number_of_winners:
+          prizeType === "evenly_distributed" ? numberOfWinners : null,
+        scoring_type: scoringType === "Other" ? otherScoringType : scoringType,
+        is_private: isPrivate,
+        cover_media: coverUrl,
+        creator_id: $user.id,
+      };
+
+      const { data: newChallenge, error } = await supabase
         .from("challenges")
-        .select("*")
-        .eq("id", challengeId)
+        .insert([challengeData])
+        .select()
         .single();
-      if (fetchError) throw fetchError;
-      challenge = data;
-    } catch (err) {
-      error = err.message;
+      if (error) throw error;
+
+      if (creatorParticipating === "yes") {
+        await supabase
+          .from("challenge_participants")
+          .insert([{ challenge_id: newChallenge.id, user_id: $user.id }]);
+      }
+
+      $showChallengeCreation = false;
+      resetForm();
+      navigate(`/challenge/${newChallenge.id}`); // Navigate to new challenge
+    } catch (error) {
+      errorMessage = error.message;
     }
   }
 
-  async function fetchContestants() {
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("challenge_participants")
-        .select("user_id, profiles(username)")
-        .eq("challenge_id", challengeId);
-      if (fetchError) throw fetchError;
-      contestants = data.map((participant) => ({
-        user_id: participant.user_id,
-        username: participant.profiles.username,
-      }));
-    } catch (err) {
-      error = err.message;
+  function closeModal(event) {
+    if (
+      event.type === "click" ||
+      (event.type === "keydown" && event.key === "Escape")
+    ) {
+      $showChallengeCreation = false;
+      resetForm();
     }
   }
 
-  function joinChallenge() {
-    if (!$user) {
-      navigate("/login");
-      return;
-    }
-    supabase
-      .from("challenge_participants")
-      .insert([{ challenge_id: challengeId, user_id: $user.id }])
-      .then(() => fetchContestants());
+  function handleFileChange(event) {
+    coverFile = event.target.files[0];
   }
 </script>
 
-<div class="challenge-details">
-  {#if loading}
-    <p>Loading...</p>
-  {:else if error}
-    <p class="error">Error: {error}</p>
-  {:else if challenge}
-    <div class="header-table">
-      <table>
-        <tr><th>Title</th><td>{challenge.title}</td></tr>
-        <tr><th>Type</th><td>{challenge.type}</td></tr>
-        <tr
-          ><th>Participants</th><td
-            >{challenge.participants_current ||
-              0}/{challenge.participants_max === 0
-              ? "Unlimited"
-              : challenge.participants_max}</td
-          ></tr
-        >
-        <tr><th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td></tr>
-        <tr><th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td></tr>
-        <tr><th>Scoring</th><td>{challenge.scoring_type}</td></tr>
-        <tr
-          ><th>Access</th><td>{challenge.is_private ? "Private" : "Public"}</td
-          ></tr
-        >
-      </table>
-    </div>
-
-    {#if challenge.cover_media}
-      <div class="cover-media">
-        {#if challenge.cover_media.match(/\.(jpg|jpeg|png|gif)$/i)}
-          <img src={challenge.cover_media} alt="Challenge Cover" />
-        {:else if challenge.cover_media.match(/\.(mp4|webm)$/i)}
-          <video controls src={challenge.cover_media}></video>
-        {/if}
-      </div>
-    {/if}
-
-    <div class="contestants">
-      <h2>Contestants</h2>
-      {#if contestants.length > 0}
-        <ul>
-          {#each contestants as contestant}
-            <li>{contestant.username}</li>
-          {/each}
-        </ul>
-      {:else}
-        <p>No contestants yet.</p>
+{#if $showChallengeCreation}
+  <div class="modal-overlay" on:click={closeModal} on:keydown={closeModal}>
+    <div class="modal-content" on:click|stopPropagation>
+      <h2>Create a New Challenge</h2>
+      {#if errorMessage}
+        <p class="error">{errorMessage}</p>
       {/if}
-      {#if !$user || !contestants.some((c) => c.user_id === $user.id)}
-        <button on:click={joinChallenge}>Join Challenge</button>
-      {/if}
+      <form on:submit={createChallenge}>
+        <label>
+          Challenge Title:
+          <input
+            type="text"
+            bind:value={title}
+            required
+            placeholder="Enter challenge title"
+          />
+        </label>
+
+        <label>
+          Challenge Type:
+          <select bind:value={challengeType}>
+            <option value="Fitness">Fitness</option>
+            <option value="Other">Other</option>
+          </select>
+          {#if challengeType === "Other"}
+            <input
+              type="text"
+              bind:value={otherType}
+              placeholder="Specify challenge type"
+              required
+            />
+          {/if}
+        </label>
+
+        <label>
+          Number of Participants (0 for unlimited):
+          <input
+            type="number"
+            bind:value={maxParticipants}
+            min="0"
+            placeholder="0"
+          />
+          {#if maxParticipants === 1}
+            <small>Only you can join this challenge.</small>
+          {/if}
+        </label>
+
+        <label>
+          Will you be participating in this Challenge?
+          <div class="radio-group">
+            <label>
+              <input
+                type="radio"
+                bind:group={creatorParticipating}
+                value="yes"
+                checked
+              />
+              Yes
+            </label>
+            <label>
+              <input
+                type="radio"
+                bind:group={creatorParticipating}
+                value="no"
+              />
+              No
+            </label>
+          </div>
+        </label>
+
+        <label>
+          Buy-In Cost ($):
+          <input
+            type="number"
+            bind:value={buyInCost}
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+          />
+        </label>
+
+        <label>
+          Additional Prize Money ($):
+          <input
+            type="number"
+            bind:value={additionalPrizeMoney}
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+          />
+        </label>
+
+        <label>
+          Prize:
+          <select bind:value={prizeType}>
+            <option value="just_for_fun">Just for Fun</option>
+            <option value="set_amount">Set Amount</option>
+            <option value="winner_takes_all">Winner Takes All</option>
+            <option value="evenly_distributed">Evenly Distributed</option>
+            <option value="tournament">Tournament Style</option>
+          </select>
+          {#if prizeType === "set_amount"}
+            <input
+              type="number"
+              bind:value={prizeAmount}
+              step="0.01"
+              min="0"
+              placeholder="Prize amount"
+              required
+            />
+          {/if}
+          {#if prizeType === "evenly_distributed"}
+            <input
+              type="number"
+              bind:value={numberOfWinners}
+              min="1"
+              placeholder="Number of winners"
+              required
+            />
+          {/if}
+          {#if prizeType === "tournament"}
+            <small
+              >Prizes calculated based on participant count at challenge end.</small
+            >
+          {/if}
+        </label>
+
+        <label>
+          Scoring Type:
+          <select bind:value={scoringType}>
+            <option value="Consistency">Consistency</option>
+            <option value="Time">Time</option>
+            <option value="Distance">Distance</option>
+            <option value="Points">Points</option>
+            <option value="Other">Other</option>
+            <option value="None">None</option>
+          </select>
+          {#if scoringType === "Other"}
+            <input
+              type="text"
+              bind:value={otherScoringType}
+              placeholder="Describe scoring type"
+              required
+            />
+          {/if}
+        </label>
+
+        <label>
+          Private Challenge:
+          <input type="checkbox" bind:checked={isPrivate} />
+          {#if isPrivate}
+            <small>A unique invitation link will be generated.</small>
+          {/if}
+        </label>
+
+        <label>
+          Cover Photo/Video:
+          <input
+            type="file"
+            accept="image/*,video/*"
+            on:change={handleFileChange}
+          />
+        </label>
+
+        <div class="buttons">
+          <button type="submit">Create Challenge</button>
+          <button type="button" on:click={closeModal}>Cancel</button>
+        </div>
+      </form>
     </div>
-  {:else}
-    <p>Challenge not found.</p>
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
-  .challenge-details {
-    padding: 1rem;
-    max-width: 800px;
-    margin: 0 auto;
-    background-color: var(--background);
-    color: var(--text);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .header-table table {
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
   }
 
-  .header-table th,
-  .header-table td {
-    padding: 0.5rem;
-    border: 1px solid var(--light-gray);
-  }
-
-  .header-table th {
-    background-color: var(--carolina-blue);
-    color: var(--charcoal);
-    font-size: 0.9rem;
-    width: 30%;
-  }
-
-  .header-table td {
-    background-color: var(--white);
-    color: var(--charcoal);
-  }
-
-  .cover-media {
-    margin: 1rem 0;
-    text-align: center;
-  }
-
-  .cover-media img,
-  .cover-media video {
-    max-width: 100%;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  }
-
-  .contestants {
-    margin-top: 1rem;
+  .modal-content {
+    background: var(--background);
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: var(--text);
   }
 
   h2 {
-    font-size: 1.2rem;
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
     color: var(--charcoal);
+  }
+
+  .error {
+    color: var(--tomato);
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
     margin-bottom: 0.5rem;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-  }
-
-  li {
-    padding: 0.5rem;
-    background-color: var(--light-gray);
-    margin-bottom: 0.25rem;
-    border-radius: 4px;
     font-size: 0.9rem;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.25rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    background-color: var(--white);
     color: var(--charcoal);
+    font-size: 0.9rem;
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.25rem;
+  }
+
+  small {
+    display: block;
+    color: var(--gray);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+
+  .buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
   }
 
   button {
+    padding: 0.5rem 1rem;
     background-color: var(--tomato);
     color: var(--white);
     border: none;
-    padding: 0.5rem 1rem;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
-    margin-top: 1rem;
   }
 
   button:hover {
     background-color: var(--tomato-light);
   }
 
-  .error {
-    color: var(--tomato);
+  button[type="button"] {
+    background-color: var(--gray);
+  }
+
+  button[type="button"]:hover {
+    background-color: var(--light-gray);
   }
 </style>

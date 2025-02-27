@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { user } from "../stores.js";
   import { createEventDispatcher } from "svelte";
+  import { navigate } from "svelte-routing"; // Add this import
 
   export let challenges = [];
   export let loading = false;
@@ -317,9 +318,8 @@
     width: auto;
   }
 
-  /* Double the default width for Title column */
   th.title-column {
-    width: 132px; /* Approx. 2x "Title" width (66px) with padding */
+    width: 132px;
   }
 
   th:hover {
