@@ -4,6 +4,7 @@
   import { showChallengeCreation, user } from "./stores.js";
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
+  import News from "./pages/News.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
   import ChallengeCreation from "./pages/ChallengeCreation.svelte";

@@ -1,30 +1,30 @@
 <script>
-  import { user } from "../stores.js"; // Path from src/pages/
+  import { onMount } from "svelte";
+  import { user } from "../stores.js";
   import { createEventDispatcher } from "svelte";
 
   export let challenges = [];
   export let loading = false;
   export let error = null;
   export let searchQuery = "";
+  export let selectedTab = "All";
+
   const dispatch = createEventDispatcher();
 
   let sortColumn = null;
   let sortDirection = "asc";
 
+  const tabs = ["All", "Fitness", "Other", "Friends", "Public", "Private"];
+
   function toggleChallengeCreation() {
-    console.log("Create Challenge clicked, user:", $user);
-    dispatch("onCreate"); // Dispatching 'onCreate' event
-    console.log("Dispatched onCreate event");
+    dispatch("onCreate");
   }
 
   function joinChallenge(challengeId) {
-    console.log("Join clicked for challenge:", challengeId, "user:", $user);
-    dispatch("onJoin", challengeId); // Pass challengeId back to parent
-    console.log("Dispatched onJoin event for challenge:", challengeId);
+    dispatch("onJoin", challengeId);
   }
 
   function sortChallenges(column) {
-    console.log("Sorting by:", column);
     if (sortColumn === column) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
     } else {
@@ -54,9 +54,33 @@
       }
     });
   }
+
+  $: filteredChallenges = challenges.filter((challenge) => {
+    if (selectedTab === "All") return true;
+    if (selectedTab === "Fitness") return challenge.type === "Fitness";
+    if (selectedTab === "Other") return challenge.type === "Other";
+    if (selectedTab === "Public") return challenge.is_public;
+    if (selectedTab === "Private") return !challenge.is_public;
+    if (selectedTab === "Friends") {
+      // Placeholder: Add logic for friends' challenges later
+      return false;
+    }
+    return true;
+  });
 </script>
 
 <div class="challenge-table">
+  <div class="tabs">
+    {#each tabs as tab}
+      <button
+        class={selectedTab === tab ? "active" : ""}
+        on:click={() => (selectedTab = tab)}
+      >
+        {tab}
+      </button>
+    {/each}
+  </div>
+
   <div class="table-wrapper">
     <table>
       <thead>
@@ -64,13 +88,13 @@
           <th on:click={() => sortChallenges("title")}>Title</th>
           <th on:click={() => sortChallenges("type")}>Type</th>
           <th on:click={() => sortChallenges("participants_current")}
-            >Participants</th
+            >Players</th
           >
           <th on:click={() => sortChallenges("cost")}>Cost</th>
           <th on:click={() => sortChallenges("prize_pool")}>Prize</th>
-          <th on:click={() => sortChallenges("scoring_type")}>Scoring Type</th>
-          <th on:click={() => sortChallenges("is_public")}>Privacy</th>
-          <th>Action</th>
+          <th on:click={() => sortChallenges("scoring_type")}>Scoring</th>
+          <th on:click={() => sortChallenges("is_public")}>Access</th>
+          <th>Join</th>
         </tr>
       </thead>
       <tbody>
@@ -82,21 +106,21 @@
           <tr>
             <td colspan="8" class="error">Error: {error}</td>
           </tr>
-        {:else if challenges.length > 0}
-          {#each challenges as challenge, index}
+        {:else if filteredChallenges.length > 0}
+          {#each filteredChallenges as challenge, index}
             <tr class={index % 2 === 0 ? "even-row" : "odd-row"}>
               <td data-label="Title">{challenge.title}</td>
               <td data-label="Type">{challenge.type}</td>
-              <td data-label="Participants"
+              <td data-label="Players"
                 >{challenge.participants_current}/{challenge.participants_max}</td
               >
               <td data-label="Cost">${challenge.cost.toFixed(2)}</td>
               <td data-label="Prize">${challenge.prize_pool.toFixed(2)}</td>
-              <td data-label="Scoring Type">{challenge.scoring_type}</td>
-              <td data-label="Privacy"
+              <td data-label="Scoring">{challenge.scoring_type}</td>
+              <td data-label="Access"
                 >{challenge.is_public ? "Public" : "Private"}</td
               >
-              <td data-label="Action">
+              <td data-label="Join">
                 <button
                   on:click={() => joinChallenge(challenge.id)}
                   disabled={challenge.participants_max !== "Unlimited" &&
@@ -110,25 +134,21 @@
           {/each}
         {:else}
           <tr>
-            <td colspan="8" class="no-challenges">
-              <div class="no-challenges-content">
-                <span>No Challenges Available</span>
-              </div>
-            </td>
+            <td colspan="8" class="no-challenges">No Challenges Available</td>
           </tr>
         {/if}
       </tbody>
     </table>
   </div>
+
   <div class="footer">
     <input
       type="text"
       bind:value={searchQuery}
-      placeholder="Search by title, type, or cost..."
+      placeholder="Search challenges..."
       class="search-input"
     />
-    <button on:click={toggleChallengeCreation} class="create-btn"
-      >Create Challenge</button
+    <button on:click={toggleChallengeCreation} class="create-btn">Create</button
     >
   </div>
 </div>
@@ -141,6 +161,38 @@
     padding: 1rem;
     background-color: var(--background);
     color: var(--text);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .tabs button {
+    padding: 6px 14px;
+    background-color: var(--light-gray);
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .tabs button.active {
+    background-color: var(--tomato);
+    color: var(--white);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .tabs button:hover:not(.active) {
+    background-color: var(--tomato-light);
+    transform: translateY(-1px);
   }
 
   .table-wrapper {
@@ -152,27 +204,37 @@
     width: 100%;
     min-width: 600px;
     border-collapse: collapse;
-    background-color: var(--white);
-    color: var(--charcoal);
-    font-size: clamp(0.75rem, 2vw, 1rem);
+    font-size: 0.8rem;
   }
 
   th,
   td {
-    padding: clamp(0.5rem, 2vw, 1rem);
-    border: 1px solid var(--light-gray);
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--light-gray);
   }
 
   th {
     background-color: var(--carolina-blue);
     color: var(--charcoal);
-    font-size: clamp(0.8rem, 2.5vw, 1.2rem);
-    text-align: center;
+    font-size: 0.85rem;
     cursor: pointer;
+    transition: background-color 0.3s;
   }
 
   th:hover {
     background-color: var(--tomato-light);
+  }
+
+  tr {
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  tr:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
 
   .even-row {
@@ -183,56 +245,17 @@
     background-color: var(--light-gray);
   }
 
-  td {
-    text-align: left;
-  }
-
-  .error {
-    color: var(--tomato);
-    text-align: center;
-    padding: 1rem;
-  }
-
-  .no-challenges {
-    text-align: center;
-    padding: 2rem;
-    color: var(--gray);
-  }
-
-  .no-challenges-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    gap: 1rem;
-  }
-
-  .search-input {
-    padding: 0.5rem;
-    border: 1px solid var(--light-gray);
-    border-radius: 4px;
-    font-size: 1rem;
-    width: 100%;
-    max-width: 300px;
-    background-color: var(--white);
-    color: var(--charcoal);
-  }
-
   button {
     background-color: var(--tomato);
-    color: var(--background);
+    color: var(--white);
     border: none;
-    padding: clamp(0.4rem, 1.5vw, 0.75rem) clamp(0.8rem, 2vw, 1rem);
+    padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: clamp(0.7rem, 1.5vw, 1rem);
+    font-size: 0.8rem;
+    transition:
+      transform 0.2s,
+      background-color 0.3s;
   }
 
   button:disabled {
@@ -242,14 +265,40 @@
 
   button:hover:not(:disabled) {
     background-color: var(--tomato-light);
+    transform: scale(1.05);
+  }
+
+  .error {
+    color: var(--tomato);
+    text-align: center;
+  }
+
+  .no-challenges {
+    text-align: center;
+    padding: 1rem;
+    color: var(--gray);
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    gap: 1rem;
+  }
+
+  .search-input {
+    padding: 6px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    width: 100%;
+    max-width: 250px;
+    background-color: var(--white);
+    color: var(--charcoal);
   }
 
   .create-btn {
     background-color: var(--tomato);
-    color: var(--background);
-    padding: clamp(0.4rem, 1.5vw, 0.75rem) clamp(0.8rem, 2vw, 1rem);
-    border-radius: 4px;
-    cursor: pointer;
   }
 
   .create-btn:hover {
