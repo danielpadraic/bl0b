@@ -176,11 +176,8 @@
       class="auth-prompt-overlay"
       on:click={closePrompt}
       on:keydown={closePrompt}
-      tabindex="0"
-      role="dialog"
-      aria-label="Authentication prompt"
     >
-      <div class="auth-prompt" on:click|stopPropagation>
+      <div class="auth-prompt">
         <p>
           Please sign up or log in to {promptAction === "create"
             ? "create a challenge"
