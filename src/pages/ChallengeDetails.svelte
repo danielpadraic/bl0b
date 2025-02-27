@@ -26,7 +26,7 @@
     try {
       const { data, error: fetchError } = await supabase
         .from("challenges")
-        .select("*")
+        .select("*, profiles!challenges_creator_id_fkey(username)") // Fetch creator's username
         .eq("id", challengeId)
         .single();
       console.log("Fetched challenge data:", data, "Error:", fetchError);
@@ -90,26 +90,46 @@
   {:else if error}
     <p class="error">Error: {error}</p>
   {:else if challenge}
-    <div class="header-table">
-      <table>
-        <tr><th>Title</th><td>{challenge.title}</td></tr>
-        <tr><th>Type</th><td>{challenge.type}</td></tr>
-        <tr
-          ><th>Participants</th><td
-            >{challenge.participants_current ||
-              0}/{challenge.participants_max === 0
-              ? "Unlimited"
-              : challenge.participants_max}</td
-          ></tr
-        >
-        <tr><th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td></tr>
-        <tr><th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td></tr>
-        <tr><th>Scoring</th><td>{challenge.scoring_type}</td></tr>
-        <tr
-          ><th>Access</th><td>{challenge.is_private ? "Private" : "Public"}</td
-          ></tr
-        >
-      </table>
+    <div class="header-section">
+      <h1>Challenge Details</h1>
+      <div class="header-table">
+        <table>
+          <tr>
+            <th>Title</th><td>{challenge.title}</td>
+            <th>Type</th><td>{challenge.type}</td>
+          </tr>
+          <tr>
+            <th>Participants</th><td
+              >{challenge.participants_current ||
+                0}/{challenge.participants_max === 0
+                ? "Unlimited"
+                : challenge.participants_max}</td
+            >
+            <th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td>
+            <th>Scoring</th><td>{challenge.scoring_type}</td>
+          </tr>
+          <tr>
+            <th>Access</th><td>{challenge.is_private ? "Private" : "Public"}</td
+            >
+            <th>Creator</th><td>{challenge.profiles.username}</td>
+          </tr>
+          <tr>
+            <th>Start</th><td
+              >{challenge.start_datetime
+                ? new Date(challenge.start_datetime).toLocaleString()
+                : "Not set"}</td
+            >
+            <th>End</th><td
+              >{challenge.end_datetime
+                ? new Date(challenge.end_datetime).toLocaleString()
+                : "Not set"}</td
+            >
+          </tr>
+        </table>
+      </div>
     </div>
 
     {#if challenge.cover_media}
@@ -153,28 +173,41 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
+  .header-section {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    color: var(--charcoal);
+    margin-bottom: 1rem;
+  }
+
   .header-table table {
     width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
     border-collapse: collapse;
-    margin-bottom: 1rem;
   }
 
   .header-table th,
   .header-table td {
     padding: 0.5rem;
     border: 1px solid var(--light-gray);
+    font-size: 0.9rem;
   }
 
   .header-table th {
     background-color: var(--carolina-blue);
     color: var(--charcoal);
-    font-size: 0.9rem;
-    width: 30%;
+    width: 25%;
   }
 
   .header-table td {
     background-color: var(--white);
     color: var(--charcoal);
+    width: 25%;
   }
 
   .cover-media {

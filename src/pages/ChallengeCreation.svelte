@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { navigate } from "svelte-routing"; // Add this
+  import { navigate } from "svelte-routing";
   import { showChallengeCreation, user } from "../stores.js";
   import { supabase } from "../supabase.js";
 
@@ -18,6 +18,8 @@
   let otherScoringType = "";
   let isPrivate = false;
   let coverFile = null;
+  let startDateTime = "";
+  let endDateTime = "";
   let errorMessage = "";
 
   function resetForm() {
@@ -35,6 +37,8 @@
     otherScoringType = "";
     isPrivate = false;
     coverFile = null;
+    startDateTime = "";
+    endDateTime = "";
     errorMessage = "";
   }
 
@@ -66,6 +70,8 @@
         is_private: isPrivate,
         cover_media: coverUrl,
         creator_id: $user.id,
+        start_datetime: startDateTime || null,
+        end_datetime: endDateTime || null,
       };
 
       const { data: newChallenge, error } = await supabase
@@ -83,7 +89,7 @@
 
       $showChallengeCreation = false;
       resetForm();
-      navigate(`/challenge/${newChallenge.id}`); // Navigate to new challenge
+      navigate(`/challenge/${newChallenge.id}`);
     } catch (error) {
       errorMessage = error.message;
     }
@@ -257,6 +263,16 @@
           {#if isPrivate}
             <small>A unique invitation link will be generated.</small>
           {/if}
+        </label>
+
+        <label>
+          Start Date & Time:
+          <input type="datetime-local" bind:value={startDateTime} required />
+        </label>
+
+        <label>
+          End Date & Time:
+          <input type="datetime-local" bind:value={endDateTime} required />
         </label>
 
         <label>

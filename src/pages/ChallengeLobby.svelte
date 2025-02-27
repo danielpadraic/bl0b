@@ -16,6 +16,7 @@
   let selectedTab = "All";
 
   onMount(async () => {
+    console.log("ChallengeLobby mounted, user:", $user);
     await fetchChallenges();
   });
 
@@ -25,7 +26,7 @@
       const { data, error: fetchError } = await supabase
         .from("challenges")
         .select(
-          "id, title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current"
+          "id, title, type, participants_max, buy_in_cost, additional_prize_money, prize_type, prize_amount, number_of_winners, scoring_type, is_private, participants_current, start_datetime, end_datetime"
         )
         .order("created_at", { ascending: false });
 
@@ -45,11 +46,14 @@
           (challenge.buy_in_cost || 0) * (challenge.participants_current || 0),
         scoring_type: challenge.scoring_type || "None",
         is_public: !challenge.is_private,
+        start_datetime: challenge.start_datetime,
+        end_datetime: challenge.end_datetime,
       }));
       challenges = [...allChallenges];
       error = null;
     } catch (err) {
       error = err.message;
+      console.error("Error fetching challenges:", err);
     } finally {
       loading = false;
     }
@@ -72,14 +76,28 @@
   $: searchQuery, filterChallenges();
 
   function handleInteraction(action, challengeId = null) {
+    console.log(
+      "handleInteraction called with action:",
+      action,
+      "challengeId:",
+      challengeId,
+      "user:",
+      $user
+    );
     if (!$user) {
+      console.log("User not authenticated, showing prompt");
       showAuthPrompt = true;
       promptAction = action;
-    } else if (action === "create") {
-      $showChallengeCreation = true;
-    } else if (action === "join" && challengeId) {
-      joinChallenge(challengeId);
+    } else {
+      console.log("User authenticated, proceeding with action:", action);
+      if (action === "create") {
+        $showChallengeCreation = true;
+        setTimeout(fetchChallenges, 1000); // Refresh after creation
+      } else if (action === "join" && challengeId) {
+        joinChallenge(challengeId);
+      }
     }
+    console.log("showAuthPrompt set to:", showAuthPrompt);
   }
 
   async function joinChallenge(challengeId) {
