@@ -133,9 +133,8 @@
     on:keydown={closeModal}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
   >
-    <div class="modal-content" on:click|stopPropagation>
+    <div class="modal-content">
       <h2>Create a New Challenge</h2>
       <form on:submit={createChallenge}>
         <!-- Challenge Title -->

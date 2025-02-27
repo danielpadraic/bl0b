@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rollup -c",
-    "dev": "concurrently \"rollup -c -w\" \"sirv public --no-clear --dev\"",
-    "start": "sirv public --no-clear",
-    "push-and-dev": "git add . && git commit -m 'Auto commit before dev' && git push origin main && concurrently \"rollup -c -w\" \"sirv public --no-clear --dev\""
-  },
+  "build": "rollup -c",
+  "dev": "concurrently \"rollup -c -w\" \"sirv public --no-clear --dev --single\"",
+  "start": "sirv public --no-clear --single",
+  "push-and-dev": "git add . && git commit -m 'Auto commit before dev' && git push origin main && concurrently \"rollup -c -w\" \"sirv public --no-clear --dev --single\""
+},
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.1.0",
     "@rollup/plugin-node-resolve": "^15.3.1",

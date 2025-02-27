@@ -14,11 +14,15 @@
     confirmPassword: "",
   };
   let profilePhotoFile = null;
+  let hasMounted = false; // Prevent multiple mounts
 
-  onMount(async () => {
+  onMount(() => {
+    if (hasMounted) return; // Skip if already mounted
+    hasMounted = true;
+    console.log("Profile component mounted"); // Debug log
     if ($user) {
       console.log("User ID:", $user.id);
-      await fetchProfile();
+      fetchProfile();
     } else {
       error = "Please log in to view your profile";
       loading = false;
@@ -54,8 +58,8 @@
           participates_in_challenges: false,
           gender: "",
           dob: "",
-          height: 0, // Inches
-          weight: 0, // Pounds
+          height: 0,
+          weight: 0,
           body_fat_percentage: 0,
           profile_photo_url: "",
           bmi: null,
@@ -73,7 +77,6 @@
     }
   }
 
-  // Convert inches to feet and inches for display
   function formatHeight(inches) {
     if (!inches) return "Not set";
     const feet = Math.floor(inches / 12);
@@ -81,19 +84,15 @@
     return `${feet}'${remainingInches}"`;
   }
 
-  // Calculate BMI: weight (lb) / [height (in)]^2 * 703
   function calculateBMI(height, weight) {
     if (!height || !weight) return null;
     return (weight / (height * height)) * 703;
   }
 
-  // Calculate BMR (Mifflin-St Jeor Equation):
-  // Men: BMR = 10 * weight (kg) + 6.25 * height (cm) - 5 * age (years) + 5
-  // Women: BMR = 10 * weight (kg) + 6.25 * height (cm) - 5 * age (years) - 161
   function calculateBMR(height, weight, gender, dob) {
     if (!height || !weight || !gender || !dob) return null;
-    const weightKg = weight * 0.453592; // lbs to kg
-    const heightCm = height * 2.54; // inches to cm
+    const weightKg = weight * 0.453592;
+    const heightCm = height * 2.54;
     const age = new Date().getFullYear() - new Date(dob).getFullYear();
     if (gender === "Male") {
       return 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
@@ -105,7 +104,6 @@
 
   async function updateProfile() {
     try {
-      // Calculate BMI and BMR before saving
       profile.bmi = calculateBMI(profile.height, profile.weight)?.toFixed(1);
       profile.bmr = calculateBMR(
         profile.height,
@@ -387,7 +385,7 @@
             <div class="field-group">
               <img
                 src={profile.profile_photo_url}
-                alt="Profile Photo"
+                alt="User profile"
                 class="profile-photo"
               />
             </div>

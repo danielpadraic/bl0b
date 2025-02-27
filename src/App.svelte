@@ -8,6 +8,7 @@
   import BottomNav from "./components/BottomNav.svelte";
   import ChallengeCreation from "./pages/ChallengeCreation.svelte";
   import Profile from "./pages/Profile.svelte";
+  import Login from "./pages/Login.svelte"; // Correct import
   import Fa from "svelte-fa";
   import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
 
@@ -20,18 +21,16 @@
   }
 
   onMount(() => {
+    console.log("App mounted");
     window.addEventListener("resize", handleResize);
     supabase.auth.onAuthStateChange((event, session) => {
       currentUser = session?.user ?? null;
       $user = currentUser;
     });
-    const {
-      data: { user: initialUser },
-    } = supabase.auth.getUser();
-    if (initialUser) {
-      currentUser = initialUser;
-      $user = initialUser;
-    }
+    supabase.auth.getUser().then(({ data: { user: initialUser } }) => {
+      currentUser = initialUser || null;
+      $user = currentUser;
+    });
   });
 
   onDestroy(() => {
@@ -40,10 +39,12 @@
 
   function toggleMenu() {
     menuOpen = !menuOpen;
+    console.log("Menu toggled:", menuOpen);
   }
 
   function toggleChallengeCreation() {
     $showChallengeCreation = !$showChallengeCreation;
+    console.log("Challenge creation toggled:", $showChallengeCreation);
   }
 
   async function logout() {
@@ -136,7 +137,7 @@
       <Route path="/profile" component={Profile} />
       <Route path="/tokens" component={ChallengeLobby} />
       <Route path="/signup" component={ChallengeLobby} />
-      <Route path="/login" component={ChallengeLobby} />
+      <Route path="/login" component={Login} />
     </main>
 
     {#if isMobile && currentUser}
@@ -247,13 +248,13 @@
     gap: 0.5rem;
   }
 
-  .nav-menu a {
+  :global(.nav-menu a) {
     color: var(--carolina-blue);
     text-decoration: none;
     padding: 0.5rem 1rem;
   }
 
-  .nav-menu a:hover {
+  :global(.nav-menu a:hover) {
     color: var(--tomato-light);
   }
 
@@ -291,7 +292,8 @@
 
   main {
     flex: 1;
-    padding: 1rem;
+    padding: 1rem 1rem 80px 1rem;
     overflow-y: auto;
+    max-height: calc(100vh - 60px);
   }
 </style>

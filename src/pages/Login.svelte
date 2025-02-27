@@ -49,13 +49,13 @@
   {/if}
   <div class="forgot-password-container">
     <p>
-      <a
-        href="#"
-        on:click|preventDefault={forgotPassword}
+      <button
+        class="forgot-password-btn"
+        on:click={forgotPassword}
         on:keydown={(e) => e.key === "Enter" && forgotPassword()}
       >
         Forgot Password?
-      </a>
+      </button>
     </p>
   </div>
 </div>
@@ -90,12 +90,16 @@
     text-align: center;
   }
 
-  a {
+  .forgot-password-btn {
     color: #ff6347;
     text-decoration: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
   }
 
-  a:hover {
+  .forgot-password-btn:hover {
     text-decoration: underline;
   }
 </style>
