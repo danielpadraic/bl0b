@@ -5,6 +5,7 @@
 
   export let onClose = () => {};
   export let preSelectedChallengeId = null;
+  export let preSelectedTaskId = null;
 
   const dispatch = createEventDispatcher();
 
@@ -19,7 +20,7 @@
   let loadingTasks = false;
   let error = null;
   let prevSelectedTask = null;
-  let modalElement; // Reference to modal div
+  let modalElement;
 
   onMount(async () => {
     if (!$user) {
@@ -40,6 +41,10 @@
       if (preSelectedChallengeId) {
         selectedChallenge =
           challenges.find((c) => c.id === preSelectedChallengeId) || null;
+        if (selectedChallenge && preSelectedTaskId) {
+          await fetchTasks();
+          selectedTask = tasks.find((t) => t.id === preSelectedTaskId) || null;
+        }
       }
     } catch (err) {
       console.error("Error fetching challenges:", err);
@@ -62,7 +67,6 @@
       currentUserUsername = "Unknown";
     }
 
-    // Auto-focus the modal or first interactive element when mounted
     if (modalElement) {
       modalElement.focus();
     }
@@ -93,7 +97,11 @@
         ":",
         tasks
       );
-      selectedTask = null;
+      if (preSelectedTaskId) {
+        selectedTask = tasks.find((t) => t.id === preSelectedTaskId) || null;
+      } else {
+        selectedTask = null;
+      }
       submissionData.verification = "";
       submissionData.comment = "";
       attachments = [];
@@ -106,7 +114,7 @@
     }
   }
 
-  $: if (selectedChallenge !== null) {
+  $: if (selectedChallenge !== null && !preSelectedTaskId) {
     fetchTasks();
   }
 
@@ -150,8 +158,9 @@
       return;
     }
 
+    // Only require verification input if verification_type is not "No Verification"
     if (
-      selectedTask.verification_type !== "none" &&
+      selectedTask.verification_type !== "No Verification" &&
       !submissionData.verification
     ) {
       alert("Please provide the required verification input.");
@@ -205,7 +214,10 @@
     const submittedData = {
       verification: {
         type: selectedTask.verification_type,
-        value: submissionData.verification || null,
+        value:
+          selectedTask.verification_type === "No Verification"
+            ? null
+            : submissionData.verification,
       },
       attachments: attachmentUrls,
     };
@@ -250,19 +262,17 @@
       submissionData.verification = "";
       submissionData.comment = "";
       attachments = [];
-      onClose();
+      dispatch("close");
     } catch (err) {
       console.error("Error submitting task:", err);
       alert("Failed to submit task: " + (err.message || "Unknown error"));
     }
   }
 
-  // Handle modal closure and focus trapping
   function handleKeydown(e) {
     if (e.key === "Escape") {
-      onClose();
+      dispatch("close");
     }
-    // Trap focus within modal
     if (e.key === "Tab") {
       const focusable = modalElement.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -320,10 +330,12 @@
       {:else}
         <label>
           Select Task:
-          <select bind:value={selectedTask}>
+          <select bind:value={selectedTask} disabled={!!preSelectedTaskId}>
             <option value={null}>Choose a task</option>
             {#each tasks as task}
-              <option value={task}>{task.action}</option>
+              <option value={task} selected={task.id === preSelectedTaskId}>
+                {task.action}
+              </option>
             {/each}
           </select>
         </label>
@@ -337,7 +349,7 @@
             Text Form (required):
             <textarea
               bind:value={submissionData.verification}
-              required={selectedTask.verification_type !== "none"}
+              required
               placeholder="Enter your description"
             ></textarea>
           </label>
@@ -348,7 +360,7 @@
               type="text"
               bind:value={submissionData.verification}
               on:input={formatTimeInput}
-              required={selectedTask.verification_type !== "none"}
+              required
               placeholder="HH:MM:SS (e.g., 01:23:45)"
               pattern="[0-2][0-3]:[0-5][0-9]:[0-5][0-9]"
               title="Enter time in HH:MM:SS format (00:00:00 to 23:59:59)"
@@ -361,7 +373,7 @@
               type="number"
               step="0.01"
               bind:value={submissionData.verification}
-              required={selectedTask.verification_type !== "none"}
+              required
             />
           </label>
         {/if}
@@ -373,7 +385,7 @@
               multiple
               accept="image/*,video/*,.pdf"
               on:change={handleAttachmentUpload}
-              required={selectedTask.require_attachment}
+              required
             />
           </label>
         {/if}
@@ -392,12 +404,7 @@
       <button on:click={submitTaskCompletion} disabled={!selectedTask}
         >Submit</button
       >
-      <button
-        on:click={() => {
-          showTaskCompletionForm.set(false);
-          onClose();
-        }}>Cancel</button
-      >
+      <button on:click={() => dispatch("close")}>Cancel</button>
     </div>
   {/if}
 </div>
@@ -412,7 +419,7 @@
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    outline: none; /* Ensure focus outline is visible */
+    outline: none;
   }
   label {
     display: block;
