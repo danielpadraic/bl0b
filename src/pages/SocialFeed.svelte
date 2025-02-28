@@ -204,12 +204,14 @@
         .delete()
         .eq("post_id", postId)
         .eq("user_id", $user.id)
-        .eq("reaction_type", reactionType);
+        .eq("reaction_type", reactionType); // Fixed: reactionType instead of reaction_type
       if (error) console.error("Error removing reaction:", error);
     } else {
       const { error } = await supabase
         .from("post_reactions")
-        .insert([{ post_id: postId, user_id: $user.id, reaction_type }]);
+        .insert([
+          { post_id: postId, user_id: $user.id, reaction_type: reactionType },
+        ]); // Fixed: reactionType
       if (error) console.error("Error adding reaction:", error);
     }
     await fetchPosts();
@@ -318,6 +320,12 @@
     tagSuggestions = [];
   }
 
+  function tagUser(username) {
+    replyingTo = replyingTo || posts[0].id;
+    replyContent = `@${username} `;
+    document.querySelector(".reply-form textarea")?.focus();
+  }
+
   function handleKeyPress(event, action) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -331,7 +339,18 @@
     {#each posts.filter((p) => !p.parent_id) as post}
       <div class="post">
         <p class="post-meta">
-          {post.timestamp} | #{challengeName} | @{post.username}
+          {post.timestamp} |
+          <span class="challenge-name">#{challengeName}</span>
+          |
+          <span
+            class="username"
+            role="button"
+            tabindex="0"
+            on:click={() => tagUser(post.username)}
+            on:keydown={(e) => handleKeyPress(e, () => tagUser(post.username))}
+          >
+            @{post.username}
+          </span>
         </p>
         <p class="post-content">{post.content}</p>
         {#if post.media_urls && post.media_urls.length > 0}
@@ -415,7 +434,19 @@
         {#each posts.filter((r) => r.parent_id === post.id) as reply}
           <div class="reply">
             <p class="post-meta">
-              {reply.timestamp} | #{challengeName} | @{reply.username}
+              {reply.timestamp} |
+              <span class="challenge-name">#{challengeName}</span>
+              |
+              <span
+                class="username"
+                role="button"
+                tabindex="0"
+                on:click={() => tagUser(reply.username)}
+                on:keydown={(e) =>
+                  handleKeyPress(e, () => tagUser(reply.username))}
+              >
+                @{reply.username}
+              </span>
             </p>
             <p class="post-content">{reply.content}</p>
           </div>
@@ -687,6 +718,16 @@
     color: var(--gray);
     margin: 0;
   }
+  .challenge-name {
+    color: var(--dark-moderate-pink);
+  }
+  .username {
+    color: var(--lapis-lazuli);
+    cursor: pointer;
+  }
+  .username:hover {
+    text-decoration: underline;
+  }
   .post-content {
     font-size: 0.85rem;
     margin: 0.25rem 0;
@@ -702,6 +743,7 @@
     gap: 0.5rem;
     margin-top: 0.25rem;
     align-items: center;
+    position: relative;
   }
   .reaction-btn {
     padding: 0.2rem 0.5rem;

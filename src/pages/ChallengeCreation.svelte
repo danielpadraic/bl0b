@@ -8,7 +8,6 @@
   export let challenge = null;
   export let editMode = false;
 
-  // Single reactive object for all form fields
   let form = {
     title: "",
     challengeType: "Fitness",
@@ -31,7 +30,6 @@
     showEndPicker: false,
   };
 
-  // Persistent store for create mode
   const formData = writable({ ...form });
 
   onMount(() => {
@@ -43,41 +41,59 @@
     );
     if (editMode && challenge) {
       console.log("Populating form with challenge data:", challenge);
-      form.title = challenge.title || "";
-      form.challengeType = ["Fitness"].includes(challenge.type)
-        ? challenge.type
-        : "Other";
-      form.otherType = form.challengeType === "Other" ? challenge.type : "";
-      form.maxParticipants = challenge.participants_max || 0;
-      form.creatorParticipating = challenge.creator_participating
-        ? "yes"
-        : "no";
-      form.buyInCost = challenge.buy_in_cost || 0;
-      form.additionalPrizeMoney = challenge.additional_prize_money || 0;
-      form.prizeType = challenge.prize_type || "just_for_fun";
-      form.prizeAmount = challenge.prize_amount || 0;
-      form.numberOfWinners = challenge.number_of_winners || 1;
-      form.scoringType = [
-        "Consistency",
-        "Time (High)",
-        "Time (Low)",
-        "Distance",
-        "Points",
-        "None",
-      ].includes(challenge.scoring_type)
-        ? challenge.scoring_type
-        : "Other";
-      form.otherScoringType =
-        form.scoringType === "Other" ? challenge.scoring_type : "";
-      form.isPrivate = challenge.is_private || false;
-      form.coverFile = null;
-      form.startDateTime = challenge.start_datetime
-        ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
-        : "";
-      form.endDateTime = challenge.end_datetime
-        ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
-        : "";
-      console.log("Form fields set:", form);
+      // Replace entire form object to trigger reactivity
+      const newFormState = {
+        title: challenge.title || "",
+        challengeType: ["Fitness"].includes(challenge.type)
+          ? challenge.type
+          : "Other",
+        otherType: ["Fitness"].includes(challenge.type)
+          ? ""
+          : challenge.type || "",
+        maxParticipants: challenge.participants_max || 0,
+        creatorParticipating: challenge.creator_participating ? "yes" : "no",
+        buyInCost: challenge.buy_in_cost || 0,
+        additionalPrizeMoney: challenge.additional_prize_money || 0,
+        prizeType: challenge.prize_type || "just_for_fun",
+        prizeAmount: challenge.prize_amount || 0,
+        numberOfWinners: challenge.number_of_winners || 1,
+        scoringType: [
+          "Consistency",
+          "Time (High)",
+          "Time (Low)",
+          "Distance",
+          "Points",
+          "None",
+        ].includes(challenge.scoring_type)
+          ? challenge.scoring_type
+          : "Other",
+        otherScoringType: [
+          "Consistency",
+          "Time (High)",
+          "Time (Low)",
+          "Distance",
+          "Points",
+          "None",
+        ].includes(challenge.scoring_type)
+          ? ""
+          : challenge.scoring_type || "",
+        isPrivate: challenge.is_private || false,
+        coverFile: null,
+        startDateTime: challenge.start_datetime
+          ? new Date(challenge.start_datetime).toISOString().slice(0, 16)
+          : "",
+        endDateTime: challenge.end_datetime
+          ? new Date(challenge.end_datetime).toISOString().slice(0, 16)
+          : "",
+        errorMessage: "",
+        showStartPicker: false,
+        showEndPicker: false,
+      };
+      // Force DOM update after initial render
+      setTimeout(() => {
+        form = newFormState;
+        console.log("Form fields set:", form);
+      }, 0);
     } else {
       console.log("Create mode: Loading persisted form data");
       form = { ...$formData };
