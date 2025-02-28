@@ -68,7 +68,7 @@
     try {
       const { data, error: fetchError } = await supabase
         .from("tasks")
-        .select("id, action, verification_type, require_attachment") // Updated to match DB column
+        .select("id, action, verification_type, require_attachment")
         .eq("challenge_id", selectedChallenge.id);
       if (fetchError) throw fetchError;
       tasks = data || [];
@@ -96,6 +96,7 @@
 
   $: if (selectedTask && selectedTask !== prevSelectedTask) {
     console.log("Selected task changed:", selectedTask);
+    console.log("Require attachment:", selectedTask.require_attachment);
     submissionData.verification = "";
     attachments = [];
     console.log(
@@ -140,7 +141,6 @@
       return;
     }
     if (selectedTask.require_attachment && attachments.length === 0) {
-      // Updated to match DB column
       alert("Please upload at least one attachment.");
       return;
     }
@@ -159,10 +159,14 @@
         attachmentUrls = await Promise.all(
           attachments.map(async (file) => {
             const fileName = `${Date.now()}-${file.name}`;
-            const { error } = await supabase.storage
+            const { data, error } = await supabase.storage
               .from("media")
-              .upload(fileName, file);
-            if (error) throw error;
+              .upload(fileName, file, { upsert: true });
+            if (error) {
+              console.error("Upload error details:", error);
+              throw error;
+            }
+            console.log("Uploaded file:", data);
             return supabase.storage.from("media").getPublicUrl(fileName).data
               .publicUrl;
           })
@@ -170,7 +174,9 @@
         console.log("Uploaded attachments:", attachmentUrls);
       } catch (err) {
         console.error("Error uploading attachments:", err);
-        alert("Failed to upload attachments.");
+        alert(
+          "Failed to upload attachments: " + (err.message || "Unknown error")
+        );
         return;
       }
     }
@@ -197,7 +203,7 @@
         ]);
       if (completionError) throw completionError;
 
-      let postContent = `${currentUserUsername} completed task: ${selectedTask.action}`;
+      let postContent = `@${currentUserUsername} completed task: ${selectedTask.action}`; // Added @ symbol
       if (
         selectedTask.verification_type !== "none" &&
         submissionData.verification
@@ -208,18 +214,22 @@
         postContent += ` and attached files.`;
       }
 
-      const { error: postError } = await supabase.from("posts").insert([
-        {
-          challenge_id: selectedChallenge.id,
-          content: postContent,
-          user_id: $user.id,
-          username: currentUserUsername,
-          media_urls: attachmentUrls,
-          parent_id: null,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const { data: postData, error: postError } = await supabase
+        .from("posts")
+        .insert([
+          {
+            challenge_id: selectedChallenge.id,
+            content: postContent,
+            user_id: $user.id,
+            username: currentUserUsername,
+            media_urls: attachmentUrls, // Ensure array format
+            parent_id: null,
+            created_at: new Date().toISOString(),
+          },
+        ])
+        .select(); // Return inserted data for debugging
       if (postError) throw postError;
+      console.log("Post inserted:", postData);
 
       showTaskCompletionForm.set(false);
       selectedChallenge = null;
@@ -229,7 +239,7 @@
       onClose();
     } catch (err) {
       console.error("Error submitting task:", err);
-      alert("Failed to submit task. Please try again.");
+      alert("Failed to submit task: " + (err.message || "Unknown error"));
     }
   }
 </script>
@@ -310,7 +320,6 @@
           </label>
         {/if}
         {#if selectedTask.require_attachment}
-          <!-- Updated to match DB column -->
           <label>
             Attachments (at least one required):
             <input
