@@ -5,6 +5,7 @@
   import { navigate } from "svelte-routing";
   import TaskCreation from "./TaskCreation.svelte";
   import ChallengeCreation from "./ChallengeCreation.svelte";
+  import SocialFeed from "./SocialFeed.svelte"; // Assuming this path
 
   export let challengeId;
 
@@ -16,7 +17,7 @@
   let timeLeft = "";
   let timer = null;
   let showTaskCreation = false;
-  let editingTaskId = null; // New state to track the task being edited
+  let editingTaskId = null;
 
   onMount(async () => {
     console.log("ChallengeDetails mounted with challengeId:", challengeId);
@@ -171,7 +172,7 @@
 
   function toggleTaskCreation() {
     showTaskCreation = !showTaskCreation;
-    editingTaskId = null; // Reset when toggling manually
+    editingTaskId = null;
   }
 
   async function handleTaskCreated() {
@@ -221,6 +222,37 @@
         error = err.message;
         console.error("Remove task error:", err);
       }
+    }
+  }
+
+  // New function to handle task completion and auto-post to feed
+  async function completeTask(taskId, taskName) {
+    try {
+      // Update task status (assuming a 'completed' field exists)
+      const { error: taskError } = await supabase
+        .from("tasks")
+        .update({ completed: true })
+        .eq("id", taskId);
+      if (taskError) throw taskError;
+
+      // Auto-post to social feed
+      const postContent = `Completed task: ${taskName}`;
+      const { error: postError } = await supabase.from("posts").insert([
+        {
+          challenge_id: challengeId,
+          content: postContent,
+          user_id: $user.id,
+          username: $user.username || "Unknown", // Ensure username is available
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      if (postError)
+        console.error("Error auto-posting task completion:", postError);
+
+      await fetchTasks(); // Refresh task list
+    } catch (err) {
+      error = err.message;
+      console.error("Complete task error:", err);
     }
   }
 </script>
@@ -335,6 +367,12 @@
                       on:click={() => removeTask(task.id)}>Remove</button
                     >
                   {/if}
+                  <!-- Example completion button; adjust as needed -->
+                  {#if !task.completed}
+                    <button on:click={() => completeTask(task.id, task.action)}
+                      >Complete</button
+                    >
+                  {/if}
                 </td>
               </tr>
             {/each}
@@ -384,6 +422,12 @@
       {#if !$user || !contestants.some((c) => c.user_id === $user.id)}
         <button on:click={joinChallenge}>Join Challenge</button>
       {/if}
+    </div>
+
+    <!-- Social Feed Container -->
+    <div class="social-feed-container">
+      <h2>#{challenge.title} Community</h2>
+      <SocialFeed {challengeId} challengeName={challenge.title} />
     </div>
   {/if}
 </div>
@@ -521,7 +565,8 @@
   }
 
   .tasks,
-  .contestants {
+  .contestants,
+  .social-feed-container {
     margin-top: 2rem;
   }
 
@@ -644,5 +689,12 @@
     color: var(--tomato);
     font-size: 1.1rem;
     text-align: center;
+  }
+
+  .social-feed-container {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
   }
 </style>
