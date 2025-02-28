@@ -106,6 +106,8 @@
 
   async function uploadMedia(fileOrUrl) {
     if (typeof fileOrUrl === "string") return fileOrUrl;
+    if (fileOrUrl && typeof fileOrUrl === "object" && fileOrUrl.url)
+      return fileOrUrl.url;
     const fileName = `${Date.now()}-${fileOrUrl.name}`;
     const { error } = await supabase.storage
       .from("media")
@@ -586,6 +588,7 @@
             {#if nestedReplyTo === reply.id}
               <div class="nested-reply-form" id="nested-reply-{reply.id}">
                 <textarea
+                  class="nested-reply-textarea"
                   bind:value={nestedReplyContent}
                   on:input={(e) => handleInput(e, true)}
                   on:keydown={(e) => handleKeydown(e, true)}
@@ -593,6 +596,7 @@
                   rows="1"
                 ></textarea>
                 <button
+                  class="nested-send-btn"
                   on:click={() => submitReply(post.id, true, reply.username)}
                   >➤</button
                 >
@@ -827,14 +831,14 @@
   .feed-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 60px); /* Adjust for bottom nav bar height */
+    height: calc(100vh - 60px);
   }
   .feed {
     flex: 1;
     overflow-y: auto;
     padding: 0.25rem;
     font-size: 0.9rem;
-    padding-bottom: 100px; /* Space for fixed post form */
+    padding-bottom: 100px;
   }
   .post-form {
     padding: 0.25rem;
@@ -842,11 +846,11 @@
     flex-direction: column;
     gap: 0.25rem;
     position: fixed;
-    bottom: 60px; /* Above bottom nav bar, adjust if nav height differs */
+    bottom: 60px;
     left: 0;
     right: 0;
     background: var(--white);
-    z-index: 1000; /* Above nav bar */
+    z-index: 1000;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
   }
   .nested-reply-form {
@@ -861,33 +865,58 @@
     display: flex;
     align-items: center;
   }
-  .post-form textarea,
-  .nested-reply-form textarea {
+  .post-form textarea {
     width: 100%;
     resize: none;
     padding: 0.25rem 2rem 0.25rem 0.25rem;
     border: 1px solid var(--light-gray);
     border-radius: 4px;
-    font-size: clamp(0.75rem, 2vw, 0.85rem); /* Adaptive font size */
-    min-height: clamp(20px, 5vw, 28px); /* Adaptive height */
+    font-size: clamp(0.75rem, 2vw, 0.85rem);
+    min-height: clamp(20px, 5vw, 28px);
     line-height: 1.2;
+  }
+  .nested-reply-textarea {
+    width: 100%;
+    resize: none;
+    padding: 0.15rem 1.5rem 0.15rem 0.15rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+    min-height: clamp(18px, 4vw, 22px);
+    line-height: 1.1;
   }
   .send-btn {
     position: absolute;
     right: 0.25rem;
     bottom: 0.25rem;
-    padding: clamp(0.05rem, 1vw, 0.1rem) clamp(0.15rem, 2vw, 0.3rem); /* Adaptive padding */
+    padding: clamp(0.05rem, 1vw, 0.1rem) clamp(0.15rem, 2vw, 0.3rem);
     background-color: var(--tomato);
     color: var(--white);
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: clamp(0.6rem, 1.5vw, 0.7rem); /* Adaptive font size */
+    font-size: clamp(0.6rem, 1.5vw, 0.7rem);
     transition: background-color 0.3s;
     width: auto;
     height: auto;
   }
-  .send-btn:hover {
+  .nested-send-btn {
+    position: absolute;
+    right: 0.15rem;
+    bottom: 0.15rem;
+    padding: clamp(0.03rem, 0.8vw, 0.05rem) clamp(0.1rem, 1.5vw, 0.2rem);
+    background-color: var(--tomato);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: clamp(0.55rem, 1.2vw, 0.65rem);
+    transition: background-color 0.3s;
+    width: auto;
+    height: auto;
+  }
+  .send-btn:hover,
+  .nested-send-btn:hover {
     background-color: var(--tomato-light);
   }
   .toolbar,
@@ -901,7 +930,7 @@
     padding: 0.25rem;
     background: none;
     border: none;
-    font-size: clamp(0.8rem, 2vw, 0.9rem); /* Adaptive font size */
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
     cursor: pointer;
     color: var(--charcoal);
   }
@@ -919,11 +948,11 @@
     border: 1px solid var(--light-gray);
     border-radius: 4px;
     padding: 0.5rem;
-    z-index: 2000; /* Above post form */
+    z-index: 2000;
     max-width: 100%;
   }
   .gif-picker {
-    bottom: 100%; /* Above text box */
+    bottom: 100%;
     left: 0;
   }
   .gif-picker input {
@@ -945,7 +974,7 @@
     cursor: pointer;
   }
   .gif-list img {
-    width: clamp(60px, 20vw, 80px); /* Adaptive image size */
+    width: clamp(60px, 20vw, 80px);
     height: clamp(60px, 20vw, 80px);
     border-radius: 4px;
   }
