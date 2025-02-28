@@ -1,21 +1,25 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, createEventDispatcher } from "svelte";
   import { supabase } from "../supabase.js";
   import { user, showTaskCompletionForm } from "../stores.js";
 
   export let onClose = () => {};
+  export let preSelectedChallengeId = null;
+
+  const dispatch = createEventDispatcher();
 
   let challenges = [];
   let selectedChallenge = null;
   let tasks = [];
   let selectedTask = null;
-  let submissionData = { verification: "" };
+  let submissionData = { verification: "", comment: "" };
   let attachments = [];
   let currentUserUsername = "";
   let loadingChallenges = true;
   let loadingTasks = false;
   let error = null;
   let prevSelectedTask = null;
+  let modalElement; // Reference to modal div
 
   onMount(async () => {
     if (!$user) {
@@ -32,6 +36,11 @@
       if (fetchError) throw fetchError;
       challenges = data.map((d) => d.challenges).filter((c) => c);
       console.log("Fetched challenges:", challenges);
+
+      if (preSelectedChallengeId) {
+        selectedChallenge =
+          challenges.find((c) => c.id === preSelectedChallengeId) || null;
+      }
     } catch (err) {
       console.error("Error fetching challenges:", err);
       error = "Failed to load challenges. Please try again.";
@@ -52,6 +61,11 @@
       console.error("Error fetching username:", err);
       currentUserUsername = "Unknown";
     }
+
+    // Auto-focus the modal or first interactive element when mounted
+    if (modalElement) {
+      modalElement.focus();
+    }
   });
 
   async function fetchTasks() {
@@ -59,6 +73,7 @@
       tasks = [];
       selectedTask = null;
       submissionData.verification = "";
+      submissionData.comment = "";
       attachments = [];
       loadingTasks = false;
       return;
@@ -80,6 +95,7 @@
       );
       selectedTask = null;
       submissionData.verification = "";
+      submissionData.comment = "";
       attachments = [];
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -98,6 +114,7 @@
     console.log("Selected task changed:", selectedTask);
     console.log("Require attachment:", selectedTask.require_attachment);
     submissionData.verification = "";
+    submissionData.comment = "";
     attachments = [];
     console.log(
       "Form should render for verification_type:",
@@ -142,6 +159,10 @@
     }
     if (selectedTask.require_attachment && attachments.length === 0) {
       alert("Please upload at least one attachment.");
+      return;
+    }
+    if (!submissionData.comment.trim()) {
+      alert("Please enter a comment for your submission.");
       return;
     }
 
@@ -203,16 +224,8 @@
         ]);
       if (completionError) throw completionError;
 
-      let postContent = `@${currentUserUsername} completed task: ${selectedTask.action}`; // Added @ symbol
-      if (
-        selectedTask.verification_type !== "none" &&
-        submissionData.verification
-      ) {
-        postContent += ` with ${selectedTask.verification_type}: ${submissionData.verification}`;
-      }
-      if (attachmentUrls.length > 0) {
-        postContent += ` and attached files.`;
-      }
+      const postContent = submissionData.comment;
+      console.log("Post content before insertion:", postContent);
 
       const { data: postData, error: postError } = await supabase
         .from("posts")
@@ -222,12 +235,12 @@
             content: postContent,
             user_id: $user.id,
             username: currentUserUsername,
-            media_urls: attachmentUrls, // Ensure array format
+            media_urls: attachmentUrls,
             parent_id: null,
             created_at: new Date().toISOString(),
           },
         ])
-        .select(); // Return inserted data for debugging
+        .select();
       if (postError) throw postError;
       console.log("Post inserted:", postData);
 
@@ -235,6 +248,7 @@
       selectedChallenge = null;
       selectedTask = null;
       submissionData.verification = "";
+      submissionData.comment = "";
       attachments = [];
       onClose();
     } catch (err) {
@@ -242,16 +256,40 @@
       alert("Failed to submit task: " + (err.message || "Unknown error"));
     }
   }
+
+  // Handle modal closure and focus trapping
+  function handleKeydown(e) {
+    if (e.key === "Escape") {
+      onClose();
+    }
+    // Trap focus within modal
+    if (e.key === "Tab") {
+      const focusable = modalElement.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
 </script>
 
 <div
   class="modal"
+  bind:this={modalElement}
   on:click|stopPropagation
-  on:keydown={(e) => e.key === "Escape" && onClose()}
+  on:keydown={handleKeydown}
   role="dialog"
+  aria-labelledby="modal-title"
   tabindex="0"
 >
-  <h2>Submit Task Completion</h2>
+  <h2 id="modal-title">Submit Task Completion</h2>
 
   {#if loadingChallenges}
     <p>Loading challenges...</p>
@@ -260,10 +298,18 @@
   {:else}
     <label>
       Select Challenge:
-      <select bind:value={selectedChallenge}>
+      <select
+        bind:value={selectedChallenge}
+        disabled={!!preSelectedChallengeId}
+      >
         <option value={null}>Choose a challenge</option>
         {#each challenges as challenge}
-          <option value={challenge}>{challenge.title}</option>
+          <option
+            value={challenge}
+            selected={challenge.id === preSelectedChallengeId}
+          >
+            {challenge.title}
+          </option>
         {/each}
       </select>
     </label>
@@ -288,7 +334,7 @@
       <div class="submission-form">
         {#if selectedTask.verification_type === "Text Form"}
           <label>
-            Text Form:
+            Text Form (required):
             <textarea
               bind:value={submissionData.verification}
               required={selectedTask.verification_type !== "none"}
@@ -297,7 +343,7 @@
           </label>
         {:else if selectedTask.verification_type === "Time Entry"}
           <label>
-            Time Entry (HH:MM:SS):
+            Time Entry (HH:MM:SS, required):
             <input
               type="text"
               bind:value={submissionData.verification}
@@ -310,7 +356,7 @@
           </label>
         {:else if selectedTask.verification_type === "Numerical Entry"}
           <label>
-            Numerical Entry (##.##):
+            Numerical Entry (##.##, required):
             <input
               type="number"
               step="0.01"
@@ -331,6 +377,14 @@
             />
           </label>
         {/if}
+        <label>
+          Comment (required):
+          <textarea
+            bind:value={submissionData.comment}
+            required
+            placeholder="Enter your submission message"
+          ></textarea>
+        </label>
       </div>
     {/if}
 
@@ -358,6 +412,7 @@
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    outline: none; /* Ensure focus outline is visible */
   }
   label {
     display: block;

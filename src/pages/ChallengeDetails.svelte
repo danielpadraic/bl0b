@@ -1,11 +1,16 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { supabase } from "../supabase.js";
-  import { user, showChallengeCreation } from "../stores.js";
+  import {
+    user,
+    showChallengeCreation,
+    showTaskCompletionForm,
+  } from "../stores.js"; // Added showTaskCompletionForm
   import { navigate } from "svelte-routing";
   import TaskCreation from "./TaskCreation.svelte";
   import ChallengeCreation from "./ChallengeCreation.svelte";
-  import SocialFeed from "./SocialFeed.svelte"; // Assuming this path
+  import SocialFeed from "./SocialFeed.svelte";
+  import TaskCompletionForm from "./TaskCompletionForm.svelte"; // Added import
 
   export let challengeId;
 
@@ -18,6 +23,7 @@
   let timer = null;
   let showTaskCreation = false;
   let editingTaskId = null;
+  let showForm = false; // Local state for form visibility
 
   onMount(async () => {
     console.log("ChallengeDetails mounted with challengeId:", challengeId);
@@ -56,7 +62,7 @@
     try {
       const { data, error: fetchError } = await supabase
         .from("challenge_participants")
-        .select("user_id")
+        .select("user_id, score")
         .eq("challenge_id", challengeId);
       console.log("Fetched participants:", data, "Error:", fetchError);
       if (fetchError) throw fetchError;
@@ -77,7 +83,7 @@
           return {
             user_id: participant.user_id,
             username: profile ? profile.username : "Unknown",
-            position: Math.floor(Math.random() * 100),
+            score: participant.score || 0,
           };
         });
 
@@ -86,12 +92,7 @@
           ? new Date(challenge.start_datetime)
           : null;
         if (start && now >= start) {
-          contestants.sort((a, b) => {
-            if (a.position === b.position) {
-              return a.username.localeCompare(b.username);
-            }
-            return b.position - a.position;
-          });
+          contestants.sort((a, b) => b.score - a.score);
         } else {
           contestants.sort((a, b) => a.username.localeCompare(b.username));
         }
@@ -225,34 +226,32 @@
     }
   }
 
-  // New function to handle task completion and auto-post to feed
-  async function completeTask(taskId, taskName) {
-    try {
-      // Update task status (assuming a 'completed' field exists)
-      const { error: taskError } = await supabase
-        .from("tasks")
-        .update({ completed: true })
-        .eq("id", taskId);
-      if (taskError) throw taskError;
+  function handleCompleteTask() {
+    if (!$user) {
+      navigate("/login");
+      return;
+    }
+    showTaskCompletionForm.set(true);
+    showForm = true;
+  }
 
-      // Auto-post to social feed
-      const postContent = `Completed task: ${taskName}`;
-      const { error: postError } = await supabase.from("posts").insert([
-        {
-          challenge_id: challengeId,
-          content: postContent,
-          user_id: $user.id,
-          username: $user.username || "Unknown", // Ensure username is available
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      if (postError)
-        console.error("Error auto-posting task completion:", postError);
+  function closeForm() {
+    showTaskCompletionForm.set(false);
+    showForm = false;
+  }
 
-      await fetchTasks(); // Refresh task list
-    } catch (err) {
-      error = err.message;
-      console.error("Complete task error:", err);
+  function getScoreLabel() {
+    if (!challenge?.scoring_type) return "Score";
+    switch (challenge.scoring_type) {
+      case "Time (High)":
+      case "Time (Low)":
+        return "Time";
+      case "Points":
+        return "Points";
+      case "Distance":
+        return "Distance";
+      default:
+        return "Score";
     }
   }
 </script>
@@ -270,40 +269,42 @@
       {/if}
       <div class="header-table">
         <table>
-          <tr>
-            <th>Title</th><td>{challenge.title}</td>
-            <th>Type</th><td>{challenge.type}</td>
-          </tr>
-          <tr>
-            <th>Participants</th><td
+          <tr><th>Title</th><td>{challenge.title}</td></tr>
+          <tr><th>Type</th><td>{challenge.type}</td></tr>
+          <tr
+            ><th>Participants</th><td
               >{challenge.participants_current ||
                 0}/{challenge.participants_max === 0
                 ? "∞"
                 : challenge.participants_max}</td
-            >
-            <th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td>
-            <th>Scoring</th><td>{challenge.scoring_type}</td>
-          </tr>
-          <tr>
-            <th>Access</th><td>{challenge.is_private ? "Private" : "Public"}</td
-            >
-            <th>Creator</th><td>{challenge.profiles.username || "Unknown"}</td>
-          </tr>
-          <tr>
-            <th>Start</th><td
+            ></tr
+          >
+          <tr><th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td></tr>
+          <tr><th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td></tr>
+          <tr><th>Scoring</th><td>{challenge.scoring_type}</td></tr>
+          <tr
+            ><th>Access</th><td
+              >{challenge.is_private ? "Private" : "Public"}</td
+            ></tr
+          >
+          <tr
+            ><th>Creator</th><td>{challenge.profiles.username || "Unknown"}</td
+            ></tr
+          >
+          <tr
+            ><th>Start</th><td
               >{challenge.start_datetime
                 ? new Date(challenge.start_datetime).toLocaleString()
                 : "Not set"}</td
-            >
-            <th>End</th><td
+            ></tr
+          >
+          <tr
+            ><th>End</th><td
               >{challenge.end_datetime
                 ? new Date(challenge.end_datetime).toLocaleString()
                 : "Not set"}</td
-            >
-          </tr>
+            ></tr
+          >
         </table>
       </div>
       {#if timeLeft}
@@ -339,49 +340,48 @@
     <div class="tasks">
       <h2>Tasks</h2>
       {#if tasks.length > 0}
-        <table class="challenge-table">
-          <thead>
-            <tr>
-              <th>Action</th>
-              <th>Frequency</th>
-              <th>Verification Type</th>
-              <th>Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each tasks as task}
-              <tr>
-                <td class="no-wrap">{task.action}</td>
-                <td>{task.frequency}</td>
-                <td>{task.verification_type}</td>
-                <td>{task.notes || ""}</td>
-                <td>
-                  {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
-                    <button
-                      class="edit-task-btn"
-                      on:click={() => editTask(task.id)}>Edit</button
-                    >
-                    <button
-                      class="remove-task-btn"
-                      on:click={() => removeTask(task.id)}>Remove</button
-                    >
-                  {/if}
-                  <!-- Example completion button; adjust as needed -->
-                  {#if !task.completed}
-                    <button on:click={() => completeTask(task.id, task.action)}
-                      >Complete</button
-                    >
-                  {/if}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+        <ul class="task-list">
+          {#each tasks as task, index}
+            <li>
+              {index + 1}. {task.action}
+              {#if $user && $user.id === challenge.creator_id && new Date() < new Date(challenge.start_datetime)}
+                <button class="edit-task-btn" on:click={() => editTask(task.id)}
+                  >Edit</button
+                >
+                <button
+                  class="remove-task-btn"
+                  on:click={() => removeTask(task.id)}>Remove</button
+                >
+              {/if}
+              {#if !task.completed}
+                <button
+                  on:click={handleCompleteTask}
+                  on:keydown={(e) => e.key === "Enter" && handleCompleteTask()}
+                >
+                  Complete
+                </button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
       {:else}
         <p>No tasks yet.</p>
       {/if}
     </div>
+
+    {#if showForm}
+      <div
+        class="modal-overlay"
+        on:click={closeForm}
+        on:keydown={(e) => e.key === "Escape" && closeForm()}
+        role="presentation"
+      >
+        <TaskCompletionForm
+          preSelectedChallengeId={challengeId}
+          on:close={closeForm}
+        />
+      </div>
+    {/if}
 
     {#if challenge.cover_media}
       <div class="cover-container">
@@ -403,6 +403,7 @@
             <tr>
               <th>Rank</th>
               <th>Username</th>
+              <th>{getScoreLabel()}</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -411,6 +412,7 @@
               <tr>
                 <td>{index + 1}</td>
                 <td>{contestant.username}</td>
+                <td>{contestant.score}</td>
                 <td>Active</td>
               </tr>
             {/each}
@@ -424,7 +426,6 @@
       {/if}
     </div>
 
-    <!-- Social Feed Container -->
     <div class="social-feed-container">
       <h2>#{challenge.title} Community</h2>
       <SocialFeed {challengeId} challengeName={challenge.title} />
@@ -449,7 +450,7 @@
   }
 
   h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: var(--charcoal);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     margin-bottom: 1.5rem;
@@ -484,25 +485,19 @@
   }
 
   .header-table table {
-    width: 100%;
-    max-width: 700px;
-    margin: 0 auto;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     background: var(--white);
     border-radius: 8px;
-    box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.15),
-      inset 0 1px 2px rgba(255, 255, 255, 0.5);
-    transform: translateZ(0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   .header-table th,
   .header-table td {
-    padding: 0.75rem 1rem;
+    padding: 0.25rem 0.5rem;
     border: 1px solid var(--light-gray);
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    text-align: left;
   }
 
   .header-table th {
@@ -516,14 +511,7 @@
   .header-table td {
     background-color: var(--white);
     color: var(--charcoal);
-    width: 25%;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .header-table tr:hover td {
-    background-color: var(--light-gray);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 75%;
   }
 
   .action-buttons {
@@ -571,49 +559,44 @@
   }
 
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: var(--charcoal);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
   }
 
-  .challenge-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    background: var(--white);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  .task-list {
+    list-style: none;
+    padding: 0;
   }
 
-  .challenge-table th,
-  .challenge-table td {
-    padding: 0.75rem;
-    border: 1px solid var(--light-gray);
-    text-align: left;
+  .task-list li {
+    margin-bottom: 0.5rem;
     font-size: 0.9rem;
-  }
-
-  .challenge-table th {
-    background: linear-gradient(to bottom, var(--tomato), var(--tomato-light));
-    color: var(--white);
-    font-weight: bold;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
-  }
-
-  .challenge-table td {
-    background-color: var(--white);
     color: var(--charcoal);
-    transition: background-color 0.3s ease;
   }
 
-  .challenge-table tr:hover td {
-    background-color: var(--light-gray);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  .task-list button {
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
   }
 
-  .challenge-table .no-wrap {
-    white-space: nowrap;
+  .edit-task-btn {
+    background-color: var(--carolina-blue);
+    color: var(--white);
+  }
+
+  .edit-task-btn:hover {
+    background-color: #87ceeb;
+  }
+
+  .remove-task-btn {
+    background-color: #e74c3c;
+  }
+
+  .remove-task-btn:hover {
+    background-color: #c0392b;
   }
 
   .contestants-table {
@@ -651,21 +634,6 @@
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
-  .edit-task-btn,
-  .remove-task-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.9rem;
-    margin-left: 0.5rem;
-  }
-
-  .remove-task-btn {
-    background-color: #e74c3c;
-  }
-
-  .remove-task-btn:hover {
-    background-color: #c0392b;
-  }
-
   button {
     background-color: var(--tomato);
     color: var(--white);
@@ -683,6 +651,19 @@
     background-color: var(--tomato-light);
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
   }
 
   .error {

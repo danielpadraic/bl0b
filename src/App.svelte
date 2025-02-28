@@ -187,7 +187,6 @@
         on:keydown={(e) =>
           e.key === "Escape" && showTaskCompletionForm.set(false)}
         role="presentation"
-        tabindex="0"
       >
         <TaskCompletionForm
           on:close={() => showTaskCompletionForm.set(false)}
