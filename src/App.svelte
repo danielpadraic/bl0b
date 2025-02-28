@@ -2,20 +2,31 @@
   import { onMount, onDestroy } from "svelte";
   import { navigate, Router, Route, Link } from "svelte-routing";
   import { showChallengeCreation, user } from "./stores.js";
+  import { showTaskCompletionForm } from "./stores.js";
+  import TaskCompletionForm from "./pages/TaskCompletionForm.svelte";
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
-  import ChallengeDetails from "./pages/ChallengeDetails.svelte"; // Add this
+  import ChallengeDetails from "./pages/ChallengeDetails.svelte";
   import SocialFeed from "./pages/SocialFeed.svelte";
   import BottomNav from "./components/BottomNav.svelte";
   import ChallengeCreation from "./pages/ChallengeCreation.svelte";
   import Profile from "./pages/Profile.svelte";
   import Login from "./pages/Login.svelte";
   import Fa from "svelte-fa";
-  import { faHome, faTrophy, faUsers } from "@fortawesome/free-solid-svg-icons";
+  import {
+    faHome,
+    faTrophy,
+    faUsers,
+    faNewspaper,
+  } from "@fortawesome/free-solid-svg-icons";
 
   let menuOpen = false;
   let currentUser = null;
   let isMobile = window.innerWidth < 769;
+  let showTaskCompletionFormValue;
+  showTaskCompletionForm.subscribe(
+    (value) => (showTaskCompletionFormValue = value)
+  );
 
   function handleResize() {
     isMobile = window.innerWidth < 769;
@@ -74,7 +85,7 @@
       >
         <img src="/assets/logo.png" alt="blOb Logo" />
       </div>
-      {#if !isMobile}
+      {#if !isMobile && $user}
         <nav class="top-nav">
           <Link to="/" class={window.location.pathname === "/" ? "active" : ""}>
             <Fa icon={faHome} size="lg" />
@@ -87,12 +98,25 @@
             <Fa icon={faTrophy} size="lg" />
             <span>Leaderboards</span>
           </Link>
+          <button
+            class="task-complete-btn"
+            on:click={() => showTaskCompletionForm.set(true)}
+          >
+            <span>+</span>
+          </button>
           <Link
             to="/social"
             class={window.location.pathname === "/social" ? "active" : ""}
           >
             <Fa icon={faUsers} size="lg" />
             <span>Social</span>
+          </Link>
+          <Link
+            to="/news"
+            class={window.location.pathname === "/news" ? "active" : ""}
+          >
+            <Fa icon={faNewspaper} size="lg" />
+            <span>News</span>
           </Link>
         </nav>
       {/if}
@@ -117,8 +141,10 @@
               toggleChallengeCreation();
               toggleMenu();
             }}
-            class="create-btn">Create Challenge</button
+            class="create-btn"
           >
+            Create Challenge
+          </button>
           <button on:click={logout} class="logout-btn">Logout</button>
         {:else}
           <Link to="/signup" on:click={toggleMenu} class="dark-bg-text"
@@ -140,10 +166,9 @@
       <Route path="/signup" component={ChallengeLobby} />
       <Route path="/login" component={Login} />
       <Route path="/challenge/:challengeId" component={ChallengeDetails} />
-      <!-- Add this -->
     </main>
 
-    {#if isMobile && currentUser}
+    {#if isMobile && $user}
       <BottomNav
         activeTab={window.location.pathname === "/"
           ? "home"
@@ -153,6 +178,21 @@
 
     {#if $showChallengeCreation}
       <ChallengeCreation />
+    {/if}
+
+    {#if showTaskCompletionFormValue}
+      <div
+        class="modal-overlay"
+        on:click={() => showTaskCompletionForm.set(false)}
+        on:keydown={(e) =>
+          e.key === "Escape" && showTaskCompletionForm.set(false)}
+        role="presentation"
+        tabindex="0"
+      >
+        <TaskCompletionForm
+          on:close={() => showTaskCompletionForm.set(false)}
+        />
+      </div>
     {/if}
   </Router>
 </div>
@@ -187,11 +227,11 @@
   .top-nav {
     display: flex;
     flex-direction: row;
-    justify-content: space-evenly;
+    justify-content: space-between;
     align-items: center;
     gap: 2rem;
     width: 100%;
-    max-width: 400px;
+    max-width: 500px; /* Adjusted to accommodate 5 buttons */
   }
 
   :global(.top-nav a) {
@@ -221,6 +261,24 @@
 
   :global(.top-nav a span) {
     margin-top: 0.3rem !important;
+  }
+
+  .top-nav .task-complete-btn {
+    background-color: var(--tomato);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .top-nav .task-complete-btn:hover {
+    background-color: var(--tomato-light);
   }
 
   .hamburger {
@@ -298,5 +356,18 @@
     padding: 1rem 1rem 80px 1rem;
     overflow-y: auto;
     max-height: calc(100vh - 60px);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
   }
 </style>
