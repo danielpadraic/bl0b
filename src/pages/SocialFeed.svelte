@@ -7,6 +7,7 @@
   export let challengeName;
 
   let posts = [];
+  let originalPost = null;
   let newPost = "";
   let mediaFiles = [];
   let showEmojiPicker = false;
@@ -19,8 +20,8 @@
   let tagStartIndex = -1;
   let currentUserUsername = "";
   let showReactionPicker = null;
-  let replyingTo = null; // Track the post ID being replied to
-  let replyContent = ""; // Content for the current reply
+  let replyingTo = null;
+  let replyContent = "";
   let minimized = false;
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
@@ -41,20 +42,20 @@
         },
         (payload) => {
           console.log("New post received via subscription:", payload.new);
-          const newPost = {
+          const newPostData = {
             ...payload.new,
             timestamp: new Date(payload.new.created_at).toLocaleString(
               "en-US",
-              {
-                hour: "numeric",
-                minute: "numeric",
-                hour12: true,
-              }
+              { hour: "numeric", minute: "numeric", hour12: true }
             ),
-            username: payload.new.username || "Unknown",
+            username: currentUserUsername,
             reactions: [],
           };
-          posts = [newPost, ...posts];
+          if (newPostData.parent_id === null && !originalPost) {
+            originalPost = newPostData;
+          } else {
+            posts = [newPostData, ...posts];
+          }
           console.log("Updated posts array after subscription:", posts);
         }
       )
@@ -76,6 +77,7 @@
       .single();
     if (error) {
       console.error("Error fetching username:", error);
+      currentUserUsername = "Unknown";
     } else {
       currentUserUsername = data.username || "Unknown";
       console.log("Fetched current user username:", currentUserUsername);
@@ -84,25 +86,82 @@
 
   async function fetchPosts() {
     try {
-      const { data, error: fetchError } = await supabase
+      const { data: postsData, error: postsError } = await supabase
         .from("posts")
-        .select("*, post_reactions(reaction_type, user_id, profiles(username))")
+        .select(
+          "id, user_id, content, color_code, created_at, challenge_id, media_url, parent_id, post_reactions(reaction_type, user_id, profiles(username))"
+        )
         .eq("challenge_id", challengeId)
         .order("created_at", { ascending: false });
-      if (fetchError) throw fetchError;
-      posts = data.map((post) => ({
-        ...post,
-        timestamp: new Date(post.created_at).toLocaleString("en-US", {
-          hour: "numeric",
-          minute: "numeric",
-          hour12: true,
-        }),
-        username: post.username || "Unknown",
-        reactions: post.post_reactions || [],
-      }));
-      console.log("Fetched posts:", posts);
+      if (postsError) {
+        console.error("Fetch posts error:", postsError);
+        throw postsError;
+      }
+      console.log("Raw posts data from Supabase:", postsData);
+      if (!postsData || postsData.length === 0) {
+        console.log("No posts found for challengeId:", challengeId);
+        posts = [];
+        originalPost = null;
+        return;
+      }
+
+      // Fetch usernames from profiles for posts
+      const userIds = [
+        ...new Set(postsData.map((post) => post.user_id).filter(Boolean)),
+      ];
+      console.log("User IDs to fetch profiles for:", userIds);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .in("id", userIds);
+      if (profilesError) {
+        console.error("Profiles fetch error:", profilesError);
+      }
+      console.log("Fetched profiles:", profilesData || "None");
+      const usernameMap = new Map(
+        profilesData ? profilesData.map((p) => [p.id, p.username]) : []
+      );
+
+      const allPosts = postsData.map((post) => {
+        let mediaUrl = post.media_url;
+        try {
+          if (typeof mediaUrl === "string") {
+            mediaUrl = JSON.parse(mediaUrl);
+          }
+          mediaUrl =
+            Array.isArray(mediaUrl) && mediaUrl.length > 0 ? mediaUrl[0] : null;
+        } catch (e) {
+          console.warn("Failed to parse media_url for post", post.id, ":", e);
+          mediaUrl = null;
+        }
+        return {
+          ...post,
+          timestamp: new Date(post.created_at).toLocaleString("en-US", {
+            hour: "numeric",
+            minute: "numeric",
+            hour12: true,
+          }),
+          username: post.user_id
+            ? usernameMap.get(post.user_id) || "Unknown"
+            : "Unknown",
+          reactions: post.post_reactions || [],
+          media_url: mediaUrl,
+        };
+      });
+      const originalIdx = allPosts.findIndex((p) => p.parent_id === null);
+      if (originalIdx !== -1) {
+        originalPost = allPosts.splice(originalIdx, 1)[0];
+      } else {
+        originalPost = null;
+      }
+      posts = allPosts;
+      console.log("Processed original post:", originalPost);
+      console.log("Processed comments/replies:", posts);
+      console.log("Rendering posts:", posts, "Original:", originalPost);
     } catch (err) {
       console.error("Error fetching posts:", err);
+      posts = [];
+      originalPost = null;
     }
   }
 
@@ -114,7 +173,6 @@
         .eq("challenge_id", challengeId);
       if (error) {
         console.error("Error fetching participants:", error);
-        // Fallback: Try fetching usernames directly from profiles if relationship fails
         const { data: fallbackData, error: fallbackError } = await supabase
           .from("profiles")
           .select("username")
@@ -127,12 +185,8 @@
                 .eq("challenge_id", challengeId)
             ).data.map((p) => p.user_id)
           );
-        if (fallbackError) {
-          console.error("Fallback error fetching participants:", fallbackError);
-          participants = [];
-        } else {
-          participants = fallbackData.map((p) => p.username).filter(Boolean);
-        }
+        if (fallbackError) throw fallbackError;
+        participants = fallbackData.map((p) => p.username).filter(Boolean);
       } else {
         participants = data.map((p) => p.profiles.username).filter(Boolean);
       }
@@ -157,9 +211,9 @@
 
   async function submitPost() {
     if (!newPost.trim() && mediaFiles.length === 0) return;
-    let mediaUrls = [];
+    let mediaUrl = null;
     if (mediaFiles.length > 0) {
-      mediaUrls = await Promise.all(mediaFiles.map(uploadMedia));
+      mediaUrl = await uploadMedia(mediaFiles[0]);
     }
     const { data, error } = await supabase
       .from("posts")
@@ -168,10 +222,10 @@
           challenge_id: challengeId,
           content: newPost,
           user_id: $user.id,
-          username: currentUserUsername,
-          media_urls: mediaUrls,
+          media_url: mediaUrl,
           parent_id: null,
           created_at: new Date().toISOString(),
+          color_code: "#ffffff",
         },
       ])
       .select();
@@ -184,12 +238,13 @@
       showEmojiPicker = false;
       showGifPicker = false;
       showTagPicker = false;
+      await fetchPosts();
     }
   }
 
   async function submitReply(postId) {
     if (!replyContent.trim()) return;
-    const parentPost = posts.find((p) => p.id === postId);
+    const parentPost = posts.find((p) => p.id === postId) || originalPost;
     const parentUsername = parentPost ? parentPost.username : null;
     const finalContent = parentUsername
       ? `@${parentUsername} ${replyContent}`
@@ -201,9 +256,10 @@
           challenge_id: challengeId,
           content: finalContent,
           user_id: $user.id,
-          username: currentUserUsername,
+          media_url: null,
           parent_id: postId,
           created_at: new Date().toISOString(),
+          color_code: "#ffffff",
         },
       ])
       .select();
@@ -215,17 +271,16 @@
       replyingTo = null;
       showEmojiPicker = false;
       showGifPicker = false;
-      showTagPicker = false; // Reset pickers after submission
-      await fetchPosts(); // Manually refresh posts to ensure UI updates
+      showTagPicker = false;
+      await fetchPosts();
     }
   }
 
   async function toggleReaction(postId, reactionType) {
-    const existingReaction = posts
-      .find((p) => p.id === postId)
-      .reactions.find(
-        (r) => r.user_id === $user.id && r.reaction_type === reactionType
-      );
+    const post = posts.find((p) => p.id === postId) || originalPost;
+    const existingReaction = post.reactions.find(
+      (r) => r.user_id === $user.id && r.reaction_type === reactionType
+    );
     if (existingReaction) {
       const { error } = await supabase
         .from("post_reactions")
@@ -242,7 +297,7 @@
         ]);
       if (error) console.error("Error adding reaction:", error);
     }
-    await fetchPosts(); // Refresh posts after reaction update
+    await fetchPosts();
     showReactionPicker = null;
   }
 
@@ -380,48 +435,39 @@
       console.log("Hiding reply form for post:", postId);
     }
   }
-
-  function renderReplies(posts, parentId = null) {
-    return posts
-      .filter((p) => p.parent_id === parentId)
-      .map((post) => ({
-        post,
-        replies: renderReplies(posts, post.id),
-      }));
-  }
 </script>
 
 <div class="feed-container">
   <div class="feed">
-    {#each renderReplies(posts) as { post, replies }}
-      <div class="post" class:reply={!!post.parent_id}>
+    {#if originalPost}
+      <div class="post">
         <p class="post-meta">
-          {post.timestamp} |
+          {originalPost.timestamp} |
           <span class="challenge-name">#{challengeName}</span>
           |
           <span
             class="username"
             role="button"
             tabindex="0"
-            on:click={() => tagUser(post.id, post.username)}
+            on:click={() => tagUser(originalPost.id, originalPost.username)}
             on:keydown={(e) =>
-              handleKeyPress(e, () => tagUser(post.id, post.username))}
+              handleKeyPress(e, () =>
+                tagUser(originalPost.id, originalPost.username)
+              )}
           >
-            @{post.username}
+            @{originalPost.username}
           </span>
         </p>
-        <p class="post-content">{post.content}</p>
-        {#if post.media_urls && post.media_urls.length > 0}
+        <p class="post-content">{originalPost.content}</p>
+        {#if originalPost.media_url}
           <div class="media">
-            {#each post.media_urls as url}
-              {#if url.match(/\.(mp4|webm)$/i)}
-                <video src={url} controls width="100%">
-                  <track kind="captions" label="No captions available" />
-                </video>
-              {:else}
-                <img src={url} alt="Post media" />
-              {/if}
-            {/each}
+            {#if originalPost.media_url.match(/\.(mp4|webm)$/i)}
+              <video src={originalPost.media_url} controls width="100%">
+                <track kind="captions" label="No captions available" />
+              </video>
+            {:else}
+              <img src={originalPost.media_url} alt="Post media" />
+            {/if}
           </div>
         {/if}
         <div class="reactions">
@@ -429,33 +475,37 @@
             class="reaction-btn"
             on:click={() =>
               (showReactionPicker =
-                showReactionPicker === post.id ? null : post.id)}
+                showReactionPicker === originalPost.id
+                  ? null
+                  : originalPost.id)}
           >
             🙂➕
           </button>
-          {#if showReactionPicker === post.id}
+          {#if showReactionPicker === originalPost.id}
             <div class="reaction-picker">
-              <button on:click={() => toggleReaction(post.id, "like")}
+              <button on:click={() => toggleReaction(originalPost.id, "like")}
                 >👍</button
               >
-              <button on:click={() => toggleReaction(post.id, "heart")}
+              <button on:click={() => toggleReaction(originalPost.id, "heart")}
                 >❤️</button
               >
-              <button on:click={() => toggleReaction(post.id, "laugh")}
+              <button on:click={() => toggleReaction(originalPost.id, "laugh")}
                 >😂</button
               >
-              <button on:click={() => toggleReaction(post.id, "cry")}>😢</button
+              <button on:click={() => toggleReaction(originalPost.id, "cry")}
+                >😢</button
               >
-              <button on:click={() => toggleReaction(post.id, "comfort")}
+              <button
+                on:click={() => toggleReaction(originalPost.id, "comfort")}
                 >🤗</button
               >
             </div>
           {/if}
           {#each ["like", "heart", "laugh", "cry", "comfort"] as type}
-            {#if post.reactions.some((r) => r.reaction_type === type)}
+            {#if originalPost.reactions.some((r) => r.reaction_type === type)}
               <span
                 class="reaction-count"
-                title={post.reactions
+                title={originalPost.reactions
                   .filter((r) => r.reaction_type === type)
                   .map((r) => r.profiles.username)
                   .join(", ")}
@@ -469,151 +519,143 @@
                       : type === "cry"
                         ? "😢"
                         : "🤗"}
-                +{post.reactions.filter((r) => r.reaction_type === type).length}
+                +{originalPost.reactions.filter((r) => r.reaction_type === type)
+                  .length}
               </span>
             {/if}
           {/each}
           <a
             href="#comment"
             class="comment-link"
-            on:click|preventDefault={(e) => {
-              console.log("Comment link clicked for post:", post.id);
-              toggleReply(post.id);
-            }}
+            on:click|preventDefault={() => toggleReply(originalPost.id)}
           >
             Comment
           </a>
         </div>
-        {#if replyingTo === post.id}
-          <div class="reply-form active" id="reply-{post.id}">
+        {#if replyingTo === originalPost.id}
+          <div class="reply-form active" id="reply-{originalPost.id}">
             <textarea
               bind:value={replyContent}
               on:input={handleInput}
-              on:keydown={(e) => handleKeydown(e, post.id)}
+              on:keydown={(e) => handleKeydown(e, originalPost.id)}
               placeholder="Reply..."
               rows="1"
             ></textarea>
-            <button class="send-btn" on:click={() => submitReply(post.id)}
-              >➤</button
+            <button
+              class="send-btn"
+              on:click={() => submitReply(originalPost.id)}>➤</button
             >
           </div>
         {/if}
-        {#each replies as { post: replyPost, replies: nestedReplies }}
-          <div class="reply">
-            <p class="post-meta">
-              {replyPost.timestamp} |
-              <span class="challenge-name">#{challengeName}</span>
-              |
-              <span
-                class="username"
-                role="button"
-                tabindex="0"
-                on:click={() => tagUser(replyPost.id, replyPost.username)}
-                on:keydown={(e) =>
-                  handleKeyPress(e, () =>
-                    tagUser(replyPost.id, replyPost.username)
-                  )}
-              >
-                @{replyPost.username}
-              </span>
-            </p>
-            <p class="post-content">{replyPost.content}</p>
-            {#if replyPost.media_urls && replyPost.media_urls.length > 0}
-              <div class="media">
-                {#each replyPost.media_urls as url}
-                  {#if url.match(/\.(mp4|webm)$/i)}
-                    <video src={url} controls width="100%">
-                      <track kind="captions" label="No captions available" />
-                    </video>
-                  {:else}
-                    <img src={url} alt="Reply media" />
-                  {/if}
-                {/each}
-              </div>
-            {/if}
-            <div class="reactions">
-              <button
-                class="reaction-btn"
-                on:click={() =>
-                  (showReactionPicker =
-                    showReactionPicker === replyPost.id ? null : replyPost.id)}
-              >
-                🙂➕
-              </button>
-              {#if showReactionPicker === replyPost.id}
-                <div class="reaction-picker">
-                  <button on:click={() => toggleReaction(replyPost.id, "like")}
-                    >👍</button
-                  >
-                  <button on:click={() => toggleReaction(replyPost.id, "heart")}
-                    >❤️</button
-                  >
-                  <button on:click={() => toggleReaction(replyPost.id, "laugh")}
-                    >😂</button
-                  >
-                  <button on:click={() => toggleReaction(replyPost.id, "cry")}
-                    >😢</button
-                  >
-                  <button
-                    on:click={() => toggleReaction(replyPost.id, "comfort")}
-                    >🤗</button
-                  >
-                </div>
+      </div>
+
+      {#each posts as post}
+        <div class="post" class:reply={post.parent_id !== null}>
+          <p class="post-meta">
+            {post.timestamp} |
+            <span class="challenge-name">#{challengeName}</span>
+            |
+            <span
+              class="username"
+              role="button"
+              tabindex="0"
+              on:click={() => tagUser(post.id, post.username)}
+              on:keydown={(e) =>
+                handleKeyPress(e, () => tagUser(post.id, post.username))}
+            >
+              @{post.username}
+            </span>
+          </p>
+          <p class="post-content">{post.content}</p>
+          {#if post.media_url}
+            <div class="media">
+              {#if post.media_url.match(/\.(mp4|webm)$/i)}
+                <video src={post.media_url} controls width="100%">
+                  <track kind="captions" label="No captions available" />
+                </video>
+              {:else}
+                <img src={post.media_url} alt="Post media" />
               {/if}
-              {#each ["like", "heart", "laugh", "cry", "comfort"] as type}
-                {#if replyPost.reactions.some((r) => r.reaction_type === type)}
-                  <span
-                    class="reaction-count"
-                    title={replyPost.reactions
-                      .filter((r) => r.reaction_type === type)
-                      .map((r) => r.profiles.username)
-                      .join(", ")}
-                  >
-                    {type === "like"
-                      ? "👍"
-                      : type === "heart"
-                        ? "❤️"
-                        : type === "laugh"
-                          ? "😂"
-                          : type === "cry"
-                            ? "😢"
-                            : "🤗"}
-                    +{replyPost.reactions.filter(
-                      (r) => r.reaction_type === type
-                    ).length}
-                  </span>
-                {/if}
-              {/each}
-              <a
-                href="#comment"
-                class="comment-link"
-                on:click|preventDefault={(e) => {
-                  console.log("Comment link clicked for reply:", replyPost.id);
-                  toggleReply(replyPost.id);
-                }}
-              >
-                Comment
-              </a>
             </div>
-            {#if replyingTo === replyPost.id}
-              <div class="reply-form active" id="reply-{replyPost.id}">
-                <textarea
-                  bind:value={replyContent}
-                  on:input={handleInput}
-                  on:keydown={(e) => handleKeydown(e, replyPost.id)}
-                  placeholder="Reply..."
-                  rows="1"
-                ></textarea>
-                <button
-                  class="send-btn"
-                  on:click={() => submitReply(replyPost.id)}>➤</button
+          {/if}
+          <div class="reactions">
+            <button
+              class="reaction-btn"
+              on:click={() =>
+                (showReactionPicker =
+                  showReactionPicker === post.id ? null : post.id)}
+            >
+              🙂➕
+            </button>
+            {#if showReactionPicker === post.id}
+              <div class="reaction-picker">
+                <button on:click={() => toggleReaction(post.id, "like")}
+                  >👍</button
+                >
+                <button on:click={() => toggleReaction(post.id, "heart")}
+                  >❤️</button
+                >
+                <button on:click={() => toggleReaction(post.id, "laugh")}
+                  >😂</button
+                >
+                <button on:click={() => toggleReaction(post.id, "cry")}
+                  >😢</button
+                >
+                <button on:click={() => toggleReaction(post.id, "comfort")}
+                  >🤗</button
                 >
               </div>
             {/if}
+            {#each ["like", "heart", "laugh", "cry", "comfort"] as type}
+              {#if post.reactions.some((r) => r.reaction_type === type)}
+                <span
+                  class="reaction-count"
+                  title={post.reactions
+                    .filter((r) => r.reaction_type === type)
+                    .map((r) => r.profiles.username)
+                    .join(", ")}
+                >
+                  {type === "like"
+                    ? "👍"
+                    : type === "heart"
+                      ? "❤️"
+                      : type === "laugh"
+                        ? "😂"
+                        : type === "cry"
+                          ? "😢"
+                          : "🤗"}
+                  +{post.reactions.filter((r) => r.reaction_type === type)
+                    .length}
+                </span>
+              {/if}
+            {/each}
+            <a
+              href="#comment"
+              class="comment-link"
+              on:click|preventDefault={() => toggleReply(post.id)}
+            >
+              Comment
+            </a>
           </div>
-        {/each}
-      </div>
-    {/each}
+          {#if replyingTo === post.id}
+            <div class="reply-form active" id="reply-{post.id}">
+              <textarea
+                bind:value={replyContent}
+                on:input={handleInput}
+                on:keydown={(e) => handleKeydown(e, post.id)}
+                placeholder="Reply..."
+                rows="1"
+              ></textarea>
+              <button class="send-btn" on:click={() => submitReply(post.id)}
+                >➤</button
+              >
+            </div>
+          {/if}
+        </div>
+      {/each}
+    {:else}
+      <p>No posts yet.</p>
+    {/if}
   </div>
   <div class="post-form" class:minimized>
     {#if minimized}
@@ -792,13 +834,13 @@
     position: absolute;
     right: 2rem;
     bottom: 0.25rem;
-    padding: 0.25rem 0.5rem; /* Reduced padding for smaller button */
+    padding: 0.25rem 0.5rem;
     background-color: var(--tomato);
     color: var(--white);
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.7rem; /* Smaller font size */
+    font-size: 0.7rem;
     transition: background-color 0.3s;
     width: auto;
     height: auto;
@@ -807,13 +849,13 @@
     position: absolute;
     right: 0.25rem;
     bottom: 0.25rem;
-    padding: 0.25rem 0.5rem; /* Reduced padding for consistency */
+    padding: 0.25rem 0.5rem;
     background-color: var(--charcoal);
     color: var(--white);
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.7rem; /* Smaller font size */
+    font-size: 0.7rem;
     transition: background-color 0.3s;
     width: auto;
     height: auto;
@@ -826,14 +868,12 @@
   .toggle-btn:hover {
     background-color: var(--tomato-light);
   }
-  .toolbar,
-  .nested-toolbar {
+  .toolbar {
     display: flex;
     gap: 0.25rem;
     flex-wrap: wrap;
   }
-  .toolbar button,
-  .nested-toolbar button {
+  .toolbar button {
     padding: 0.25rem;
     background: none;
     border: none;
@@ -841,8 +881,7 @@
     cursor: pointer;
     color: var(--charcoal);
   }
-  .toolbar button:hover,
-  .nested-toolbar button:hover {
+  .toolbar button:hover {
     color: var(--tomato);
   }
   .gif-picker,
@@ -986,7 +1025,7 @@
   }
   .reply-form {
     margin-top: 0.25rem;
-    display: none; /* Hidden by default */
+    display: none;
   }
   .reply-form.active {
     display: flex;

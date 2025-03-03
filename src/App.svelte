@@ -49,7 +49,8 @@
     window.removeEventListener("resize", handleResize);
   });
 
-  function toggleMenu() {
+  function toggleMenu(event) {
+    event.stopPropagation(); // Stops the click from affecting other elements
     menuOpen = !menuOpen;
     console.log("Menu toggled:", menuOpen);
   }

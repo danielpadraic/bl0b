@@ -3,7 +3,6 @@
   import { supabase } from "../supabase.js";
   import { user, showTaskCompletionForm } from "../stores.js";
 
-  export let onClose = () => {};
   export let preSelectedChallengeId = null;
   export let preSelectedTaskId = null;
 
@@ -292,6 +291,7 @@
   }
 </script>
 
+<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <div
   class="modal"
   bind:this={modalElement}
@@ -299,6 +299,7 @@
   on:keydown={handleKeydown}
   role="dialog"
   aria-labelledby="modal-title"
+  aria-modal="true"
   tabindex="0"
 >
   <h2 id="modal-title">Submit Task Completion</h2>
