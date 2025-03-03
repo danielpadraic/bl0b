@@ -3,8 +3,10 @@
   import { navigate } from "svelte-routing";
   import { supabase } from "../supabase.js";
   import { user, showChallengeCreation } from "../stores.js";
+  import Comment from "./Comment.svelte";
   import ChallengeTable from "./ChallengeTable.svelte";
   import NewsFeed from "../components/NewsFeed.svelte";
+  import SocialFeed from "./SocialFeed.svelte"; // Add this import
 
   let allChallenges = [];
   let challenges = [];
@@ -183,6 +185,11 @@
       </div>
     </div>
   {/if}
+
+  <div class="social-feed-container">
+    <h2>#bl0b-general</h2>
+    <SocialFeed challengeId={null} challengeName="bl0b-general" />
+  </div>
 </div>
 
 <style>
@@ -219,5 +226,20 @@
   .create-account-link {
     text-align: center;
     margin-top: 1rem;
+  }
+
+  .social-feed-container {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    margin-top: 2rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+    color: var(--charcoal);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
   }
 </style>

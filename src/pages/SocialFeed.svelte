@@ -2,9 +2,10 @@
   import { onMount, onDestroy } from "svelte";
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
+  import Comment from "./Comment.svelte"; // Import the new component
 
-  export let challengeId;
-  export let challengeName;
+  export let challengeId = null;
+  export let challengeName = "bl0b-general";
 
   let posts = [];
   let originalPost = null;
@@ -23,22 +24,29 @@
   let replyingTo = null;
   let replyContent = "";
   let minimized = false;
+  let expandedComments = {}; // Tracks expanded comment sections by post ID
+  let expandedReplies = {}; // Tracks expanded reply sections by comment ID
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
+  const COMMENTS_PER_PAGE = 5;
 
   onMount(async () => {
+    console.log("SocialFeed mounted with challengeId:", challengeId);
     await fetchCurrentUserUsername();
-    await fetchPosts();
+    await fetchPosts(); // Ensure posts load even if user is null
     await fetchParticipants();
+    const channelName = challengeId
+      ? `public:posts:challenge_id=eq.${challengeId}`
+      : "public:posts:general";
     const channel = supabase
-      .channel(`public:posts:challenge_id=eq.${challengeId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "posts",
-          filter: `challenge_id=eq.${challengeId}`,
+          filter: challengeId ? `challenge_id=eq.${challengeId}` : null,
         },
         (payload) => {
           console.log("New post received via subscription:", payload.new);
@@ -46,17 +54,27 @@
             ...payload.new,
             timestamp: new Date(payload.new.created_at).toLocaleString(
               "en-US",
-              { hour: "numeric", minute: "numeric", hour12: true }
+              {
+                hour: "numeric",
+                minute: "numeric",
+                hour12: true,
+              }
             ),
-            username: currentUserUsername,
+            username: currentUserUsername || "Anonymous", // Fallback if no username
             reactions: [],
+            challenge_title: payload.new.challenge_id
+              ? challengeName
+              : "bl0b-general",
+            comments: [],
           };
-          if (newPostData.parent_id === null && !originalPost) {
-            originalPost = newPostData;
-          } else {
-            posts = [newPostData, ...posts];
+          if (!challengeId || newPostData.challenge_id === challengeId) {
+            if (newPostData.parent_id === null && !originalPost) {
+              originalPost = newPostData;
+            } else {
+              posts = [newPostData, ...posts];
+            }
+            console.log("Updated posts array after subscription:", posts);
           }
-          console.log("Updated posts array after subscription:", posts);
         }
       )
       .subscribe((status) => {
@@ -70,6 +88,11 @@
   });
 
   async function fetchCurrentUserUsername() {
+    if (!$user) {
+      console.warn("User not authenticated, using 'Anonymous' as username");
+      currentUserUsername = "Anonymous";
+      return; // Skip Supabase call if no user
+    }
     const { data, error } = await supabase
       .from("profiles")
       .select("username")
@@ -77,22 +100,62 @@
       .single();
     if (error) {
       console.error("Error fetching username:", error);
-      currentUserUsername = "Unknown";
+      currentUserUsername = "Anonymous"; // Fallback if error
     } else {
-      currentUserUsername = data.username || "Unknown";
+      currentUserUsername = data.username || "Anonymous";
       console.log("Fetched current user username:", currentUserUsername);
     }
   }
 
   async function fetchPosts() {
     try {
-      const { data: postsData, error: postsError } = await supabase
+      let query = supabase
         .from("posts")
         .select(
-          "id, user_id, content, color_code, created_at, challenge_id, media_url, parent_id, post_reactions(reaction_type, user_id, profiles(username))"
+          "id, user_id, content, color_code, created_at, challenge_id, media_url, parent_id, post_reactions(reaction_type, user_id, profiles(username)), challenges(title)"
         )
-        .eq("challenge_id", challengeId)
         .order("created_at", { ascending: false });
+
+      if (challengeId) {
+        // For challenge page, fetch all posts for the specific challenge
+        query = query.eq("challenge_id", challengeId);
+      } else {
+        // For home page (bl0b-general), fetch all posts without challenge_id or public posts
+        if (!$user) {
+          console.log(
+            "Fetching public and general posts for unauthenticated user"
+          );
+          query = query.or("challenge_id.is.null,user_id.is.null");
+        } else {
+          const { data: friendData, error: friendError } = await supabase
+            .from("friendships")
+            .select("friend_id")
+            .eq("user_id", $user.id);
+          if (friendError) throw friendError;
+
+          const { data: participantData, error: participantError } =
+            await supabase
+              .from("challenge_participants")
+              .select("challenge_id")
+              .eq("user_id", $user.id);
+          if (participantError) throw participantError;
+
+          const friendIds = friendData.map((f) => f.friend_id);
+          const challengeIds = participantData.map((p) => p.challenge_id);
+          const relevantUserIds = [$user.id, ...friendIds].filter(Boolean);
+
+          query = query
+            .in(
+              "user_id",
+              relevantUserIds.length > 0 ? relevantUserIds : [$user.id]
+            )
+            .or(
+              `challenge_id.in.(${challengeIds.join(",")}),challenge_id.is.null`
+            );
+        }
+      }
+
+      const { data: postsData, error: postsError } = await query;
       if (postsError) {
         console.error("Fetch posts error:", postsError);
         throw postsError;
@@ -105,7 +168,6 @@
         return;
       }
 
-      // Fetch usernames from profiles for posts
       const userIds = [
         ...new Set(postsData.map((post) => post.user_id).filter(Boolean)),
       ];
@@ -146,18 +208,65 @@
             : "Unknown",
           reactions: post.post_reactions || [],
           media_url: mediaUrl,
+          challenge_title: post.challenge_id
+            ? post.challenges?.title || "Unknown"
+            : "bl0b-general",
+          comments: [],
         };
       });
-      const originalIdx = allPosts.findIndex((p) => p.parent_id === null);
+
+      // Build a complete comment hierarchy recursively with detailed logging
+      function buildHierarchy(posts, parentId = null) {
+        const children = posts
+          .filter((post) => post.parent_id === parentId)
+          .map((post) => ({
+            ...post,
+            comments: buildHierarchy(posts, post.id), // Recursively build all nested replies
+          }))
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        console.log(
+          `Building hierarchy for parentId ${parentId || "null"}: Found ${children.length} children, deepest nesting: ${getDeepestNesting(children)}`
+        );
+        return children;
+      }
+
+      // Helper to calculate deepest nesting level for debugging
+      function getDeepestNesting(posts, level = 0) {
+        if (!posts || posts.length === 0) return level;
+        return Math.max(
+          ...posts.map((post) => getDeepestNesting(post.comments, level + 1))
+        );
+      }
+
+      const topLevelPosts = buildHierarchy(allPosts, null);
+      const originalIdx = topLevelPosts.findIndex((p) => p.parent_id === null);
       if (originalIdx !== -1) {
-        originalPost = allPosts.splice(originalIdx, 1)[0];
+        originalPost = topLevelPosts.splice(originalIdx, 1)[0];
       } else {
         originalPost = null;
       }
-      posts = allPosts;
+      posts = topLevelPosts;
       console.log("Processed original post:", originalPost);
-      console.log("Processed comments/replies:", posts);
-      console.log("Rendering posts:", posts, "Original:", originalPost);
+      console.log("Processed top-level posts:", posts);
+      console.log(
+        "Rendering posts with nested structure:",
+        posts.map((p) => ({
+          id: p.id,
+          content: p.content,
+          commentsCount: p.comments.length,
+          nestedStructure: p.comments.map((c) => ({
+            id: c.id,
+            content: c.content,
+            commentsCount: c.comments.length,
+            nestedReplies: c.comments.map((r) => ({
+              id: r.id,
+              content: r.content,
+              commentsCount: r.comments.length,
+            })),
+          })),
+        }))
+      );
     } catch (err) {
       console.error("Error fetching posts:", err);
       posts = [];
@@ -167,29 +276,44 @@
 
   async function fetchParticipants() {
     try {
-      const { data, error } = await supabase
-        .from("challenge_participants")
-        .select("user_id, profiles(username)")
-        .eq("challenge_id", challengeId);
-      if (error) {
-        console.error("Error fetching participants:", error);
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("profiles")
-          .select("username")
-          .in(
-            "id",
-            (
-              await supabase
-                .from("challenge_participants")
-                .select("user_id")
-                .eq("challenge_id", challengeId)
-            ).data.map((p) => p.user_id)
-          );
-        if (fallbackError) throw fallbackError;
-        participants = fallbackData.map((p) => p.username).filter(Boolean);
+      let participantIds = [];
+      if (challengeId) {
+        const { data, error } = await supabase
+          .from("challenge_participants")
+          .select("user_id")
+          .eq("challenge_id", challengeId);
+        if (error) throw error;
+        participantIds = data.map((p) => p.user_id);
       } else {
-        participants = data.map((p) => p.profiles.username).filter(Boolean);
+        const { data: friendData, error: friendError } = await supabase
+          .from("friendships")
+          .select("friend_id")
+          .eq("user_id", $user?.id || null); // Use optional chaining
+        if (friendError) throw friendError;
+
+        const { data: participantData, error: participantError } =
+          await supabase
+            .from("challenge_participants")
+            .select("user_id")
+            .eq("user_id", $user?.id || null); // Use optional chaining
+        if (participantError) throw participantError;
+
+        participantIds = [
+          ...new Set([
+            ...(friendData?.map((f) => f.friend_id) || []),
+            ...(participantData?.map((p) => p.user_id) || []),
+            $user?.id || null,
+          ]),
+        ].filter(Boolean); // Filter out null/undefined
       }
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("username")
+        .in("id", participantIds);
+      if (profilesError) throw profilesError;
+
+      participants = profilesData.map((p) => p.username).filter(Boolean);
       console.log("Fetched participants:", participants);
     } catch (err) {
       console.error("Unexpected error fetching participants:", err);
@@ -221,7 +345,7 @@
         {
           challenge_id: challengeId,
           content: newPost,
-          user_id: $user.id,
+          user_id: $user?.id || null, // Use optional chaining
           media_url: mediaUrl,
           parent_id: null,
           created_at: new Date().toISOString(),
@@ -253,9 +377,9 @@
       .from("posts")
       .insert([
         {
-          challenge_id: challengeId,
+          challenge_id: challengeId || parentPost.challenge_id,
           content: finalContent,
-          user_id: $user.id,
+          user_id: $user?.id || null, // Use optional chaining
           media_url: null,
           parent_id: postId,
           created_at: new Date().toISOString(),
@@ -279,21 +403,21 @@
   async function toggleReaction(postId, reactionType) {
     const post = posts.find((p) => p.id === postId) || originalPost;
     const existingReaction = post.reactions.find(
-      (r) => r.user_id === $user.id && r.reaction_type === reactionType
+      (r) => r.user_id === $user?.id && r.reaction_type === reactionType
     );
     if (existingReaction) {
       const { error } = await supabase
         .from("post_reactions")
         .delete()
         .eq("post_id", postId)
-        .eq("user_id", $user.id)
+        .eq("user_id", $user?.id)
         .eq("reaction_type", reactionType);
       if (error) console.error("Error removing reaction:", error);
     } else {
       const { error } = await supabase
         .from("post_reactions")
         .insert([
-          { post_id: postId, user_id: $user.id, reaction_type: reactionType },
+          { post_id: postId, user_id: $user?.id, reaction_type: reactionType },
         ]);
       if (error) console.error("Error adding reaction:", error);
     }
@@ -435,6 +559,47 @@
       console.log("Hiding reply form for post:", postId);
     }
   }
+
+  function toggleComments(postId) {
+    expandedComments[postId] = !expandedComments[postId];
+    expandedComments = { ...expandedComments }; // Ensure reactivity by creating a new object
+    console.log(
+      "Toggled comments for postId:",
+      postId,
+      "Expanded:",
+      expandedComments[postId],
+      "State:",
+      expandedComments
+    );
+  }
+
+  function getVisibleComments(post) {
+    const isExpanded = expandedComments[post.id] === true; // Explicitly check for true
+    console.log(
+      "Getting visible comments for postId:",
+      post.id,
+      "Is Expanded:",
+      isExpanded,
+      "Comments:",
+      post.comments
+    );
+    return isExpanded
+      ? post.comments
+      : post.comments.slice(0, COMMENTS_PER_PAGE);
+  }
+
+  function getVisibleReplies(comment) {
+    const isExpanded = expandedReplies[comment.id] === true; // Use expandedReplies instead of expandedComments
+    console.log(
+      "Getting visible replies for commentId:",
+      comment.id,
+      "Is Expanded:",
+      isExpanded,
+      "Comments:",
+      comment.comments
+    );
+    return isExpanded ? comment.comments : comment.comments.slice(0, 1);
+  }
 </script>
 
 <div class="feed-container">
@@ -443,7 +608,9 @@
       <div class="post">
         <p class="post-meta">
           {originalPost.timestamp} |
-          <span class="challenge-name">#{challengeName}</span>
+          <span class="challenge-name" role="button" tabindex="0"
+            >#{originalPost.challenge_title}</span
+          >
           |
           <span
             class="username"
@@ -547,113 +714,162 @@
             >
           </div>
         {/if}
-      </div>
-
-      {#each posts as post}
-        <div class="post" class:reply={post.parent_id !== null}>
-          <p class="post-meta">
-            {post.timestamp} |
-            <span class="challenge-name">#{challengeName}</span>
-            |
-            <span
-              class="username"
-              role="button"
-              tabindex="0"
-              on:click={() => tagUser(post.id, post.username)}
-              on:keydown={(e) =>
-                handleKeyPress(e, () => tagUser(post.id, post.username))}
-            >
-              @{post.username}
-            </span>
-          </p>
-          <p class="post-content">{post.content}</p>
-          {#if post.media_url}
-            <div class="media">
-              {#if post.media_url.match(/\.(mp4|webm)$/i)}
-                <video src={post.media_url} controls width="100%">
-                  <track kind="captions" label="No captions available" />
-                </video>
-              {:else}
-                <img src={post.media_url} alt="Post media" />
-              {/if}
-            </div>
-          {/if}
-          <div class="reactions">
-            <button
-              class="reaction-btn"
-              on:click={() =>
-                (showReactionPicker =
-                  showReactionPicker === post.id ? null : post.id)}
-            >
-              🙂➕
-            </button>
-            {#if showReactionPicker === post.id}
-              <div class="reaction-picker">
-                <button on:click={() => toggleReaction(post.id, "like")}
-                  >👍</button
-                >
-                <button on:click={() => toggleReaction(post.id, "heart")}
-                  >❤️</button
-                >
-                <button on:click={() => toggleReaction(post.id, "laugh")}
-                  >😂</button
-                >
-                <button on:click={() => toggleReaction(post.id, "cry")}
-                  >😢</button
-                >
-                <button on:click={() => toggleReaction(post.id, "comfort")}
-                  >🤗</button
-                >
-              </div>
-            {/if}
-            {#each ["like", "heart", "laugh", "cry", "comfort"] as type}
-              {#if post.reactions.some((r) => r.reaction_type === type)}
-                <span
-                  class="reaction-count"
-                  title={post.reactions
-                    .filter((r) => r.reaction_type === type)
-                    .map((r) => r.profiles.username)
-                    .join(", ")}
-                >
-                  {type === "like"
-                    ? "👍"
-                    : type === "heart"
-                      ? "❤️"
-                      : type === "laugh"
-                        ? "😂"
-                        : type === "cry"
-                          ? "😢"
-                          : "🤗"}
-                  +{post.reactions.filter((r) => r.reaction_type === type)
-                    .length}
-                </span>
-              {/if}
+        {#if originalPost.comments.length > 0}
+          <div class="comments">
+            {#each getVisibleComments(originalPost) as comment}
+              <Comment
+                {comment}
+                level={1}
+                {challengeId}
+                {currentUserUsername}
+                on:replySubmitted={() => fetchPosts()}
+              />
             {/each}
-            <a
-              href="#comment"
-              class="comment-link"
-              on:click|preventDefault={() => toggleReply(post.id)}
-            >
-              Comment
-            </a>
+            {#if originalPost.comments.length > COMMENTS_PER_PAGE}
+              <a
+                href="#view-all"
+                class="view-more-link"
+                on:click|preventDefault={() => toggleComments(originalPost.id)}
+              >
+                {expandedComments[originalPost.id]
+                  ? "Hide Comments..."
+                  : "View All Comments..."}
+              </a>
+            {/if}
           </div>
-          {#if replyingTo === post.id}
-            <div class="reply-form active" id="reply-{post.id}">
-              <textarea
-                bind:value={replyContent}
-                on:input={handleInput}
-                on:keydown={(e) => handleKeydown(e, post.id)}
-                placeholder="Reply..."
-                rows="1"
-              ></textarea>
-              <button class="send-btn" on:click={() => submitReply(post.id)}
-                >➤</button
+        {/if}
+      </div>
+    {/if}
+
+    {#each posts as post}
+      <div class="post">
+        <p class="post-meta">
+          {post.timestamp} |
+          <span class="challenge-name" role="button" tabindex="0"
+            >#{post.challenge_title}</span
+          >
+          |
+          <span
+            class="username"
+            role="button"
+            tabindex="0"
+            on:click={() => tagUser(post.id, post.username)}
+            on:keydown={(e) =>
+              handleKeyPress(e, () => tagUser(post.id, post.username))}
+          >
+            @{post.username}
+          </span>
+        </p>
+        <p class="post-content">{post.content}</p>
+        {#if post.media_url}
+          <div class="media">
+            {#if post.media_url.match(/\.(mp4|webm)$/i)}
+              <video src={post.media_url} controls width="100%">
+                <track kind="captions" label="No captions available" />
+              </video>
+            {:else}
+              <img src={post.media_url} alt="Post media" />
+            {/if}
+          </div>
+        {/if}
+        <div class="reactions">
+          <button
+            class="reaction-btn"
+            on:click={() =>
+              (showReactionPicker =
+                showReactionPicker === post.id ? null : post.id)}
+          >
+            🙂➕
+          </button>
+          {#if showReactionPicker === post.id}
+            <div class="reaction-picker">
+              <button on:click={() => toggleReaction(post.id, "like")}
+                >👍</button
+              >
+              <button on:click={() => toggleReaction(post.id, "heart")}
+                >❤️</button
+              >
+              <button on:click={() => toggleReaction(post.id, "laugh")}
+                >😂</button
+              >
+              <button on:click={() => toggleReaction(post.id, "cry")}>😢</button
+              >
+              <button on:click={() => toggleReaction(post.id, "comfort")}
+                >🤗</button
               >
             </div>
           {/if}
+          {#each ["like", "heart", "laugh", "cry", "comfort"] as type}
+            {#if post.reactions.some((r) => r.reaction_type === type)}
+              <span
+                class="reaction-count"
+                title={post.reactions
+                  .filter((r) => r.reaction_type === type)
+                  .map((r) => r.profiles.username)
+                  .join(", ")}
+              >
+                {type === "like"
+                  ? "👍"
+                  : type === "heart"
+                    ? "❤️"
+                    : type === "laugh"
+                      ? "😂"
+                      : type === "cry"
+                        ? "😢"
+                        : "🤗"}
+                +{post.reactions.filter((r) => r.reaction_type === type).length}
+              </span>
+            {/if}
+          {/each}
+          <a
+            href="#comment"
+            class="comment-link"
+            on:click|preventDefault={() => toggleReply(post.id)}
+          >
+            Comment
+          </a>
         </div>
-      {/each}
-    {:else}
+        {#if replyingTo === post.id}
+          <div class="reply-form active" id="reply-{post.id}">
+            <textarea
+              bind:value={replyContent}
+              on:input={handleInput}
+              on:keydown={(e) => handleKeydown(e, post.id)}
+              placeholder="Reply..."
+              rows="1"
+            ></textarea>
+            <button class="send-btn" on:click={() => submitReply(post.id)}
+              >➤</button
+            >
+          </div>
+        {/if}
+        {#if post.comments.length > 0}
+          <div class="comments">
+            {#each getVisibleComments(post) as comment}
+              <Comment
+                {comment}
+                level={1}
+                {challengeId}
+                {currentUserUsername}
+                on:replySubmitted={() => fetchPosts()}
+              />
+            {/each}
+            {#if post.comments.length > COMMENTS_PER_PAGE}
+              <a
+                href="#view-all"
+                class="view-more-link"
+                on:click|preventDefault={() => toggleComments(post.id)}
+              >
+                {expandedComments[post.id]
+                  ? "Hide Comments..."
+                  : "View All Comments..."}
+              </a>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/each}
+    {#if !originalPost && posts.length === 0}
       <p>No posts yet.</p>
     {/if}
   </div>
@@ -807,11 +1023,10 @@
     height: 40px;
     padding: 0 0.5rem;
   }
-  .post.reply,
-  .reply {
-    margin-left: 1rem;
-    border-left: 1px solid #ccc;
-    padding-left: 0.5rem;
+  .post {
+    border-bottom: 1px solid #eee;
+    padding: 0.5rem 0;
+    font-size: clamp(0.75rem, 2.5vw, 0.85rem); /* Consistent font size */
   }
   .input-container,
   .reply-form {
@@ -956,10 +1171,6 @@
   .tag-suggestion:focus {
     background-color: var(--light-gray);
   }
-  .post {
-    border-bottom: 1px solid #eee;
-    padding: 0.5rem 0;
-  }
   .post-meta {
     font-size: clamp(0.65rem, 2vw, 0.75rem);
     color: var(--gray);
@@ -967,6 +1178,10 @@
   }
   .challenge-name {
     color: var(--dark-moderate-pink);
+    cursor: pointer;
+  }
+  .challenge-name:hover {
+    text-decoration: underline;
   }
   .username {
     color: var(--lapis-lazuli);
@@ -974,11 +1189,6 @@
   }
   .username:hover {
     text-decoration: underline;
-  }
-  .post-content {
-    font-size: clamp(0.75rem, 2.5vw, 0.85rem);
-    margin: 0.25rem 0;
-    white-space: pre-wrap;
   }
   .media img,
   .media video {
@@ -1023,13 +1233,19 @@
   .comment-link:hover {
     color: var(--tomato-light);
   }
-  .reply-form {
-    margin-top: 0.25rem;
-    display: none;
+  .comments {
+    margin-top: 0.5rem;
   }
-  .reply-form.active {
-    display: flex;
-    gap: 0.25rem;
-    align-items: center;
+  .view-more-link {
+    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    color: var(--tomato);
+    text-decoration: underline;
+    cursor: pointer;
+    display: block;
+    margin-top: 0.25rem;
+    margin-left: 1rem;
+  }
+  .view-more-link:hover {
+    color: var(--tomato-light);
   }
 </style>
