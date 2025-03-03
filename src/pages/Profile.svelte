@@ -14,12 +14,12 @@
     confirmPassword: "",
   };
   let profilePhotoFile = null;
-  let hasMounted = false; // Prevent multiple mounts
+  let hasMounted = false;
 
   onMount(() => {
-    if (hasMounted) return; // Skip if already mounted
+    if (hasMounted) return;
     hasMounted = true;
-    console.log("Profile component mounted"); // Debug log
+    console.log("Profile component mounted");
     if ($user) {
       console.log("User ID:", $user.id);
       fetchProfile();
@@ -34,9 +34,7 @@
       loading = true;
       const { data, error: fetchError } = await supabase
         .from("profiles")
-        .select(
-          "first_name, last_name, username, phone_number, phone_number_raw, address, participates_in_challenges, gender, dob, height, weight, body_fat_percentage, profile_photo_url, bmi, bmr"
-        )
+        .select("*") // Updated to fetch all fields including visibility toggles
         .eq("id", $user.id)
         .maybeSingle();
 
@@ -64,6 +62,20 @@
           profile_photo_url: "",
           bmi: null,
           bmr: null,
+          first_name_public: false,
+          last_name_public: false,
+          username_public: true,
+          phone_number_public: false,
+          address_public: false,
+          participates_in_challenges_public: false,
+          gender_public: false,
+          dob_public: false,
+          height_public: false,
+          weight_public: false,
+          body_fat_percentage_public: false,
+          profile_photo_url_public: true,
+          bmi_public: false,
+          bmr_public: false,
         };
         await supabase.from("profiles").insert([profile]);
         console.log("Created default profile for user:", $user.id);
@@ -112,23 +124,7 @@
         profile.dob
       )?.toFixed(0);
 
-      const updates = {
-        id: $user.id,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        username: profile.username,
-        phone_number: profile.phone_number,
-        phone_number_raw: profile.phone_number_raw,
-        address: profile.address,
-        participates_in_challenges: profile.participates_in_challenges,
-        gender: profile.gender,
-        dob: profile.dob,
-        height: profile.height,
-        weight: profile.weight,
-        body_fat_percentage: profile.body_fat_percentage,
-        bmi: profile.bmi,
-        bmr: profile.bmr,
-      };
+      const updates = { ...profile, id: $user.id };
 
       const { error: updateError } = await supabase
         .from("profiles")
@@ -221,48 +217,72 @@
               <label>
                 First Name:
                 <input type="text" bind:value={profile.first_name} required />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.first_name_public}
+                  />
+                </label>
               </label>
               <label>
                 Last Name:
                 <input type="text" bind:value={profile.last_name} required />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.last_name_public}
+                  />
+                </label>
               </label>
             </div>
             <div class="field-group">
               <label>
                 Username:
                 <input type="text" bind:value={profile.username} required />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.username_public}
+                  />
+                </label>
               </label>
               <label>
                 Phone Number:
-                <input
-                  type="text"
-                  bind:value={profile.phone_number}
-                  placeholder="e.g., (123) 456-7890"
-                />
+                <input type="text" bind:value={profile.phone_number} />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.phone_number_public}
+                  />
+                </label>
               </label>
             </div>
             <div class="field-group">
-              <label>
-                Phone Number (Raw):
-                <input
-                  type="text"
-                  bind:value={profile.phone_number_raw}
-                  placeholder="e.g., 1234567890"
-                />
-              </label>
               <label>
                 Address:
                 <input type="text" bind:value={profile.address} />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.address_public}
+                  />
+                </label>
               </label>
-            </div>
-            <div class="field-group">
               <label>
                 Participates in Challenges:
                 <input
                   type="checkbox"
                   bind:checked={profile.participates_in_challenges}
                 />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.participates_in_challenges_public}
+                  />
+                </label>
               </label>
+            </div>
+            <div class="field-group">
               <label>
                 Gender:
                 <div class="radio-group">
@@ -281,13 +301,25 @@
                     /> Female</label
                   >
                 </div>
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.gender_public}
+                  />
+                </label>
               </label>
-            </div>
-            <div class="field-group">
               <label>
                 Date of Birth:
                 <input type="date" bind:value={profile.dob} />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.dob_public}
+                  />
+                </label>
               </label>
+            </div>
+            <div class="field-group">
               <label>
                 Height (in inches):
                 <input
@@ -295,11 +327,14 @@
                   bind:value={profile.height}
                   min="0"
                   step="1"
-                  placeholder="e.g., 70"
                 />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.height_public}
+                  />
+                </label>
               </label>
-            </div>
-            <div class="field-group">
               <label>
                 Weight (in lbs):
                 <input
@@ -307,9 +342,16 @@
                   bind:value={profile.weight}
                   min="0"
                   step="1"
-                  placeholder="e.g., 150"
                 />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.weight_public}
+                  />
+                </label>
               </label>
+            </div>
+            <div class="field-group">
               <label>
                 Body Fat Percentage:
                 <input
@@ -318,9 +360,13 @@
                   min="0"
                   max="100"
                 />
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.body_fat_percentage_public}
+                  />
+                </label>
               </label>
-            </div>
-            <div class="field-group">
               <label>
                 Profile Photo:
                 <input
@@ -331,6 +377,12 @@
                 <button type="button" on:click={uploadProfilePhoto}
                   >Upload Photo</button
                 >
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.profile_photo_url_public}
+                  />
+                </label>
               </label>
             </div>
             <div class="buttons">
@@ -344,41 +396,81 @@
           </form>
         {:else}
           <div class="field-group">
-            <p>First Name: {profile.first_name || "Not set"}</p>
-            <p>Last Name: {profile.last_name || "Not set"}</p>
+            <p>
+              First Name: {profile.first_name || "Not set"} (Public: {profile.first_name_public
+                ? "Yes"
+                : "No"})
+            </p>
+            <p>
+              Last Name: {profile.last_name || "Not set"} (Public: {profile.last_name_public
+                ? "Yes"
+                : "No"})
+            </p>
           </div>
           <div class="field-group">
-            <p>Username: @{profile.username || "Not set"}</p>
-            <p>Phone Number: {profile.phone_number || "Not set"}</p>
+            <p>
+              Username: @{profile.username || "Not set"} (Public: {profile.username_public
+                ? "Yes"
+                : "No"})
+            </p>
+            <p>
+              Phone Number: {profile.phone_number || "Not set"} (Public: {profile.phone_number_public
+                ? "Yes"
+                : "No"})
+            </p>
           </div>
           <div class="field-group">
-            <p>Phone Number (Raw): {profile.phone_number_raw || "Not set"}</p>
-            <p>Address: {profile.address || "Not set"}</p>
-          </div>
-          <div class="field-group">
+            <p>
+              Address: {profile.address || "Not set"} (Public: {profile.address_public
+                ? "Yes"
+                : "No"})
+            </p>
             <p>
               Participates in Challenges: {profile.participates_in_challenges
                 ? "Yes"
-                : "No"}
+                : "No"} (Public: {profile.participates_in_challenges_public
+                ? "Yes"
+                : "No"})
             </p>
-            <p>Gender: {profile.gender || "Not set"}</p>
-          </div>
-          <div class="field-group">
-            <p>Date of Birth: {profile.dob || "Not set"}</p>
-            <p>Height: {formatHeight(profile.height)}</p>
           </div>
           <div class="field-group">
             <p>
-              Weight: {profile.weight ? `${profile.weight} lbs` : "Not set"}
+              Gender: {profile.gender || "Not set"} (Public: {profile.gender_public
+                ? "Yes"
+                : "No"})
             </p>
+            <p>
+              Date of Birth: {profile.dob || "Not set"} (Public: {profile.dob_public
+                ? "Yes"
+                : "No"})
+            </p>
+          </div>
+          <div class="field-group">
+            <p>
+              Height: {formatHeight(profile.height)} (Public: {profile.height_public
+                ? "Yes"
+                : "No"})
+            </p>
+            <p>
+              Weight: {profile.weight ? `${profile.weight} lbs` : "Not set"} (Public:
+              {profile.weight_public ? "Yes" : "No"})
+            </p>
+          </div>
+          <div class="field-group">
             <p>
               Body Fat Percentage: {profile.body_fat_percentage || "Not set"}%
+              (Public: {profile.body_fat_percentage_public ? "Yes" : "No"})
+            </p>
+            <p>
+              BMI: {profile.bmi || "Not calculated"} (Public: {profile.bmi_public
+                ? "Yes"
+                : "No"})
             </p>
           </div>
           <div class="field-group">
-            <p>BMI: {profile.bmi || "Not calculated"}</p>
             <p>
-              BMR: {profile.bmr ? `${profile.bmr} kcal/day` : "Not calculated"}
+              BMR: {profile.bmr ? `${profile.bmr} kcal/day` : "Not calculated"} (Public:
+              {profile.bmr_public ? "Yes" : "No"})
             </p>
           </div>
           {#if profile.profile_photo_url}
@@ -388,6 +480,7 @@
                 alt="User profile"
                 class="profile-photo"
               />
+              <p>(Public: {profile.profile_photo_url_public ? "Yes" : "No"})</p>
             </div>
           {/if}
           <button on:click={() => (editingPersonal = true)}>Edit</button>

@@ -125,7 +125,7 @@
           "Fetching all posts for unauthenticated users (general, public, and challenge)"
         );
         query = query.or(
-          "(challenge_id.is.null,user_id.is.null,challenge_id.is.not.null)"
+          "challenge_id.is.null,user_id.is.null,challenge_id.is.not.null"
         );
       }
 

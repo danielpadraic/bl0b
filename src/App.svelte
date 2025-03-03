@@ -13,6 +13,7 @@
   import ChallengeCreation from "./pages/ChallengeCreation.svelte";
   import Profile from "./pages/Profile.svelte";
   import Login from "./pages/Login.svelte";
+  import PublicProfile from "./pages/PublicProfile.svelte";
   import Fa from "svelte-fa";
   import {
     faHome,
@@ -168,6 +169,7 @@
       </Route>
       <Route path="/leaderboards" component={ChallengeLobby} />
       <Route path="/profile" component={Profile} />
+      <Route path="/profile/:username" component={PublicProfile} />
       <Route path="/tokens" component={ChallengeLobby} />
       <Route path="/signup" component={ChallengeLobby} />
       <Route path="/login" component={Login} />
@@ -266,24 +268,6 @@
 
   :global(.top-nav a span) {
     margin-top: 0.3rem !important;
-  }
-
-  .top-nav .task-complete-btn {
-    background-color: var(--tomato);
-    color: var(--white);
-    border: none;
-    border-radius: 8px;
-    width: 40px;
-    height: 40px;
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-
-  .top-nav .task-complete-btn:hover {
-    background-color: var(--tomato-light);
   }
 
   .hamburger {
