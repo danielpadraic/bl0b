@@ -222,6 +222,7 @@
   {#if comment.comments && comment.comments.length > 0}
     <div class="nested-comments">
       {#each getVisibleReplies() as reply (reply.id)}
+        <!-- Use key for reactivity -->
         <Comment
           comment={reply}
           level={level + 1}

@@ -8,6 +8,7 @@
     faNewspaper,
   } from "@fortawesome/free-solid-svg-icons";
   import { showTaskCompletionForm } from "../stores.js";
+  import TaskButtonWithMenu from "./TaskButtonWithMenu.svelte";
 
   export let activeTab;
 
@@ -31,12 +32,11 @@
     <Fa icon={faTrophy} size="lg" />
     <span>Leaderboards</span>
   </button>
-  <button
-    class="task-complete-btn"
-    on:click={() => showTaskCompletionForm.set(true)}
-  >
-    <span>+</span>
-  </button>
+  <TaskButtonWithMenu
+    menuPosition="above"
+    buttonWidth="50px"
+    buttonHeight="50px"
+  />
   <button
     on:click={() => goTo("/social")}
     class={activeTab === "social" ? "active" : ""}
@@ -88,23 +88,5 @@
 
   span {
     margin-top: 5px;
-  }
-
-  .task-complete-btn {
-    background-color: var(--tomato);
-    color: var(--white);
-    border-radius: 8px;
-    width: 50px;
-    height: 50px;
-    font-size: 1.5rem;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-    flex: 0.5;
-  }
-
-  .task-complete-btn:hover {
-    background-color: var(--tomato-light);
   }
 </style>

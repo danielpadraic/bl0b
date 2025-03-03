@@ -3,6 +3,7 @@
   import { navigate, Router, Route, Link } from "svelte-routing";
   import { showChallengeCreation, user } from "./stores.js";
   import { showTaskCompletionForm } from "./stores.js";
+  import TaskButtonWithMenu from "./components/TaskButtonWithMenu.svelte";
   import TaskCompletionForm from "./pages/TaskCompletionForm.svelte";
   import { supabase } from "./supabase.js";
   import ChallengeLobby from "./pages/ChallengeLobby.svelte";
@@ -99,12 +100,11 @@
             <Fa icon={faTrophy} size="lg" />
             <span>Leaderboards</span>
           </Link>
-          <button
-            class="task-complete-btn"
-            on:click={() => showTaskCompletionForm.set(true)}
-          >
-            <span>+</span>
-          </button>
+          <TaskButtonWithMenu
+            menuPosition="below"
+            buttonWidth="40px"
+            buttonHeight="40px"
+          />
           <Link
             to="/social"
             class={window.location.pathname === "/social" ? "active" : ""}

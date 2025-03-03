@@ -120,39 +120,13 @@
         // For challenge page, fetch all posts for the specific challenge
         query = query.eq("challenge_id", challengeId);
       } else {
-        // For home page (bl0b-general), fetch all posts without challenge_id or public posts
-        if (!$user) {
-          console.log(
-            "Fetching public and general posts for unauthenticated user"
-          );
-          query = query.or("challenge_id.is.null,user_id.is.null");
-        } else {
-          const { data: friendData, error: friendError } = await supabase
-            .from("friendships")
-            .select("friend_id")
-            .eq("user_id", $user.id);
-          if (friendError) throw friendError;
-
-          const { data: participantData, error: participantError } =
-            await supabase
-              .from("challenge_participants")
-              .select("challenge_id")
-              .eq("user_id", $user.id);
-          if (participantError) throw participantError;
-
-          const friendIds = friendData.map((f) => f.friend_id);
-          const challengeIds = participantData.map((p) => p.challenge_id);
-          const relevantUserIds = [$user.id, ...friendIds].filter(Boolean);
-
-          query = query
-            .in(
-              "user_id",
-              relevantUserIds.length > 0 ? relevantUserIds : [$user.id]
-            )
-            .or(
-              `challenge_id.in.(${challengeIds.join(",")}),challenge_id.is.null`
-            );
-        }
+        // For home page (bl0b-general), fetch all posts (general, public, and challenge) for unauthenticated users
+        console.log(
+          "Fetching all posts for unauthenticated users (general, public, and challenge)"
+        );
+        query = query.or(
+          "(challenge_id.is.null,user_id.is.null,challenge_id.is.not.null)"
+        );
       }
 
       const { data: postsData, error: postsError } = await query;
@@ -240,14 +214,16 @@
       }
 
       const topLevelPosts = buildHierarchy(allPosts, null);
+      console.log("Top-level posts before finding original:", topLevelPosts);
       const originalIdx = topLevelPosts.findIndex((p) => p.parent_id === null);
       if (originalIdx !== -1) {
         originalPost = topLevelPosts.splice(originalIdx, 1)[0];
+        console.log("Processed original post:", originalPost);
       } else {
         originalPost = null;
+        console.log("No original post found (parent_id is null)");
       }
       posts = topLevelPosts;
-      console.log("Processed original post:", originalPost);
       console.log("Processed top-level posts:", posts);
       console.log(
         "Rendering posts with nested structure:",
@@ -588,6 +564,19 @@
       : post.comments.slice(0, COMMENTS_PER_PAGE);
   }
 
+  function toggleReplies(commentId) {
+    expandedReplies[commentId] = !expandedReplies[commentId];
+    expandedReplies = { ...expandedReplies }; // Ensure reactivity by creating a new object
+    console.log(
+      "Toggled replies for commentId:",
+      commentId,
+      "Expanded:",
+      expandedReplies[commentId],
+      "State:",
+      expandedReplies
+    );
+  }
+
   function getVisibleReplies(comment) {
     const isExpanded = expandedReplies[comment.id] === true; // Use expandedReplies instead of expandedComments
     console.log(
@@ -716,7 +705,8 @@
         {/if}
         {#if originalPost.comments.length > 0}
           <div class="comments">
-            {#each getVisibleComments(originalPost) as comment}
+            {#each getVisibleComments(originalPost) as comment (comment.id)}
+              <!-- Added key for reactivity -->
               <Comment
                 {comment}
                 level={1}
@@ -741,7 +731,8 @@
       </div>
     {/if}
 
-    {#each posts as post}
+    {#each posts as post (post.id)}
+      <!-- Added key for reactivity -->
       <div class="post">
         <p class="post-meta">
           {post.timestamp} |
@@ -845,7 +836,8 @@
         {/if}
         {#if post.comments.length > 0}
           <div class="comments">
-            {#each getVisibleComments(post) as comment}
+            {#each getVisibleComments(post) as comment (comment.id)}
+              <!-- Added key for reactivity -->
               <Comment
                 {comment}
                 level={1}
