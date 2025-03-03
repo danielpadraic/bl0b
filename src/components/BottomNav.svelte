@@ -7,6 +7,7 @@
     faUsers,
     faNewspaper,
   } from "@fortawesome/free-solid-svg-icons";
+  import { showTaskCompletionForm } from "../stores.js";
 
   export let activeTab;
 
@@ -31,6 +32,12 @@
     <span>Leaderboards</span>
   </button>
   <button
+    class="task-complete-btn"
+    on:click={() => showTaskCompletionForm.set(true)}
+  >
+    <span>+</span>
+  </button>
+  <button
     on:click={() => goTo("/social")}
     class={activeTab === "social" ? "active" : ""}
   >
@@ -49,12 +56,17 @@
 <style>
   .bottom-nav {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
+    align-items: center;
     background-color: var(--charcoal);
     padding: 10px;
     position: fixed;
     bottom: 0;
     width: 100%;
+    max-width: 500px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
   }
 
   button {
@@ -66,6 +78,8 @@
     align-items: center;
     font-size: 0.8rem;
     cursor: pointer;
+    padding: 0;
+    flex: 1;
   }
 
   .active {
@@ -74,5 +88,23 @@
 
   span {
     margin-top: 5px;
+  }
+
+  .task-complete-btn {
+    background-color: var(--tomato);
+    color: var(--white);
+    border-radius: 8px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 0.5;
+  }
+
+  .task-complete-btn:hover {
+    background-color: var(--tomato-light);
   }
 </style>

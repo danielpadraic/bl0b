@@ -230,7 +230,7 @@
     align-items: center;
     gap: 2rem;
     width: 100%;
-    max-width: 500px; /* Adjusted to accommodate 5 buttons */
+    max-width: 500px;
   }
 
   :global(.top-nav a) {
@@ -352,9 +352,11 @@
 
   main {
     flex: 1;
-    padding: 1rem 1rem 80px 1rem;
+    padding: 1rem 1rem 120px 1rem; /* Increased bottom padding to clear post form */
     overflow-y: auto;
-    max-height: calc(100vh - 60px);
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
   }
 
   .modal-overlay {

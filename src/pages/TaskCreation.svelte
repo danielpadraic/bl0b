@@ -43,7 +43,7 @@
   });
 
   async function saveTask(event) {
-    event.preventDefault(); // Ensure form submit works
+    event.preventDefault();
     console.log("saveTask called with:", {
       action,
       frequency,
@@ -94,7 +94,7 @@
         .single();
     }
 
-    const { data, error } = result; // Ensure we capture data and error correctly
+    const { data, error } = result;
     if (error) {
       errorMessage = error.message;
       console.error("Supabase error:", errorMessage);
@@ -120,7 +120,7 @@
 
   async function closeAndSave() {
     console.log("closeAndSave called");
-    const success = await saveTask({ preventDefault: () => {} }); // Simulate event for consistency
+    const success = await saveTask({ preventDefault: () => {} });
     if (success) {
       console.log("Task saved, closing modal");
       dispatch("close");
@@ -205,10 +205,10 @@
     </label>
     <div class="buttons">
       <button type="submit">{editMode ? "Update Task" : "Add Task"}</button>
-      <button type="button" on:click={closeAndSave}>Complete</button>
       {#if editMode}
-        <button type="button" on:click={close}>Cancel</button>
+        <button type="button" on:click={closeAndSave}>Complete</button>
       {/if}
+      <button type="button" on:click={close}>Cancel</button>
     </div>
   </form>
 </div>
@@ -326,7 +326,7 @@
     display: flex;
     justify-content: space-between;
     margin-top: 1rem;
-    gap: 0.5rem; /* Added spacing between buttons */
+    gap: 0.5rem;
   }
 
   button {
@@ -337,7 +337,7 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
-    flex: 1; /* Make buttons equal width */
+    flex: 1;
   }
 
   button:hover {

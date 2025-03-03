@@ -158,7 +158,6 @@
       return;
     }
 
-    // Only require verification input if verification_type is not "No Verification"
     if (
       selectedTask.verification_type !== "No Verification" &&
       !submissionData.verification
@@ -253,8 +252,11 @@
           },
         ])
         .select();
-      if (postError) throw postError;
-      console.log("Post inserted:", postData);
+      if (postError) {
+        console.error("Post insertion error:", postError);
+        throw postError;
+      }
+      console.log("Post inserted successfully:", postData);
 
       showTaskCompletionForm.set(false);
       selectedChallenge = null;

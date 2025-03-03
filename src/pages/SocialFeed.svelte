@@ -9,10 +9,7 @@
   let posts = [];
   let newPost = "";
   let mediaFiles = [];
-  let replyingTo = null;
-  let replyContent = "";
   let showEmojiPicker = false;
-  let showTaskPicker = false;
   let showGifPicker = false;
   let gifs = [];
   let gifSearch = "";
@@ -22,8 +19,9 @@
   let tagStartIndex = -1;
   let currentUserUsername = "";
   let showReactionPicker = null;
-  let nestedReplyTo = null;
-  let nestedReplyContent = "";
+  let replyingTo = null; // Track the post ID being replied to
+  let replyContent = ""; // Content for the current reply
+  let minimized = false;
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
 
@@ -32,7 +30,7 @@
     await fetchPosts();
     await fetchParticipants();
     const channel = supabase
-      .channel("public:posts")
+      .channel(`public:posts:challenge_id=eq.${challengeId}`)
       .on(
         "postgres_changes",
         {
@@ -42,19 +40,32 @@
           filter: `challenge_id=eq.${challengeId}`,
         },
         (payload) => {
+          console.log("New post received via subscription:", payload.new);
           const newPost = {
             ...payload.new,
             timestamp: new Date(payload.new.created_at).toLocaleString(
               "en-US",
-              { hour: "numeric", minute: "numeric", hour12: true }
+              {
+                hour: "numeric",
+                minute: "numeric",
+                hour12: true,
+              }
             ),
             username: payload.new.username || "Unknown",
+            reactions: [],
           };
           posts = [newPost, ...posts];
+          console.log("Updated posts array after subscription:", posts);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
     return () => supabase.removeChannel(channel);
+  });
+
+  onDestroy(() => {
+    console.log("SocialFeed destroyed, cleaning up subscription");
   });
 
   async function fetchCurrentUserUsername() {
@@ -67,18 +78,18 @@
       console.error("Error fetching username:", error);
     } else {
       currentUserUsername = data.username || "Unknown";
+      console.log("Fetched current user username:", currentUserUsername);
     }
   }
 
   async function fetchPosts() {
-    const { data, error } = await supabase
-      .from("posts")
-      .select("*, post_reactions(reaction_type, user_id, profiles(username))")
-      .eq("challenge_id", challengeId)
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("Error fetching posts:", error);
-    } else {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("posts")
+        .select("*, post_reactions(reaction_type, user_id, profiles(username))")
+        .eq("challenge_id", challengeId)
+        .order("created_at", { ascending: false });
+      if (fetchError) throw fetchError;
       posts = data.map((post) => ({
         ...post,
         timestamp: new Date(post.created_at).toLocaleString("en-US", {
@@ -89,18 +100,46 @@
         username: post.username || "Unknown",
         reactions: post.post_reactions || [],
       }));
+      console.log("Fetched posts:", posts);
+    } catch (err) {
+      console.error("Error fetching posts:", err);
     }
   }
 
   async function fetchParticipants() {
-    const { data, error } = await supabase
-      .from("challenge_participants")
-      .select("user_id, profiles(username)")
-      .eq("challenge_id", challengeId);
-    if (error) {
-      console.error("Error fetching participants:", error);
-    } else {
-      participants = data.map((p) => p.profiles.username).filter(Boolean);
+    try {
+      const { data, error } = await supabase
+        .from("challenge_participants")
+        .select("user_id, profiles(username)")
+        .eq("challenge_id", challengeId);
+      if (error) {
+        console.error("Error fetching participants:", error);
+        // Fallback: Try fetching usernames directly from profiles if relationship fails
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("profiles")
+          .select("username")
+          .in(
+            "id",
+            (
+              await supabase
+                .from("challenge_participants")
+                .select("user_id")
+                .eq("challenge_id", challengeId)
+            ).data.map((p) => p.user_id)
+          );
+        if (fallbackError) {
+          console.error("Fallback error fetching participants:", fallbackError);
+          participants = [];
+        } else {
+          participants = fallbackData.map((p) => p.username).filter(Boolean);
+        }
+      } else {
+        participants = data.map((p) => p.profiles.username).filter(Boolean);
+      }
+      console.log("Fetched participants:", participants);
+    } catch (err) {
+      console.error("Unexpected error fetching participants:", err);
+      participants = [];
     }
   }
 
@@ -139,19 +178,7 @@
     if (error) {
       console.error("Error submitting post:", error);
     } else {
-      posts = [
-        {
-          ...data[0],
-          timestamp: new Date().toLocaleString("en-US", {
-            hour: "numeric",
-            minute: "numeric",
-            hour12: true,
-          }),
-          username: currentUserUsername,
-          reactions: [],
-        },
-        ...posts,
-      ];
+      console.log("Manual post inserted:", data);
       newPost = "";
       mediaFiles = [];
       showEmojiPicker = false;
@@ -160,16 +187,13 @@
     }
   }
 
-  async function submitReply(
-    parentId,
-    isNested = false,
-    targetUsername = null
-  ) {
-    const content = isNested ? `${nestedReplyContent}` : replyContent;
-    if (!content.trim()) return;
-    const finalContent = targetUsername
-      ? `@${targetUsername} ${content}`
-      : content;
+  async function submitReply(postId) {
+    if (!replyContent.trim()) return;
+    const parentPost = posts.find((p) => p.id === postId);
+    const parentUsername = parentPost ? parentPost.username : null;
+    const finalContent = parentUsername
+      ? `@${parentUsername} ${replyContent}`
+      : replyContent;
     const { data, error } = await supabase
       .from("posts")
       .insert([
@@ -178,7 +202,7 @@
           content: finalContent,
           user_id: $user.id,
           username: currentUserUsername,
-          parent_id: parentId,
+          parent_id: postId,
           created_at: new Date().toISOString(),
         },
       ])
@@ -186,26 +210,13 @@
     if (error) {
       console.error("Error submitting reply:", error);
     } else {
-      posts = [
-        {
-          ...data[0],
-          timestamp: new Date().toLocaleString("en-US", {
-            hour: "numeric",
-            minute: "numeric",
-            hour12: true,
-          }),
-          username: currentUserUsername,
-          reactions: [],
-        },
-        ...posts,
-      ];
-      if (isNested) {
-        nestedReplyContent = "";
-        nestedReplyTo = null;
-      } else {
-        replyContent = "";
-        replyingTo = null;
-      }
+      console.log("Reply inserted:", data);
+      replyContent = "";
+      replyingTo = null;
+      showEmojiPicker = false;
+      showGifPicker = false;
+      showTagPicker = false; // Reset pickers after submission
+      await fetchPosts(); // Manually refresh posts to ensure UI updates
     }
   }
 
@@ -231,17 +242,13 @@
         ]);
       if (error) console.error("Error adding reaction:", error);
     }
-    await fetchPosts();
+    await fetchPosts(); // Refresh posts after reaction update
     showReactionPicker = null;
   }
 
-  function handleMediaChange(event, isNested = false) {
+  function handleMediaChange(event) {
     mediaFiles = Array.from(event.target.files);
-    if (isNested) {
-      submitReply(nestedReplyTo, true);
-    } else {
-      submitPost();
-    }
+    submitPost();
   }
 
   async function searchGifs() {
@@ -259,79 +266,23 @@
     }));
   }
 
-  function addGif(gifUrl, isNested = false) {
+  function addGif(gifUrl) {
     mediaFiles = [{ name: "gif", url: gifUrl }];
-    if (isNested) {
-      submitReply(nestedReplyTo, true);
-    } else {
-      submitPost();
-    }
+    submitPost();
   }
 
-  function addEmoji(emoji, isNested = false) {
-    if (isNested) {
-      nestedReplyContent += emoji;
+  function addEmoji(emoji) {
+    if (replyingTo) {
+      replyContent += emoji;
     } else {
       newPost += emoji;
     }
     showEmojiPicker = false;
   }
 
-  function toggleBold(isNested = false) {
-    if (isNested) {
-      nestedReplyContent = nestedReplyContent.trim()
-        ? `**${nestedReplyContent}**`
-        : nestedReplyContent;
-    } else {
-      newPost = newPost.trim() ? `**${newPost}**` : newPost;
-    }
-  }
-
-  function toggleItalic(isNested = false) {
-    if (isNested) {
-      nestedReplyContent = nestedReplyContent.trim()
-        ? `_${nestedReplyContent}_`
-        : nestedReplyContent;
-    } else {
-      newPost = newPost.trim() ? `_${newPost}_` : newPost;
-    }
-  }
-
-  function addList(isNested = false) {
-    if (isNested) {
-      nestedReplyContent += "\n- ";
-    } else {
-      newPost += "\n- ";
-    }
-  }
-
-  function addLocation(isNested = false) {
-    if (isNested) {
-      nestedReplyContent += "📍 Location";
-    } else {
-      newPost += "📍 Location";
-    }
-  }
-
-  async function completeTask() {
-    const { data: tasks } = await supabase
-      .from("tasks")
-      .select("action")
-      .eq("challenge_id", challengeId)
-      .limit(1);
-    if (tasks && tasks.length > 0) {
-      const taskName = tasks[0].action;
-      newPost = `Completed task: ${taskName}`;
-      await submitPost();
-      showTaskPicker = false;
-    }
-  }
-
-  function handleInput(event, isNested = false) {
-    const value = isNested ? nestedReplyContent : event.target.value;
-    const cursorPos = isNested
-      ? event.target.selectionStart
-      : event.target.selectionStart;
+  function handleInput(event) {
+    const value = replyingTo ? replyContent : newPost;
+    const cursorPos = event.target.selectionStart;
     const lastAtIndex = value.lastIndexOf("@", cursorPos - 1);
 
     if (
@@ -352,33 +303,28 @@
     }
   }
 
-  function handleKeydown(event, isNested = false) {
+  function handleKeydown(event, postId) {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
       event.preventDefault();
-      if (isNested) {
-        submitReply(nestedReplyTo, true);
+      if (postId) {
+        submitReply(postId);
       } else {
         submitPost();
       }
     }
   }
 
-  function addTag(username, isNested = false) {
-    if (isNested) {
-      const before = nestedReplyContent.slice(0, tagStartIndex);
-      const after = nestedReplyContent.slice(
-        nestedReplyContent.indexOf(" ", tagStartIndex) !== -1
-          ? nestedReplyContent.indexOf(" ", tagStartIndex)
-          : nestedReplyContent.length
-      );
-      nestedReplyContent = `${before}@${username} ${after}`.trim();
+  function addTag(username) {
+    const value = replyingTo ? replyContent : newPost;
+    const before = value.slice(0, tagStartIndex);
+    const after = value.slice(
+      value.indexOf(" ", tagStartIndex) !== -1
+        ? value.indexOf(" ", tagStartIndex)
+        : value.length
+    );
+    if (replyingTo) {
+      replyContent = `${before}@${username} ${after}`.trim();
     } else {
-      const before = newPost.slice(0, tagStartIndex);
-      const after = newPost.slice(
-        newPost.indexOf(" ", tagStartIndex) !== -1
-          ? newPost.indexOf(" ", tagStartIndex)
-          : newPost.length
-      );
       newPost = `${before}@${username} ${after}`.trim();
     }
     showTagPicker = false;
@@ -386,16 +332,13 @@
     tagSuggestions = [];
   }
 
-  function tagUser(username, parentId) {
-    replyingTo = parentId;
+  function tagUser(postId, username) {
+    replyingTo = postId;
     replyContent = `@${username} `;
-    document.querySelector(".reply-form textarea")?.focus();
-  }
-
-  function tagNestedUser(username, parentId) {
-    nestedReplyTo = parentId;
-    nestedReplyContent = `@${username} `;
-    document.querySelector(`#nested-reply-${parentId} textarea`)?.focus();
+    setTimeout(() => {
+      const textarea = document.querySelector(`#reply-${postId} textarea`);
+      if (textarea) textarea.focus();
+    }, 0);
   }
 
   function handleKeyPress(event, action) {
@@ -404,12 +347,54 @@
       action();
     }
   }
+
+  function toggleMinimize() {
+    minimized = !minimized;
+    if (!minimized) {
+      showEmojiPicker = false;
+      showGifPicker = false;
+      showTagPicker = false;
+    }
+  }
+
+  function toggleReply(postId) {
+    console.log(
+      "Toggling reply for post:",
+      postId,
+      "current replyingTo:",
+      replyingTo
+    );
+    replyingTo = replyingTo === postId ? null : postId;
+    if (replyingTo) {
+      replyContent = "";
+      setTimeout(() => {
+        const textarea = document.querySelector(`#reply-${postId} textarea`);
+        if (textarea) {
+          textarea.focus();
+          console.log("Focused textarea for post:", postId);
+        } else {
+          console.error("Textarea not found for post:", postId);
+        }
+      }, 0);
+    } else {
+      console.log("Hiding reply form for post:", postId);
+    }
+  }
+
+  function renderReplies(posts, parentId = null) {
+    return posts
+      .filter((p) => p.parent_id === parentId)
+      .map((post) => ({
+        post,
+        replies: renderReplies(posts, post.id),
+      }));
+  }
 </script>
 
 <div class="feed-container">
   <div class="feed">
-    {#each posts.filter((p) => !p.parent_id) as post}
-      <div class="post">
+    {#each renderReplies(posts) as { post, replies }}
+      <div class="post" class:reply={!!post.parent_id}>
         <p class="post-meta">
           {post.timestamp} |
           <span class="challenge-name">#{challengeName}</span>
@@ -418,9 +403,9 @@
             class="username"
             role="button"
             tabindex="0"
-            on:click={() => tagUser(post.username, post.id)}
+            on:click={() => tagUser(post.id, post.username)}
             on:keydown={(e) =>
-              handleKeyPress(e, () => tagUser(post.username, post.id))}
+              handleKeyPress(e, () => tagUser(post.id, post.username))}
           >
             @{post.username}
           </span>
@@ -491,72 +476,95 @@
           <a
             href="#comment"
             class="comment-link"
-            on:click|preventDefault={() =>
-              (replyingTo = replyingTo === post.id ? null : post.id)}
+            on:click|preventDefault={(e) => {
+              console.log("Comment link clicked for post:", post.id);
+              toggleReply(post.id);
+            }}
           >
             Comment
           </a>
         </div>
         {#if replyingTo === post.id}
-          <div class="reply-form">
-            <textarea bind:value={replyContent} placeholder="Reply..." rows="1"
+          <div class="reply-form active" id="reply-{post.id}">
+            <textarea
+              bind:value={replyContent}
+              on:input={handleInput}
+              on:keydown={(e) => handleKeydown(e, post.id)}
+              placeholder="Reply..."
+              rows="1"
             ></textarea>
-            <button on:click={() => submitReply(post.id)}>➤</button>
+            <button class="send-btn" on:click={() => submitReply(post.id)}
+              >➤</button
+            >
           </div>
         {/if}
-        {#each posts.filter((r) => r.parent_id === post.id) as reply}
+        {#each replies as { post: replyPost, replies: nestedReplies }}
           <div class="reply">
             <p class="post-meta">
-              {reply.timestamp} |
+              {replyPost.timestamp} |
               <span class="challenge-name">#{challengeName}</span>
               |
               <span
                 class="username"
                 role="button"
                 tabindex="0"
-                on:click={() => tagNestedUser(reply.username, post.id)}
+                on:click={() => tagUser(replyPost.id, replyPost.username)}
                 on:keydown={(e) =>
                   handleKeyPress(e, () =>
-                    tagNestedUser(reply.username, post.id)
+                    tagUser(replyPost.id, replyPost.username)
                   )}
               >
-                @{reply.username}
+                @{replyPost.username}
               </span>
             </p>
-            <p class="post-content">{reply.content}</p>
+            <p class="post-content">{replyPost.content}</p>
+            {#if replyPost.media_urls && replyPost.media_urls.length > 0}
+              <div class="media">
+                {#each replyPost.media_urls as url}
+                  {#if url.match(/\.(mp4|webm)$/i)}
+                    <video src={url} controls width="100%">
+                      <track kind="captions" label="No captions available" />
+                    </video>
+                  {:else}
+                    <img src={url} alt="Reply media" />
+                  {/if}
+                {/each}
+              </div>
+            {/if}
             <div class="reactions">
               <button
                 class="reaction-btn"
                 on:click={() =>
                   (showReactionPicker =
-                    showReactionPicker === reply.id ? null : reply.id)}
+                    showReactionPicker === replyPost.id ? null : replyPost.id)}
               >
                 🙂➕
               </button>
-              {#if showReactionPicker === reply.id}
+              {#if showReactionPicker === replyPost.id}
                 <div class="reaction-picker">
-                  <button on:click={() => toggleReaction(reply.id, "like")}
+                  <button on:click={() => toggleReaction(replyPost.id, "like")}
                     >👍</button
                   >
-                  <button on:click={() => toggleReaction(reply.id, "heart")}
+                  <button on:click={() => toggleReaction(replyPost.id, "heart")}
                     >❤️</button
                   >
-                  <button on:click={() => toggleReaction(reply.id, "laugh")}
+                  <button on:click={() => toggleReaction(replyPost.id, "laugh")}
                     >😂</button
                   >
-                  <button on:click={() => toggleReaction(reply.id, "cry")}
+                  <button on:click={() => toggleReaction(replyPost.id, "cry")}
                     >😢</button
                   >
-                  <button on:click={() => toggleReaction(reply.id, "comfort")}
+                  <button
+                    on:click={() => toggleReaction(replyPost.id, "comfort")}
                     >🤗</button
                   >
                 </div>
               {/if}
               {#each ["like", "heart", "laugh", "cry", "comfort"] as type}
-                {#if reply.reactions.some((r) => r.reaction_type === type)}
+                {#if replyPost.reactions.some((r) => r.reaction_type === type)}
                   <span
                     class="reaction-count"
-                    title={reply.reactions
+                    title={replyPost.reactions
                       .filter((r) => r.reaction_type === type)
                       .map((r) => r.profiles.username)
                       .join(", ")}
@@ -570,136 +578,36 @@
                           : type === "cry"
                             ? "😢"
                             : "🤗"}
-                    +{reply.reactions.filter((r) => r.reaction_type === type)
-                      .length}
+                    +{replyPost.reactions.filter(
+                      (r) => r.reaction_type === type
+                    ).length}
                   </span>
                 {/if}
               {/each}
               <a
                 href="#comment"
                 class="comment-link"
-                on:click|preventDefault={() =>
-                  (nestedReplyTo =
-                    nestedReplyTo === reply.id ? null : reply.id)}
+                on:click|preventDefault={(e) => {
+                  console.log("Comment link clicked for reply:", replyPost.id);
+                  toggleReply(replyPost.id);
+                }}
               >
                 Comment
               </a>
             </div>
-            {#if nestedReplyTo === reply.id}
-              <div class="nested-reply-form" id="nested-reply-{reply.id}">
+            {#if replyingTo === replyPost.id}
+              <div class="reply-form active" id="reply-{replyPost.id}">
                 <textarea
-                  class="nested-reply-textarea"
-                  bind:value={nestedReplyContent}
-                  on:input={(e) => handleInput(e, true)}
-                  on:keydown={(e) => handleKeydown(e, true)}
+                  bind:value={replyContent}
+                  on:input={handleInput}
+                  on:keydown={(e) => handleKeydown(e, replyPost.id)}
                   placeholder="Reply..."
                   rows="1"
                 ></textarea>
                 <button
-                  class="nested-send-btn"
-                  on:click={() => submitReply(post.id, true, reply.username)}
-                  >➤</button
+                  class="send-btn"
+                  on:click={() => submitReply(replyPost.id)}>➤</button
                 >
-                <div class="nested-toolbar">
-                  <button
-                    type="button"
-                    on:click={() =>
-                      document
-                        .getElementById(`nested-media-${reply.id}`)
-                        .click()}
-                    title="Image"
-                  >
-                    <span>🖼️</span>
-                  </button>
-                  <input
-                    id="nested-media-{reply.id}"
-                    type="file"
-                    multiple
-                    accept="image/*,video/*"
-                    on:change={(e) => handleMediaChange(e, true)}
-                    hidden
-                  />
-                  <button
-                    type="button"
-                    on:click={() => (showGifPicker = !showGifPicker)}
-                    title="GIF"
-                  >
-                    <span>🎞️</span>
-                  </button>
-                  <button
-                    type="button"
-                    on:click={() => addList(true)}
-                    title="List"
-                  >
-                    <span>📋</span>
-                  </button>
-                  <button
-                    type="button"
-                    on:click={() => (showEmojiPicker = !showEmojiPicker)}
-                    title="Emoji"
-                  >
-                    <span>😊</span>
-                  </button>
-                  <button
-                    type="button"
-                    on:click={() => addLocation(true)}
-                    title="Location"
-                  >
-                    <span>📍</span>
-                  </button>
-                  <button
-                    type="button"
-                    on:click={() => toggleBold(true)}
-                    title="Bold"
-                  >
-                    <span>𝐁</span>
-                  </button>
-                  <button
-                    type="button"
-                    on:click={() => toggleItalic(true)}
-                    title="Italic"
-                  >
-                    <span>𝐈</span>
-                  </button>
-                </div>
-                {#if showGifPicker}
-                  <div class="gif-picker">
-                    <input
-                      type="text"
-                      bind:value={gifSearch}
-                      on:input={searchGifs}
-                      placeholder="Search GIFs"
-                    />
-                    <div class="gif-list">
-                      {#each gifs as gif}
-                        <button
-                          type="button"
-                          class="gif-button"
-                          on:click={() => addGif(gif.url, true)}
-                          on:keydown={(e) =>
-                            handleKeyPress(e, () => addGif(gif.url, true))}
-                        >
-                          <img src={gif.url} alt="GIF" />
-                        </button>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-                {#if showEmojiPicker}
-                  <div class="emoji-picker">
-                    {#each ["😊", "👍", "😂", "❤️", "🔥"] as emoji}
-                      <button
-                        type="button"
-                        class="emoji-button"
-                        on:click={() => addEmoji(emoji, true)}
-                        on:keydown={(e) =>
-                          handleKeyPress(e, () => addEmoji(emoji, true))}
-                      >
-                        {emoji}
-                      </button>
-                    {/each}
-                  </div>
-                {/if}
               </div>
             {/if}
           </div>
@@ -707,122 +615,105 @@
       </div>
     {/each}
   </div>
-  <div class="post-form">
-    <div class="input-container">
-      <textarea
-        bind:value={newPost}
-        on:input={handleInput}
-        on:keydown={handleKeydown}
-        placeholder="Say something..."
-        rows="2"
-      ></textarea>
-      <button class="send-btn" on:click={submitPost}>➤</button>
-    </div>
-    {#if showTagPicker && tagSuggestions.length > 0}
-      <div class="tag-picker">
-        {#each tagSuggestions as username}
-          <div
-            class="tag-suggestion"
-            role="button"
-            tabindex="0"
-            on:click={() => addTag(username)}
-            on:keydown={(e) => handleKeyPress(e, () => addTag(username))}
-          >
-            {username}
-          </div>
-        {/each}
+  <div class="post-form" class:minimized>
+    {#if minimized}
+      <div class="minimized-bar">
+        <button class="toggle-btn" on:click={toggleMinimize}>↑</button>
       </div>
-    {/if}
-    <div class="toolbar">
-      <button
-        type="button"
-        on:click={() => document.getElementById("mediaInput").click()}
-        title="Image"
-      >
-        <span>🖼️</span>
-      </button>
-      <input
-        id="mediaInput"
-        type="file"
-        multiple
-        accept="image/*,video/*"
-        on:change={handleMediaChange}
-        hidden
-      />
-      <button
-        type="button"
-        on:click={() => (showGifPicker = !showGifPicker)}
-        title="GIF"
-      >
-        <span>🎞️</span>
-      </button>
-      <button type="button" on:click={addList} title="List">
-        <span>📋</span>
-      </button>
-      <button
-        type="button"
-        on:click={() => (showEmojiPicker = !showEmojiPicker)}
-        title="Emoji"
-      >
-        <span>😊</span>
-      </button>
-      <button type="button" on:click={addLocation} title="Location">
-        <span>📍</span>
-      </button>
-      <button type="button" on:click={toggleBold} title="Bold">
-        <span>𝐁</span>
-      </button>
-      <button type="button" on:click={toggleItalic} title="Italic">
-        <span>𝐈</span>
-      </button>
-      <button
-        type="button"
-        on:click={() => (showTaskPicker = !showTaskPicker)}
-        title="Complete Task"
-      >
-        <span>+""</span>
-      </button>
-    </div>
-    {#if showGifPicker}
-      <div class="gif-picker">
+    {:else}
+      <div class="input-container">
+        <textarea
+          bind:value={newPost}
+          on:input={handleInput}
+          on:keydown={(e) => handleKeydown(e, null)}
+          placeholder="Say something..."
+          rows="2"
+        ></textarea>
+        <button class="send-btn" on:click={submitPost}>➤</button>
+        <button class="toggle-btn" on:click={toggleMinimize}>↓</button>
+      </div>
+      {#if showTagPicker && tagSuggestions.length > 0}
+        <div class="tag-picker">
+          {#each tagSuggestions as username}
+            <div
+              class="tag-suggestion"
+              role="button"
+              tabindex="0"
+              on:click={() => addTag(username)}
+              on:keydown={(e) => handleKeyPress(e, () => addTag(username))}
+            >
+              {username}
+            </div>
+          {/each}
+        </div>
+      {/if}
+      <div class="toolbar">
+        <button
+          type="button"
+          on:click={() => document.getElementById("mediaInput").click()}
+          title="Image"
+        >
+          <span>🖼️</span>
+        </button>
         <input
-          type="text"
-          bind:value={gifSearch}
-          on:input={searchGifs}
-          placeholder="Search GIFs"
+          id="mediaInput"
+          type="file"
+          multiple
+          accept="image/*,video/*"
+          on:change={handleMediaChange}
+          hidden
         />
-        <div class="gif-list">
-          {#each gifs as gif}
+        <button
+          type="button"
+          on:click={() => (showGifPicker = !showGifPicker)}
+          title="GIF"
+        >
+          <span>🎞️</span>
+        </button>
+        <button
+          type="button"
+          on:click={() => (showEmojiPicker = !showEmojiPicker)}
+          title="Emoji"
+        >
+          <span>😊</span>
+        </button>
+      </div>
+      {#if showGifPicker}
+        <div class="gif-picker">
+          <input
+            type="text"
+            bind:value={gifSearch}
+            on:input={searchGifs}
+            placeholder="Search GIFs"
+          />
+          <div class="gif-list">
+            {#each gifs as gif}
+              <button
+                type="button"
+                class="gif-button"
+                on:click={() => addGif(gif.url)}
+                on:keydown={(e) => handleKeyPress(e, () => addGif(gif.url))}
+              >
+                <img src={gif.url} alt="GIF" />
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+      {#if showEmojiPicker}
+        <div class="emoji-picker">
+          {#each ["😊", "👍", "😂", "❤️", "🔥"] as emoji}
             <button
               type="button"
-              class="gif-button"
-              on:click={() => addGif(gif.url)}
-              on:keydown={(e) => handleKeyPress(e, () => addGif(gif.url))}
+              class="emoji-button"
+              on:click={() => addEmoji(emoji)}
+              on:keydown={(e) => handleKeyPress(e, () => addEmoji(emoji))}
             >
-              <img src={gif.url} alt="GIF" />
+              {emoji}
             </button>
           {/each}
         </div>
-      </div>
-    {/if}
-    {#if showEmojiPicker}
-      <div class="emoji-picker">
-        {#each ["😊", "👍", "😂", "❤️", "🔥"] as emoji}
-          <button
-            type="button"
-            class="emoji-button"
-            on:click={() => addEmoji(emoji)}
-            on:keydown={(e) => handleKeyPress(e, () => addEmoji(emoji))}
-          >
-            {emoji}
-          </button>
-        {/each}
-      </div>
-    {/if}
-    {#if showTaskPicker}
-      <div class="task-picker">
-        <button on:click={completeTask}>Complete a Task</button>
-      </div>
+      {/if}
     {/if}
   </div>
 </div>
@@ -831,14 +722,17 @@
   .feed-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 60px);
+    max-width: 450px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: calc(100vh - 60px);
   }
   .feed {
     flex: 1;
     overflow-y: auto;
     padding: 0.25rem;
     font-size: 0.9rem;
-    padding-bottom: 100px;
+    padding-bottom: 150px;
   }
   .post-form {
     padding: 0.25rem;
@@ -847,25 +741,44 @@
     gap: 0.25rem;
     position: fixed;
     bottom: 60px;
-    left: 0;
-    right: 0;
+    width: 100%;
+    max-width: 450px;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--white);
     z-index: 1000;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+    transition: height 0.3s ease;
   }
-  .nested-reply-form {
-    padding: 0.25rem;
+  .post-form.minimized {
+    height: 40px;
+  }
+  @media (min-width: 769px) {
+    .post-form {
+      bottom: 0;
+    }
+  }
+  .minimized-bar {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    justify-content: flex-end;
+    align-items: center;
+    height: 40px;
+    padding: 0 0.5rem;
+  }
+  .post.reply,
+  .reply {
+    margin-left: 1rem;
+    border-left: 1px solid #ccc;
+    padding-left: 0.5rem;
   }
   .input-container,
-  .nested-reply-form {
+  .reply-form {
     position: relative;
     display: flex;
     align-items: center;
   }
-  .post-form textarea {
+  .post-form textarea,
+  .reply-form textarea {
     width: 100%;
     resize: none;
     padding: 0.25rem 2rem 0.25rem 0.25rem;
@@ -875,48 +788,42 @@
     min-height: clamp(20px, 5vw, 28px);
     line-height: 1.2;
   }
-  .nested-reply-textarea {
-    width: 100%;
-    resize: none;
-    padding: 0.15rem 1.5rem 0.15rem 0.15rem;
-    border: 1px solid var(--light-gray);
-    border-radius: 4px;
-    font-size: clamp(0.65rem, 1.5vw, 0.75rem);
-    min-height: clamp(18px, 4vw, 22px);
-    line-height: 1.1;
-  }
   .send-btn {
+    position: absolute;
+    right: 2rem;
+    bottom: 0.25rem;
+    padding: 0.25rem 0.5rem; /* Reduced padding for smaller button */
+    background-color: var(--tomato);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem; /* Smaller font size */
+    transition: background-color 0.3s;
+    width: auto;
+    height: auto;
+  }
+  .toggle-btn {
     position: absolute;
     right: 0.25rem;
     bottom: 0.25rem;
-    padding: clamp(0.05rem, 1vw, 0.1rem) clamp(0.15rem, 2vw, 0.3rem);
-    background-color: var(--tomato);
+    padding: 0.25rem 0.5rem; /* Reduced padding for consistency */
+    background-color: var(--charcoal);
     color: var(--white);
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+    font-size: 0.7rem; /* Smaller font size */
     transition: background-color 0.3s;
     width: auto;
     height: auto;
   }
-  .nested-send-btn {
-    position: absolute;
-    right: 0.15rem;
-    bottom: 0.15rem;
-    padding: clamp(0.03rem, 0.8vw, 0.05rem) clamp(0.1rem, 1.5vw, 0.2rem);
-    background-color: var(--tomato);
-    color: var(--white);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: clamp(0.55rem, 1.2vw, 0.65rem);
-    transition: background-color 0.3s;
-    width: auto;
-    height: auto;
+  .minimized-bar .toggle-btn {
+    position: static;
+    margin: 0;
   }
   .send-btn:hover,
-  .nested-send-btn:hover {
+  .toggle-btn:hover {
     background-color: var(--tomato-light);
   }
   .toolbar,
@@ -940,7 +847,6 @@
   }
   .gif-picker,
   .emoji-picker,
-  .task-picker,
   .tag-picker,
   .reaction-picker {
     position: absolute;
@@ -952,7 +858,7 @@
     max-width: 100%;
   }
   .gif-picker {
-    bottom: 100%;
+    bottom: calc(100% + 5px);
     left: 0;
   }
   .gif-picker input {
@@ -1033,6 +939,7 @@
   .post-content {
     font-size: clamp(0.75rem, 2.5vw, 0.85rem);
     margin: 0.25rem 0;
+    white-space: pre-wrap;
   }
   .media img,
   .media video {
@@ -1077,21 +984,13 @@
   .comment-link:hover {
     color: var(--tomato-light);
   }
-  .reply-form,
-  .nested-reply-form {
+  .reply-form {
     margin-top: 0.25rem;
+    display: none; /* Hidden by default */
+  }
+  .reply-form.active {
     display: flex;
     gap: 0.25rem;
     align-items: center;
-  }
-  .reply {
-    margin-left: 1rem;
-    border-left: 1px solid #ccc;
-    padding-left: 0.5rem;
-  }
-  @media (max-width: 600px) {
-    .feed {
-      padding: 0.25rem;
-    }
   }
 </style>
