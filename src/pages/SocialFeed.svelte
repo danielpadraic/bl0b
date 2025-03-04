@@ -25,6 +25,7 @@
   let minimized = false;
   let expandedComments = {};
   let expandedReplies = {};
+  let profilesMap = new Map(); // Define profilesMap globally
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
   const COMMENTS_PER_PAGE = 3;
@@ -36,6 +37,7 @@
       "challengeName:",
       challengeName
     );
+    console.log("Current user ID:", $user?.id);
     await fetchCurrentUserUsername();
     await fetchPosts();
     await fetchParticipants();
@@ -108,7 +110,7 @@
       return;
     }
     const { data, error } = await supabase
-      .from("users")
+      .from("profiles")
       .select("username")
       .eq("id", $user.id)
       .single();
@@ -157,6 +159,7 @@
         console.log("Fetching posts for challenge:", challengeId);
       } else {
         if ($user) {
+          console.log("User authenticated, ID:", $user.id);
           const { data: participantData, error: participantError } =
             await supabase
               .from("challenge_participants")
@@ -166,10 +169,19 @@
           const userChallengeIds =
             participantData?.map((p) => p.challenge_id) || [];
           console.log("User's challenge IDs:", userChallengeIds);
-          query = query.or(
-            `challenge_id.is.null,challenge_id.in.(${userChallengeIds.join(",")})`
-          );
-          console.log("Fetching general posts and user's challenge posts");
+
+          if (userChallengeIds.length > 0) {
+            query = query.or(
+              `challenge_id.is.null,challenge_id.in.(${userChallengeIds.join(",")})`
+            );
+            console.log(
+              "Querying general posts and user's challenge posts:",
+              userChallengeIds
+            );
+          } else {
+            query = query.is("challenge_id", null);
+            console.log("No challenges joined, fetching only general posts");
+          }
 
           const { data: whisperData, error: whisperError } = await supabase
             .from("whispers")
@@ -195,25 +207,38 @@
       postsData = postData || [];
       console.log("Fetched posts:", postsData.length, "entries:", postsData);
 
-      // Fetch user data separately for posts with user_id
+      // Fetch profile data for posts, whispers, and reactions
       const userIds = [
-        ...new Set(postsData.map((post) => post.user_id).filter((id) => id)),
+        ...new Set(
+          [
+            ...postsData.map((post) => post.user_id),
+            ...whispersData.map((whisper) => whisper.sender_id),
+            ...postsData.flatMap((post) =>
+              post.post_reactions.map((r) => r.user_id)
+            ),
+          ].filter((id) => id)
+        ),
       ];
-      let usersData = [];
+      let profilesData = [];
       if (userIds.length > 0) {
-        const { data: fetchedUsers, error: usersError } = await supabase
-          .from("users")
-          .select("id, first_name, last_name, username")
+        const { data: fetchedProfiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, username, profile_photo_url")
           .in("id", userIds);
-        if (usersError) throw usersError;
-        usersData = fetchedUsers || [];
+        if (profilesError) throw profilesError;
+        profilesData = fetchedProfiles || [];
       }
-      const usersMap = new Map(usersData.map((u) => [u.id, u]));
-      console.log("Fetched users:", usersData.length, "entries:", usersData);
+      profilesMap = new Map(profilesData.map((p) => [p.id, p]));
+      console.log(
+        "Fetched profiles:",
+        profilesData.length,
+        "entries:",
+        profilesData
+      );
 
       const allPosts = [
-        ...postsData.map((post) => processPost(post, usersMap)),
-        ...whispersData.map((whisper) => processWhisper(whisper, usersMap)),
+        ...postsData.map((post) => processPost(post)),
+        ...whispersData.map((whisper) => processWhisper(whisper)),
       ];
       posts = buildPostTree(allPosts);
       console.log(
@@ -227,6 +252,7 @@
           first_name: p.first_name,
           last_name: p.last_name,
           username: p.username,
+          profile_photo_url: p.profile_photo_url,
         }))
       );
     } catch (err) {
@@ -235,7 +261,7 @@
     }
   }
 
-  function processPost(post, usersMap) {
+  function processPost(post) {
     let mediaUrl = post.media_url;
     try {
       if (Array.isArray(mediaUrl) && mediaUrl.length > 0) {
@@ -248,7 +274,7 @@
     } catch (e) {
       mediaUrl = null;
     }
-    const user = post.user_id ? usersMap.get(post.user_id) : null;
+    const profile = post.user_id ? profilesMap.get(post.user_id) : null;
     return {
       ...post,
       timestamp: new Date(post.created_at).toLocaleString("en-US", {
@@ -256,10 +282,10 @@
         minute: "numeric",
         hour12: true,
       }),
-      first_name: user?.first_name || "Anonymous",
-      last_name: user?.last_name || "",
-      username: user?.username || "unknown",
-      profile_photo_url: null, // No profile_photo_url in users table
+      first_name: profile?.first_name || "Anonymous",
+      last_name: profile?.last_name || "",
+      username: profile?.username || "unknown",
+      profile_photo_url: profile?.profile_photo_url || null,
       reactions: post.post_reactions || [],
       media_url: mediaUrl,
       challenge_title: post.challenge_id
@@ -270,8 +296,10 @@
     };
   }
 
-  function processWhisper(whisper, usersMap) {
-    const user = whisper.sender_id ? usersMap.get(whisper.sender_id) : null;
+  function processWhisper(whisper) {
+    const profile = whisper.sender_id
+      ? profilesMap.get(whisper.sender_id)
+      : null;
     return {
       id: whisper.id,
       user_id: whisper.sender_id,
@@ -282,10 +310,10 @@
         minute: "numeric",
         hour12: true,
       }),
-      first_name: user?.first_name || "Anonymous",
-      last_name: user?.last_name || "",
-      username: user?.username || "unknown",
-      profile_photo_url: null, // No profile_photo_url in users table
+      first_name: profile?.first_name || "Anonymous",
+      last_name: profile?.last_name || "",
+      username: profile?.username || "unknown",
+      profile_photo_url: profile?.profile_photo_url || null,
       reactions: [],
       media_url: null,
       challenge_id: null,
@@ -323,7 +351,7 @@
         ].filter(Boolean);
       }
       const { data: profilesData } = await supabase
-        .from("users")
+        .from("profiles")
         .select("username")
         .in("id", participantIds);
       participants = profilesData?.map((p) => p.username).filter(Boolean) || [];
@@ -669,7 +697,7 @@
                 class="reaction-count"
                 title={post.reactions
                   .filter((r) => r.reaction_type === type)
-                  .map((r) => r.users?.username || "unknown")
+                  .map((r) => profilesMap.get(r.user_id)?.username || "unknown")
                   .join(", ")}
               >
                 {type === "like"

@@ -1,7 +1,6 @@
 <script>
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
-  // Import Comment for recursive use
   import Comment from "./Comment.svelte";
 
   export let comment;
@@ -14,8 +13,8 @@
   let showReactionPicker = false;
   let replyingTo = null;
   let replyContent = "";
-  const REPLIES_PER_PAGE = 1; // Initial number of replies to show
-  const REPLIES_EXPAND_COUNT = 20; // Number of replies to show when expanded
+  const REPLIES_PER_PAGE = 1;
+  const REPLIES_EXPAND_COUNT = 20;
 
   async function toggleReaction(postId, reactionType) {
     const existingReaction = comment.reactions.find(
@@ -79,7 +78,7 @@
           ? REPLIES_EXPAND_COUNT
           : REPLIES_PER_PAGE;
     }
-    expandedReplies = { ...expandedReplies }; // Trigger reactivity
+    expandedReplies = { ...expandedReplies };
   }
 
   function getVisibleReplies(comment) {
@@ -185,7 +184,7 @@
           class="reaction-count"
           title={comment.reactions
             .filter((r) => r.reaction_type === type)
-            .map((r) => r.profiles.username)
+            .map((r) => "unknown")
             .join(", ")}
         >
           {type === "like"
