@@ -27,7 +27,7 @@
   let expandedReplies = {};
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
-  const COMMENTS_PER_PAGE = 3; // Changed from 5
+  const COMMENTS_PER_PAGE = 3;
 
   onMount(async () => {
     console.log(
@@ -66,7 +66,7 @@
               return;
             }
           }
-          await fetchPosts(); // Updated to rebuild tree
+          await fetchPosts();
         }
       )
       .subscribe();
@@ -85,7 +85,7 @@
           },
           async () => {
             console.log("New whisper received");
-            await fetchPosts(); // Updated to rebuild tree
+            await fetchPosts();
           }
         )
         .subscribe();
@@ -108,7 +108,7 @@
       return;
     }
     const { data, error } = await supabase
-      .from("profiles")
+      .from("users")
       .select("username")
       .eq("id", $user.id)
       .single();
@@ -148,7 +148,7 @@
       let query = supabase
         .from("posts")
         .select(
-          "id, user_id, content, color_code, created_at, challenge_id, media_url, parent_id, post_reactions(reaction_type, user_id, profiles(username)), challenges(title)"
+          "id, user_id, content, color_code, created_at, challenge_id, media_url, parent_id, post_reactions(reaction_type, user_id), challenges(title)"
         )
         .order("created_at", { ascending: false });
 
@@ -173,9 +173,7 @@
 
           const { data: whisperData, error: whisperError } = await supabase
             .from("whispers")
-            .select(
-              "id, sender_id, recipient_id, content, created_at, profiles!sender_id(username)"
-            )
+            .select("id, sender_id, recipient_id, content, created_at")
             .eq("recipient_id", $user.id)
             .order("created_at", { ascending: false });
           if (whisperError) throw whisperError;
@@ -197,27 +195,25 @@
       postsData = postData || [];
       console.log("Fetched posts:", postsData.length, "entries:", postsData);
 
+      // Fetch user data separately for posts with user_id
       const userIds = [
-        ...new Set(
-          [
-            ...postsData.map((post) => post.user_id),
-            ...whispersData.map((w) => w.sender_id),
-          ].filter(Boolean)
-        ),
+        ...new Set(postsData.map((post) => post.user_id).filter((id) => id)),
       ];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", userIds);
-      if (profilesError) throw profilesError;
-      const usernameMap = new Map(
-        profilesData?.map((p) => [p.id, p.username]) || []
-      );
-      console.log("Username map:", Array.from(usernameMap.entries()));
+      let usersData = [];
+      if (userIds.length > 0) {
+        const { data: fetchedUsers, error: usersError } = await supabase
+          .from("users")
+          .select("id, first_name, last_name, username")
+          .in("id", userIds);
+        if (usersError) throw usersError;
+        usersData = fetchedUsers || [];
+      }
+      const usersMap = new Map(usersData.map((u) => [u.id, u]));
+      console.log("Fetched users:", usersData.length, "entries:", usersData);
 
       const allPosts = [
-        ...postsData.map((post) => processPost(post, usernameMap)),
-        ...whispersData.map((whisper) => processWhisper(whisper, usernameMap)),
+        ...postsData.map((post) => processPost(post, usersMap)),
+        ...whispersData.map((whisper) => processWhisper(whisper, usersMap)),
       ];
       posts = buildPostTree(allPosts);
       console.log(
@@ -228,6 +224,9 @@
           challenge_id: p.challenge_id,
           isWhisper: p.isWhisper,
           comments: p.comments.length,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          username: p.username,
         }))
       );
     } catch (err) {
@@ -236,7 +235,7 @@
     }
   }
 
-  function processPost(post, usernameMap = null) {
+  function processPost(post, usersMap) {
     let mediaUrl = post.media_url;
     try {
       if (Array.isArray(mediaUrl) && mediaUrl.length > 0) {
@@ -249,6 +248,7 @@
     } catch (e) {
       mediaUrl = null;
     }
+    const user = post.user_id ? usersMap.get(post.user_id) : null;
     return {
       ...post,
       timestamp: new Date(post.created_at).toLocaleString("en-US", {
@@ -256,9 +256,10 @@
         minute: "numeric",
         hour12: true,
       }),
-      username: post.user_id
-        ? usernameMap?.get(post.user_id) || "Unknown"
-        : "Unknown",
+      first_name: user?.first_name || "Anonymous",
+      last_name: user?.last_name || "",
+      username: user?.username || "unknown",
+      profile_photo_url: null, // No profile_photo_url in users table
       reactions: post.post_reactions || [],
       media_url: mediaUrl,
       challenge_title: post.challenge_id
@@ -269,7 +270,8 @@
     };
   }
 
-  function processWhisper(whisper, usernameMap = null) {
+  function processWhisper(whisper, usersMap) {
+    const user = whisper.sender_id ? usersMap.get(whisper.sender_id) : null;
     return {
       id: whisper.id,
       user_id: whisper.sender_id,
@@ -280,9 +282,10 @@
         minute: "numeric",
         hour12: true,
       }),
-      username: whisper.sender_id
-        ? usernameMap?.get(whisper.sender_id) || "Unknown"
-        : "Unknown",
+      first_name: user?.first_name || "Anonymous",
+      last_name: user?.last_name || "",
+      username: user?.username || "unknown",
+      profile_photo_url: null, // No profile_photo_url in users table
       reactions: [],
       media_url: null,
       challenge_id: null,
@@ -320,7 +323,7 @@
         ].filter(Boolean);
       }
       const { data: profilesData } = await supabase
-        .from("profiles")
+        .from("users")
         .select("username")
         .in("id", participantIds);
       participants = profilesData?.map((p) => p.username).filter(Boolean) || [];
@@ -577,26 +580,50 @@
   <div class="feed">
     {#each posts.filter((post) => !post.parent_id) as post (post.id)}
       <div class="post">
-        <p class="post-meta">
-          {post.timestamp} |
-          <span class="challenge-name" role="button" tabindex="0"
-            >#{post.challenge_title}</span
-          >
-          |
-          <span
-            class="username"
-            role="button"
-            tabindex="0"
-            on:click={() => tagUser(post.id, post.username)}
-            on:keydown={(e) =>
-              handleKeyPress(e, () => tagUser(post.id, post.username))}
-          >
-            @{post.username}
-          </span>
-          {#if post.isWhisper}
-            <span class="whisper-label">[Whisper]</span>
+        <div class="post-header">
+          {#if post.profile_photo_url}
+            <img
+              src={post.profile_photo_url}
+              alt={`${post.first_name} ${post.last_name}'s profile`}
+              class="profile-pic"
+              title="@{post.username}"
+              on:click={() => tagUser(post.id, post.username)}
+              on:keydown={(e) =>
+                handleKeyPress(e, () => tagUser(post.id, post.username))}
+            />
+          {:else}
+            <div
+              class="profile-pic-placeholder"
+              title="@{post.username}"
+              on:click={() => tagUser(post.id, post.username)}
+              on:keydown={(e) =>
+                handleKeyPress(e, () => tagUser(post.id, post.username))}
+            >
+              {post.first_name.charAt(0)}{post.last_name.charAt(0)}
+            </div>
           {/if}
-        </p>
+          <div class="user-info">
+            <div class="name-row">
+              <span
+                class="full-name"
+                role="button"
+                tabindex="0"
+                title="@{post.username}"
+                on:click={() => tagUser(post.id, post.username)}
+                on:keydown={(e) =>
+                  handleKeyPress(e, () => tagUser(post.id, post.username))}
+              >
+                {post.first_name}
+                {post.last_name}
+              </span>
+              <span class="channel-name">in #{post.challenge_title}</span>
+              {#if post.isWhisper}
+                <span class="whisper-label">[Whisper]</span>
+              {/if}
+            </div>
+            <div class="timestamp">{post.timestamp}</div>
+          </div>
+        </div>
         <p class="post-content">{post.content}</p>
         {#if post.media_url}
           <div class="media">
@@ -642,7 +669,7 @@
                 class="reaction-count"
                 title={post.reactions
                   .filter((r) => r.reaction_type === type)
-                  .map((r) => r.profiles.username)
+                  .map((r) => r.users?.username || "unknown")
                   .join(", ")}
               >
                 {type === "like"
@@ -869,6 +896,63 @@
     padding: 0.5rem 0;
     font-size: clamp(0.75rem, 2.5vw, 0.85rem);
   }
+  .post-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .profile-pic {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .profile-pic-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--charcoal);
+    cursor: pointer;
+  }
+  .user-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .full-name {
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
+    font-weight: 500;
+    color: var(--charcoal);
+    cursor: pointer;
+  }
+  .full-name:hover {
+    text-decoration: underline;
+  }
+  .channel-name {
+    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    color: var(--dark-moderate-pink);
+  }
+  .timestamp {
+    font-size: clamp(0.6rem, 2vw, 0.7rem);
+    color: var(--gray);
+    opacity: 0.7;
+  }
+  .whisper-label {
+    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    color: var(--tomato);
+    font-style: italic;
+    margin-left: 0.5rem;
+  }
   .input-container,
   .reply-form {
     position: relative;
@@ -1012,35 +1096,9 @@
   .tag-suggestion:focus {
     background-color: var(--light-gray);
   }
-  .post-meta {
-    font-size: clamp(0.65rem, 2vw, 0.75rem);
-    color: var(--gray);
-    margin: 0;
-  }
-  .challenge-name {
-    color: var(--dark-moderate-pink);
-    cursor: pointer;
-  }
-  .challenge-name:hover {
-    text-decoration: underline;
-  }
-  .username {
-    color: var(--lapis-lazuli);
-    cursor: pointer;
-  }
-  .username:hover {
-    text-decoration: underline;
-  }
-  .whisper-label {
-    color: var(--tomato);
-    font-style: italic;
-    margin-left: 0.5rem;
-  }
-  .media img,
-  .media video {
-    max-width: 100%;
-    margin-top: 0.25rem;
-    border-radius: 4px;
+  .post-content {
+    margin: 0.25rem 0;
+    white-space: pre-wrap;
   }
   .reactions {
     display: flex;

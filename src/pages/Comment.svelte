@@ -108,25 +108,47 @@
 </script>
 
 <div class="comment" style="margin-left: {level * 1}rem;">
-  <p class="post-meta">
-    {comment.timestamp} |
-    <span class="challenge-name" role="button" tabindex="0"
-      >#{comment.challenge_title}</span
-    >
-    |
-    <span
-      class="username"
-      role="button"
-      tabindex="0"
-      on:click={() => toggleReply(comment.id)}
-      on:keydown={(e) => handleKeyPress(e, () => toggleReply(comment.id))}
-    >
-      @{comment.username}
-    </span>
-    {#if comment.isWhisper}
-      <span class="whisper-label">[Whisper]</span>
+  <div class="comment-header">
+    {#if comment.profile_photo_url}
+      <img
+        src={comment.profile_photo_url}
+        alt={`${comment.first_name} ${comment.last_name}'s profile`}
+        class="profile-pic"
+        title="@{comment.username}"
+        on:click={() => toggleReply(comment.id)}
+        on:keydown={(e) => handleKeyPress(e, () => toggleReply(comment.id))}
+      />
+    {:else}
+      <div
+        class="profile-pic-placeholder"
+        title="@{comment.username}"
+        on:click={() => toggleReply(comment.id)}
+        on:keydown={(e) => handleKeyPress(e, () => toggleReply(comment.id))}
+      >
+        {comment.first_name.charAt(0)}{comment.last_name.charAt(0)}
+      </div>
     {/if}
-  </p>
+    <div class="user-info">
+      <div class="name-row">
+        <span
+          class="full-name"
+          role="button"
+          tabindex="0"
+          title="@{comment.username}"
+          on:click={() => toggleReply(comment.id)}
+          on:keydown={(e) => handleKeyPress(e, () => toggleReply(comment.id))}
+        >
+          {comment.first_name}
+          {comment.last_name}
+        </span>
+        <span class="channel-name">in #{comment.challenge_title}</span>
+        {#if comment.isWhisper}
+          <span class="whisper-label">[Whisper]</span>
+        {/if}
+      </div>
+      <div class="timestamp">{comment.timestamp}</div>
+    </div>
+  </div>
   <p class="post-content">{comment.content}</p>
   {#if comment.media_url}
     <div class="media">
@@ -238,6 +260,63 @@
     padding: 0.5rem 0;
     font-size: clamp(0.75rem, 2.5vw, 0.85rem);
   }
+  .comment-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .profile-pic {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .profile-pic-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--charcoal);
+    cursor: pointer;
+  }
+  .user-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .full-name {
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
+    font-weight: 500;
+    color: var(--charcoal);
+    cursor: pointer;
+  }
+  .full-name:hover {
+    text-decoration: underline;
+  }
+  .channel-name {
+    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    color: var(--dark-moderate-pink);
+  }
+  .timestamp {
+    font-size: clamp(0.6rem, 2vw, 0.7rem);
+    color: var(--gray);
+    opacity: 0.7;
+  }
+  .whisper-label {
+    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    color: var(--tomato);
+    font-style: italic;
+    margin-left: 0.5rem;
+  }
   .nested-comments {
     margin-left: 1rem;
     border-left: 1px solid #eee;
@@ -307,28 +386,21 @@
     margin-top: 0.25rem;
     border-radius: 4px;
   }
-  .challenge-name {
-    color: var(--dark-moderate-pink);
-    cursor: pointer;
-  }
-  .challenge-name:hover {
-    text-decoration: underline;
-  }
-  .username {
-    color: var(--lapis-lazuli);
-    cursor: pointer;
-  }
-  .username:hover {
-    text-decoration: underline;
-  }
-  .whisper-label {
-    color: var(--tomato);
-    font-style: italic;
-    margin-left: 0.5rem;
-  }
   .post-content {
     font-size: clamp(0.75rem, 2.5vw, 0.85rem);
     margin: 0.25rem 0;
     white-space: pre-wrap;
+  }
+  .view-more-link {
+    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    color: var(--tomato);
+    text-decoration: underline;
+    cursor: pointer;
+    display: block;
+    margin-top: 0.25rem;
+    margin-left: 1rem;
+  }
+  .view-more-link:hover {
+    color: var(--tomato-light);
   }
 </style>
