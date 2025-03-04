@@ -175,8 +175,8 @@
   {/if}
 
   <div class="social-feed-container">
-    <h2>#bl0b-general</h2>
-    <SocialFeed challengeId={null} challengeName="bl0b-general" />
+    <h2>Your Social Feed</h2>
+    <SocialFeed challengeId={null} challengeName="Your Feed" />
   </div>
 </div>
 
@@ -216,6 +216,9 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     padding: 1rem;
     margin-top: 2rem;
+    max-width: 450px;
+    margin-left: auto;
+    margin-right: auto;
   }
   h2 {
     font-size: 1.2rem;
