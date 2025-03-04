@@ -1,6 +1,7 @@
 <script>
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
+  import { navigate } from "svelte-routing"; // Add this import
   import Comment from "./Comment.svelte";
 
   export let comment;
@@ -15,6 +16,36 @@
   let replyContent = "";
   const REPLIES_PER_PAGE = 1;
   const REPLIES_EXPAND_COUNT = 20;
+
+  // Process post data to match SocialFeed's structure
+  function processPost(post) {
+    const profile =
+      $user?.id === post.user_id
+        ? {
+            username: currentUserUsername,
+            first_name: "Bob",
+            last_name: "Leblaw",
+            profile_photo_url: comment.profile_photo_url,
+          }
+        : null;
+    return {
+      ...post,
+      timestamp: new Date(post.created_at).toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      }),
+      first_name: profile?.first_name || "Anonymous",
+      last_name: profile?.last_name || "",
+      username: profile?.username || "unknown",
+      profile_photo_url: profile?.profile_photo_url || null,
+      reactions: [],
+      media_url: null,
+      challenge_title: challengeId ? "Challenge Post" : "bl0b-general",
+      comments: [],
+      isWhisper: false,
+    };
+  }
 
   async function toggleReaction(postId, reactionType) {
     const existingReaction = comment.reactions.find(
@@ -40,21 +71,29 @@
   async function submitReply(postId) {
     if (!replyContent.trim()) return;
     const finalContent = `@${comment.username} ${replyContent}`;
-    const { error } = await supabase.from("posts").insert([
-      {
-        challenge_id: challengeId || comment.challenge_id,
-        content: finalContent,
-        user_id: $user?.id,
-        media_url: null,
-        parent_id: postId,
-        created_at: new Date().toISOString(),
-        color_code: "#ffffff",
-      },
-    ]);
+    const newReplyData = {
+      challenge_id: challengeId || comment.challenge_id,
+      content: finalContent,
+      user_id: $user?.id,
+      media_url: null,
+      parent_id: postId,
+      created_at: new Date().toISOString(),
+      color_code: "#ffffff",
+    };
+    const { data, error } = await supabase
+      .from("posts")
+      .insert([newReplyData])
+      .select()
+      .single();
     if (!error) {
+      const processedReply = processPost(data);
+      comment.comments = [processedReply, ...comment.comments];
       replyContent = "";
       replyingTo = null;
       dispatch("replySubmitted");
+      console.log("Added new reply locally:", processedReply);
+    } else {
+      console.error("Error submitting reply:", error);
     }
   }
 
@@ -140,7 +179,18 @@
           {comment.first_name}
           {comment.last_name}
         </span>
-        <span class="channel-name">in #{comment.challenge_title}</span>
+        {#if comment.challenge_id}
+          <a
+            href={`/challenge/${comment.challenge_id}`}
+            class="channel-name"
+            on:click|preventDefault={() =>
+              navigate(`/challenge/${comment.challenge_id}`)}
+          >
+            in #{comment.challenge_title}
+          </a>
+        {:else}
+          <span class="channel-name">in #bl0b-general</span>
+        {/if}
         {#if comment.isWhisper}
           <span class="whisper-label">[Whisper]</span>
         {/if}
@@ -224,8 +274,7 @@
   {#if comment.comments && comment.comments.length > 0}
     <div class="nested-comments">
       {#each getVisibleReplies(comment) as reply (reply.id)}
-        <svelte:component
-          this={Comment}
+        <svelte:self
           comment={reply}
           level={level + 1}
           {challengeId}
@@ -304,6 +353,11 @@
   .channel-name {
     font-size: clamp(0.65rem, 2vw, 0.75rem);
     color: var(--dark-moderate-pink);
+    text-decoration: none; /* Remove default underline */
+  }
+  .channel-name:hover {
+    text-decoration: underline; /* Add hover effect */
+    color: var(--tomato); /* Optional: match hover color */
   }
   .timestamp {
     font-size: clamp(0.6rem, 2vw, 0.7rem);

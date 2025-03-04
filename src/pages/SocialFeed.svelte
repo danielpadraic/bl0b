@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
+  import { navigate } from "svelte-routing"; // Add this import
   import Comment from "./Comment.svelte";
 
   export let challengeId = null;
@@ -25,7 +26,7 @@
   let minimized = false;
   let expandedComments = {};
   let expandedReplies = {};
-  let profilesMap = new Map(); // Define profilesMap globally
+  let profilesMap = new Map();
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
   const COMMENTS_PER_PAGE = 3;
@@ -68,7 +69,13 @@
               return;
             }
           }
-          await fetchPosts();
+          // Add new post directly to local state
+          const newPostData = await processPost(payload.new);
+          posts = [
+            newPostData,
+            ...posts.filter((p) => p.id !== newPostData.id),
+          ];
+          console.log("Updated posts with subscription:", posts);
         }
       )
       .subscribe();
@@ -85,9 +92,14 @@
             table: "whispers",
             filter: `recipient_id=eq.${$user.id}`,
           },
-          async () => {
-            console.log("New whisper received");
-            await fetchPosts();
+          async (payload) => {
+            console.log("New whisper received:", payload.new);
+            const newWhisper = await processWhisper(payload.new);
+            posts = [
+              newWhisper,
+              ...posts.filter((p) => p.id !== newWhisper.id),
+            ];
+            console.log("Updated posts with whisper:", posts);
           }
         )
         .subscribe();
@@ -156,7 +168,7 @@
 
       if (challengeId) {
         query = query.eq("challenge_id", challengeId);
-        console.log("Fetching posts for challenge:", challengeId);
+        console.log("Fetching posts for challenge_id:", challengeId);
       } else {
         if ($user) {
           console.log("User authenticated, ID:", $user.id);
@@ -207,7 +219,6 @@
       postsData = postData || [];
       console.log("Fetched posts:", postsData.length, "entries:", postsData);
 
-      // Fetch profile data for posts, whispers, and reactions
       const userIds = [
         ...new Set(
           [
@@ -380,24 +391,29 @@
     if (mediaFiles.length > 0) {
       mediaUrl = await uploadMedia(mediaFiles[0]);
     }
-    const { error } = await supabase.from("posts").insert([
-      {
-        challenge_id: challengeId,
-        content: newPost,
-        user_id: $user?.id || null,
-        media_url: mediaUrl ? [mediaUrl] : null,
-        parent_id: null,
-        created_at: new Date().toISOString(),
-        color_code: "#ffffff",
-      },
-    ]);
+    const newPostData = {
+      challenge_id: challengeId,
+      content: newPost,
+      user_id: $user?.id || null,
+      media_url: mediaUrl ? [mediaUrl] : null,
+      parent_id: null,
+      created_at: new Date().toISOString(),
+      color_code: "#ffffff",
+    };
+    const { data, error } = await supabase
+      .from("posts")
+      .insert([newPostData])
+      .select()
+      .single();
     if (!error) {
+      const processedPost = await processPost(data);
+      posts = [processedPost, ...posts];
       newPost = "";
       mediaFiles = [];
       showEmojiPicker = false;
       showGifPicker = false;
       showTagPicker = false;
-      await fetchPosts();
+      console.log("Added new post locally:", processedPost);
     } else {
       console.error("Error submitting post:", error);
     }
@@ -410,21 +426,30 @@
     const finalContent = parentUsername
       ? `@${parentUsername} ${replyContent}`
       : replyContent;
-    const { error } = await supabase.from("posts").insert([
-      {
-        challenge_id: challengeId || parentPost?.challenge_id,
-        content: finalContent,
-        user_id: $user?.id || null,
-        media_url: null,
-        parent_id: postId,
-        created_at: new Date().toISOString(),
-        color_code: "#ffffff",
-      },
-    ]);
+    const newReplyData = {
+      challenge_id: challengeId || parentPost?.challenge_id,
+      content: finalContent,
+      user_id: $user?.id || null,
+      media_url: null,
+      parent_id: postId,
+      created_at: new Date().toISOString(),
+      color_code: "#ffffff",
+    };
+    const { data, error } = await supabase
+      .from("posts")
+      .insert([newReplyData])
+      .select()
+      .single();
     if (!error) {
+      const processedReply = await processPost(data);
+      posts = posts.map((p) =>
+        p.id === postId
+          ? { ...p, comments: [processedReply, ...p.comments] }
+          : p
+      );
       replyContent = "";
       replyingTo = null;
-      await fetchPosts();
+      console.log("Added new reply locally:", processedReply);
     } else {
       console.error("Error submitting reply:", error);
     }
@@ -644,7 +669,18 @@
                 {post.first_name}
                 {post.last_name}
               </span>
-              <span class="channel-name">in #{post.challenge_title}</span>
+              {#if post.challenge_id}
+                <a
+                  href={`/challenge/${post.challenge_id}`}
+                  class="channel-name"
+                  on:click|preventDefault={() =>
+                    navigate(`/challenge/${post.challenge_id}`)}
+                >
+                  in #{post.challenge_title}
+                </a>
+              {:else}
+                <span class="channel-name">in #bl0b-general</span>
+              {/if}
               {#if post.isWhisper}
                 <span class="whisper-label">[Whisper]</span>
               {/if}

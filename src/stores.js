@@ -9,14 +9,12 @@ export async function setUser() {
   user.set(user || null);
 }
 
-supabase.auth.getSession().then(({ data, error }) => {
-  if (error) {
-    console.error('Error fetching session:', error);
-  } else {
-    user.set(data.session?.user || null);
-  }
+supabase.auth.getSession().then(({ data: { session } }) => {
+  user.set(session?.user ?? null);
+  console.log("Initial session user:", session?.user);
 });
 
 supabase.auth.onAuthStateChange((event, session) => {
-  user.set(session?.user || null);
+  user.set(session?.user ?? null);
+  console.log("Auth state changed:", event, session?.user);
 });

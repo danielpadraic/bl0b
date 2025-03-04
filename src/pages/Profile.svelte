@@ -167,30 +167,61 @@
     if (!profilePhotoFile) return;
 
     try {
+      if (!$user || !$user.id) {
+        throw new Error("User not authenticated");
+      }
+      console.log("User authenticated for upload:", $user);
       const fileExt = profilePhotoFile.name.split(".").pop();
       const fileName = `${$user.id}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
+      console.log("Uploading to profile_photos:", fileName);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("profile_photos")
         .upload(fileName, profilePhotoFile, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error(
+          "Storage upload failed:",
+          uploadError.message,
+          uploadError
+        );
+        throw uploadError;
+      }
+      console.log("Upload successful:", uploadData);
 
-      const { data } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from("profile_photos")
         .getPublicUrl(fileName);
+      const publicURL = urlData.publicUrl;
+      console.log("Generated public URL:", publicURL);
 
-      const publicURL = data.publicUrl;
+      // Test URL accessibility
+      const response = await fetch(publicURL);
+      console.log("URL fetch response:", response.status, response.ok);
 
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from("profiles")
         .update({ profile_photo_url: publicURL })
-        .eq("id", $user.id);
+        .eq("id", $user.id)
+        .select()
+        .single();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error(
+          "Profile update failed:",
+          updateError.message,
+          updateError
+        );
+        throw updateError;
+      }
+      console.log("Profile update successful, updated data:", updateData);
 
-      profile.profile_photo_url = publicURL;
+      profile = { ...profile, ...updateData };
+      console.log("Updated profile object:", profile);
+
       alert("Profile photo updated successfully");
     } catch (err) {
+      console.error("Upload error details:", err.message, err);
       alert("Failed to upload profile photo: " + err.message);
     }
   }

@@ -34,16 +34,26 @@
     isMobile = window.innerWidth < 769;
   }
 
-  onMount(() => {
+  onMount(async () => {
     console.log("App mounted");
     window.addEventListener("resize", handleResize);
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    console.log("Supabase auth user on mount:", authUser);
+    if (authUser) {
+      currentUser = authUser;
+      $user = authUser;
+    }
+
     supabase.auth.onAuthStateChange((event, session) => {
       currentUser = session?.user ?? null;
       $user = currentUser;
-    });
-    supabase.auth.getUser().then(({ data: { user: initialUser } }) => {
-      currentUser = initialUser || null;
-      $user = currentUser;
+      console.log("Auth state changed:", event, "User:", currentUser);
+      if (!currentUser) {
+        navigate("/login");
+      }
     });
   });
 
@@ -221,9 +231,11 @@
     background-color: var(--charcoal);
     color: var(--white);
     width: 100%;
-    z-index: 10;
-    position: sticky;
+    z-index: 1000; /* Increased for overlay */
+    position: fixed; /* Changed from sticky to fixed */
     top: 0;
+    left: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Optional: adds depth */
   }
 
   .logo img {
@@ -286,8 +298,8 @@
   }
 
   .nav-menu {
-    position: absolute;
-    top: 60px;
+    position: fixed; /* Changed from absolute to fixed */
+    top: 60px; /* Matches header height */
     right: 0;
     background-color: var(--charcoal);
     padding: 1rem;
@@ -342,7 +354,7 @@
 
   main {
     flex: 1;
-    padding: 1rem 1rem 120px 1rem;
+    padding: 70px 1rem 120px 1rem; /* Increased top padding to account for fixed header */
     overflow-y: auto;
     max-width: 900px;
     width: 100%;

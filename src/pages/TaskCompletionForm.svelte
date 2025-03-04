@@ -14,12 +14,14 @@
   let selectedTask = null;
   let submissionData = { verification: "", comment: "" };
   let attachments = [];
-  let currentUserUsername = "";
+  let currentUserFirstName = "";
+  let currentUserLastName = "";
   let loadingChallenges = true;
   let loadingTasks = false;
   let error = null;
   let prevSelectedTask = null;
   let modalElement;
+  let videoWatched = false;
 
   onMount(async () => {
     if (!$user) {
@@ -55,20 +57,24 @@
     try {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("username")
+        .select("first_name, last_name")
         .eq("id", $user.id)
         .single();
       if (profileError) throw profileError;
-      currentUserUsername = profile.username || "Unknown";
-      console.log("Fetched username:", currentUserUsername);
+      currentUserFirstName = profile.first_name || "Anonymous";
+      currentUserLastName = profile.last_name || "";
+      console.log("Fetched user profile:", {
+        currentUserFirstName,
+        currentUserLastName,
+      });
     } catch (err) {
-      console.error("Error fetching username:", err);
-      currentUserUsername = "Unknown";
+      console.error("Error fetching user profile:", err);
+      currentUserFirstName = "Anonymous";
+      currentUserLastName = "";
     }
 
-    if (modalElement) {
-      modalElement.focus();
-    }
+    if (modalElement)
+      modalElement.querySelector("button, input, select")?.focus();
   });
 
   async function fetchTasks() {
@@ -86,16 +92,12 @@
     try {
       const { data, error: fetchError } = await supabase
         .from("tasks")
-        .select("id, action, verification_type, require_attachment")
+        .select(
+          "id, action, verification_type, require_attachment, media_url, require_video_completion"
+        )
         .eq("challenge_id", selectedChallenge.id);
       if (fetchError) throw fetchError;
       tasks = data || [];
-      console.log(
-        "Fetched tasks for challenge",
-        selectedChallenge.id,
-        ":",
-        tasks
-      );
       if (preSelectedTaskId) {
         selectedTask = tasks.find((t) => t.id === preSelectedTaskId) || null;
       } else {
@@ -104,6 +106,7 @@
       submissionData.verification = "";
       submissionData.comment = "";
       attachments = [];
+      videoWatched = false;
     } catch (err) {
       console.error("Error fetching tasks:", err);
       error = "Failed to load tasks for this challenge.";
@@ -113,42 +116,35 @@
     }
   }
 
-  $: if (selectedChallenge !== null && !preSelectedTaskId) {
-    fetchTasks();
-  }
+  $: if (selectedChallenge !== null && !preSelectedTaskId) fetchTasks();
 
   $: if (selectedTask && selectedTask !== prevSelectedTask) {
-    console.log("Selected task changed:", selectedTask);
-    console.log("Require attachment:", selectedTask.require_attachment);
     submissionData.verification = "";
     submissionData.comment = "";
     attachments = [];
-    console.log(
-      "Form should render for verification_type:",
-      selectedTask.verification_type
-    );
+    videoWatched = false;
     prevSelectedTask = selectedTask;
   }
 
   function handleAttachmentUpload(event) {
     attachments = Array.from(event.target.files);
-    console.log("Attachments updated:", attachments);
   }
 
   function formatTimeInput(event) {
     let value = event.target.value.replace(/[^0-9]/g, "");
     if (value.length > 6) value = value.slice(0, 6);
-
     let formatted = "";
-    if (value.length > 4) {
+    if (value.length > 4)
       formatted = `${value.slice(0, 2)}:${value.slice(2, 4)}:${value.slice(4, 6)}`;
-    } else if (value.length > 2) {
+    else if (value.length > 2)
       formatted = `${value.slice(0, 2)}:${value.slice(2)}`;
-    } else {
-      formatted = value;
-    }
+    else formatted = value;
     submissionData.verification = formatted;
-    console.log("Time input updated:", submissionData.verification);
+  }
+
+  function handleVideoEnd() {
+    videoWatched = true;
+    console.log("Video fully watched:", videoWatched);
   }
 
   async function submitTaskCompletion() {
@@ -172,6 +168,14 @@
       alert("Please enter a comment for your submission.");
       return;
     }
+    if (
+      selectedTask.require_video_completion &&
+      selectedTask.media_url &&
+      !videoWatched
+    ) {
+      alert("Please watch the full video before submitting.");
+      return;
+    }
 
     if (selectedTask.verification_type === "Time Entry") {
       const timePattern = /^[0-2][0-3]:[0-5][0-9]:[0-5][0-9]$/;
@@ -190,11 +194,7 @@
             const { data, error } = await supabase.storage
               .from("media")
               .upload(fileName, file, { upsert: true });
-            if (error) {
-              console.error("Upload error details:", error);
-              throw error;
-            }
-            console.log("Uploaded file:", data);
+            if (error) throw error;
             return supabase.storage.from("media").getPublicUrl(fileName).data
               .publicUrl;
           })
@@ -218,6 +218,9 @@
             : submissionData.verification,
       },
       attachments: attachmentUrls,
+      video_watched: selectedTask.require_video_completion
+        ? videoWatched
+        : null,
     };
 
     try {
@@ -235,8 +238,12 @@
       if (completionError) throw completionError;
 
       const postContent = submissionData.comment;
-      console.log("Post content before insertion:", postContent);
-
+      console.log(
+        "Inserting post with content:",
+        postContent,
+        "and media_urls:",
+        attachmentUrls
+      );
       const { data: postData, error: postError } = await supabase
         .from("posts")
         .insert([
@@ -244,8 +251,7 @@
             challenge_id: selectedChallenge.id,
             content: postContent,
             user_id: $user.id,
-            username: currentUserUsername,
-            media_urls: attachmentUrls,
+            media_urls: attachmentUrls.length > 0 ? attachmentUrls : [],
             parent_id: null,
             created_at: new Date().toISOString(),
           },
@@ -263,6 +269,7 @@
       submissionData.verification = "";
       submissionData.comment = "";
       attachments = [];
+      videoWatched = false;
       dispatch("close");
     } catch (err) {
       console.error("Error submitting task:", err);
@@ -271,9 +278,7 @@
   }
 
   function handleKeydown(e) {
-    if (e.key === "Escape") {
-      dispatch("close");
-    }
+    if (e.key === "Escape") dispatch("close");
     if (e.key === "Tab") {
       const focusable = modalElement.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -291,7 +296,6 @@
   }
 </script>
 
-<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <div
   class="modal"
   bind:this={modalElement}
@@ -300,7 +304,6 @@
   role="dialog"
   aria-labelledby="modal-title"
   aria-modal="true"
-  tabindex="0"
 >
   <h2 id="modal-title">Submit Task Completion</h2>
 
@@ -347,6 +350,38 @@
 
     {#if selectedTask}
       <div class="submission-form">
+        {#if selectedTask.media_url}
+          {#if selectedTask.media_url.match(/\.(mp4|webm|ogg)$/i)}
+            <div>
+              <p>Watch the video below:</p>
+              <video
+                controls
+                src={selectedTask.media_url}
+                on:ended={handleVideoEnd}
+                width="100%"
+              >
+                <track
+                  kind="captions"
+                  label="Video Captions"
+                  src=""
+                  srclang="en"
+                  default
+                />
+                Your browser does not support the video tag.
+              </video>
+              {#if selectedTask.require_video_completion}
+                <p class="note">
+                  You must watch the full video to submit this task.
+                </p>
+              {/if}
+            </div>
+          {:else}
+            <div>
+              <p>Task Image:</p>
+              <img src={selectedTask.media_url} alt="Task media" width="100%" />
+            </div>
+          {/if}
+        {/if}
         {#if selectedTask.verification_type === "Text Form"}
           <label>
             Text Form (required):
@@ -462,5 +497,10 @@
   .error {
     color: var(--tomato);
     font-weight: bold;
+  }
+  .note {
+    color: var(--charcoal);
+    font-size: 0.9rem;
+    margin-top: 5px;
   }
 </style>

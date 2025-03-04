@@ -1,6 +1,6 @@
 <script>
   import { supabase } from "../supabase.js";
-  import { user } from "../stores/user.js";
+  import { user } from "../stores.js"; // Ensure correct import path
   import { navigate } from "svelte-routing";
 
   let firstName = "";
@@ -12,13 +12,13 @@
   let username = "";
   let password = "";
   let confirmPassword = "";
+  let profilePhotoFile = null; // Add profile photo file
   let error = "";
   let usernameError = "";
   let passwordMatchError = "";
   let phoneNumberError = "";
 
   let participatesInChallenges = false;
-
   let gender = "";
   let dob = "";
   let height = "";
@@ -27,7 +27,7 @@
 
   async function checkUsername() {
     const { data, error: err } = await supabase
-      .from("users")
+      .from("profiles") // Change to "profiles" since that's where username lives
       .select("username")
       .eq("username", username);
     if (err) {
@@ -72,6 +72,23 @@
     formatPhoneNumber(event.target.value);
   }
 
+  async function uploadProfilePhoto(userId) {
+    if (!profilePhotoFile) return null;
+
+    const fileExt = profilePhotoFile.name.split(".").pop();
+    const fileName = `${userId}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from("profile_photos") // Use bucket ID
+      .upload(fileName, profilePhotoFile, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from("profile_photos")
+      .getPublicUrl(fileName); // Use bucket ID
+    return data.publicUrl;
+  }
+
   async function signUp() {
     if (password !== confirmPassword) {
       error = "Passwords must match";
@@ -98,30 +115,36 @@
 
     console.log("Auth signup successful, user:", authData.user);
 
+    let profilePhotoUrl = null;
+    if (profilePhotoFile) {
+      profilePhotoUrl = await uploadProfilePhoto(authData.user.id);
+    }
+
     const userData = {
       id: authData.user.id,
       first_name: firstName,
-      last_name: lastName, // Fixed typo from LastName
+      last_name: lastName,
       phone_number: phoneNumberRaw,
       address,
       username,
       participates_in_challenges: participatesInChallenges,
-      email: email, // Always include email
+      email,
+      profile_photo_url: profilePhotoUrl, // Add profile photo URL
     };
 
     if (participatesInChallenges) {
       userData.gender = gender;
       userData.dob = dob;
-      userData.height_inches = parseInt(height);
-      userData.weight_lbs = parseInt(weight);
+      userData.height = parseInt(height) || null;
+      userData.weight = parseInt(weight) || null;
       userData.body_fat_percentage =
         bodyFatPercentage === 60 ? null : bodyFatPercentage;
     }
 
-    console.log("Inserting user data into users table:", userData);
+    console.log("Inserting user data into profiles table:", userData);
 
     const { data: insertData, error: dbError } = await supabase
-      .from("users")
+      .from("profiles") // Change to "profiles" to match your schema
       .insert([userData]);
 
     if (dbError) {
@@ -229,6 +252,14 @@
       <p class="error">{passwordMatchError}</p>
     {/if}
 
+    <label for="profilePhoto">Profile Photo (optional)</label>
+    <input
+      type="file"
+      id="profilePhoto"
+      accept="image/*"
+      on:change={(e) => (profilePhotoFile = e.target.files[0])}
+    />
+
     <div class="toggle-container">
       <label for="participatesInChallenges"
         >Will you be participating in Fitness Challenges?</label
@@ -255,7 +286,7 @@
                 type="radio"
                 id="male"
                 name="gender"
-                value="male"
+                value="Male"
                 bind:group={gender}
                 required
               />
@@ -266,7 +297,7 @@
                 type="radio"
                 id="female"
                 name="gender"
-                value="female"
+                value="Female"
                 bind:group={gender}
               />
               <label for="female">Female</label>
@@ -317,8 +348,9 @@
     <button
       type="submit"
       disabled={usernameError || passwordMatchError || phoneNumberError}
-      >Sign Up</button
     >
+      Sign Up
+    </button>
   </form>
   {#if error}
     <p class="error">{error}</p>

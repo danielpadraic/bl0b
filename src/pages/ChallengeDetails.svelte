@@ -1,11 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { supabase } from "../supabase.js";
-  import {
-    user,
-    showChallengeCreation,
-    showTaskCompletionForm,
-  } from "../stores.js";
+  import { user, showChallengeCreation } from "../stores.js"; // Removed showTaskCompletionForm
   import { navigate } from "svelte-routing";
   import TaskCreation from "./TaskCreation.svelte";
   import ChallengeCreation from "./ChallengeCreation.svelte";
@@ -24,6 +20,7 @@
   let showTaskCreation = false;
   let editingTaskId = null;
   let showForm = false;
+  let selectedTaskId = null; // New: Track which task's "Complete" was clicked
 
   onMount(async () => {
     console.log("ChallengeDetails mounted with challengeId:", challengeId);
@@ -204,18 +201,19 @@
     }
   }
 
-  function handleCompleteTask() {
+  function handleCompleteTask(taskId) {
     if (!$user) {
       navigate("/login");
       return;
     }
-    showTaskCompletionForm.set(true);
-    showForm = true;
+    selectedTaskId = taskId; // Set the specific task ID
+    showForm = true; // Show local form only
   }
 
   function closeForm() {
-    showTaskCompletionForm.set(false);
     showForm = false;
+    selectedTaskId = null; // Reset selected task
+    fetchTasks(); // Refresh tasks after submission
   }
 
   function getScoreLabel() {
@@ -249,14 +247,15 @@
         <table>
           <tr><th>Title</th><td>{challenge.title}</td></tr>
           <tr><th>Type</th><td>{challenge.type}</td></tr>
-          <tr
-            ><th>Participants</th><td
-              >{challenge.participants_current ||
+          <tr>
+            <th>Participants</th>
+            <td>
+              {challenge.participants_current ||
                 0}/{challenge.participants_max === 0
                 ? "∞"
-                : challenge.participants_max}</td
-            ></tr
-          >
+                : challenge.participants_max}
+            </td>
+          </tr>
           <tr><th>Cost</th><td>${challenge.buy_in_cost.toFixed(2)}</td></tr>
           <tr><th>Prize</th><td>${challenge.prize_pool.toFixed(2)}</td></tr>
           <tr><th>Scoring</th><td>{challenge.scoring_type}</td></tr>
@@ -269,20 +268,22 @@
             ><th>Creator</th><td>{challenge.profiles.username || "Unknown"}</td
             ></tr
           >
-          <tr
-            ><th>Start</th><td
-              >{challenge.start_datetime
+          <tr>
+            <th>Start</th>
+            <td>
+              {challenge.start_datetime
                 ? new Date(challenge.start_datetime).toLocaleString()
-                : "Not set"}</td
-            ></tr
-          >
-          <tr
-            ><th>End</th><td
-              >{challenge.end_datetime
+                : "Not set"}
+            </td>
+          </tr>
+          <tr>
+            <th>End</th>
+            <td>
+              {challenge.end_datetime
                 ? new Date(challenge.end_datetime).toLocaleString()
-                : "Not set"}</td
-            ></tr
-          >
+                : "Not set"}
+            </td>
+          </tr>
         </table>
       </div>
       {#if timeLeft}
@@ -332,7 +333,9 @@
                 >
               {/if}
               {#if !task.completed}
-                <button on:click={handleCompleteTask}>Complete</button>
+                <button on:click={() => handleCompleteTask(task.id)}
+                  >Complete</button
+                >
               {/if}
             </li>
           {/each}
@@ -351,6 +354,7 @@
       >
         <TaskCompletionForm
           preSelectedChallengeId={challengeId}
+          preSelectedTaskId={selectedTaskId}
           on:close={closeForm}
         />
       </div>
