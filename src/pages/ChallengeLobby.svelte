@@ -3,10 +3,9 @@
   import { navigate } from "svelte-routing";
   import { supabase } from "../supabase.js";
   import { user, showChallengeCreation } from "../stores.js";
-  import Comment from "./Comment.svelte";
   import ChallengeTable from "./ChallengeTable.svelte";
   import NewsFeed from "../components/NewsFeed.svelte";
-  import SocialFeed from "./SocialFeed.svelte"; // Add this import
+  import SocialFeed from "./SocialFeed.svelte";
 
   let allChallenges = [];
   let challenges = [];
@@ -78,27 +77,16 @@
   $: searchQuery, filterChallenges();
 
   function handleInteraction(action, challengeId = null) {
-    console.log(
-      "handleInteraction called with action:",
-      action,
-      "challengeId:",
-      challengeId,
-      "user:",
-      $user
-    );
     if (!$user) {
-      console.log("User not authenticated, showing prompt");
       showAuthPrompt = true;
       promptAction = action;
     } else {
-      console.log("User authenticated, proceeding with action:", action);
       if (action === "create") {
         $showChallengeCreation = true;
       } else if (action === "join" && challengeId) {
         joinChallenge(challengeId);
       }
     }
-    console.log("showAuthPrompt set to:", showAuthPrompt);
   }
 
   async function joinChallenge(challengeId) {
@@ -198,22 +186,18 @@
     background-color: var(--background);
     min-height: 100vh;
   }
-
   .layout {
     display: flex;
     max-width: 1200px;
     margin: 0 auto;
     gap: 1rem;
   }
-
   .news-feed-container {
     width: 25%;
   }
-
   .table-container {
     flex: 1;
   }
-
   @media (max-width: 768px) {
     .layout {
       flex-direction: column;
@@ -222,12 +206,10 @@
       display: none;
     }
   }
-
   .create-account-link {
     text-align: center;
     margin-top: 1rem;
   }
-
   .social-feed-container {
     background: var(--white);
     border-radius: 8px;
@@ -235,7 +217,6 @@
     padding: 1rem;
     margin-top: 2rem;
   }
-
   h2 {
     font-size: 1.2rem;
     color: var(--charcoal);

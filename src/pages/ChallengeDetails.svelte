@@ -5,12 +5,12 @@
     user,
     showChallengeCreation,
     showTaskCompletionForm,
-  } from "../stores.js"; // Added showTaskCompletionForm
+  } from "../stores.js";
   import { navigate } from "svelte-routing";
   import TaskCreation from "./TaskCreation.svelte";
   import ChallengeCreation from "./ChallengeCreation.svelte";
   import SocialFeed from "./SocialFeed.svelte";
-  import TaskCompletionForm from "./TaskCompletionForm.svelte"; // Added import
+  import TaskCompletionForm from "./TaskCompletionForm.svelte";
 
   export let challengeId;
 
@@ -23,7 +23,7 @@
   let timer = null;
   let showTaskCreation = false;
   let editingTaskId = null;
-  let showForm = false; // Local state for form visibility
+  let showForm = false;
 
   onMount(async () => {
     console.log("ChallengeDetails mounted with challengeId:", challengeId);
@@ -32,8 +32,6 @@
       await fetchContestants();
       await fetchTasks();
       startCountdown();
-    } else {
-      console.log("No challenge found, skipping further fetches");
     }
     loading = false;
   });
@@ -49,12 +47,10 @@
         .select("*, profiles!challenges_creator_id_fkey(username)")
         .eq("id", challengeId)
         .single();
-      console.log("Fetched challenge data:", data, "Error:", fetchError);
       if (fetchError) throw fetchError;
       challenge = data;
     } catch (err) {
       error = err.message;
-      console.error("Fetch challenge error:", err);
     }
   }
 
@@ -64,7 +60,6 @@
         .from("challenge_participants")
         .select("user_id, score")
         .eq("challenge_id", challengeId);
-      console.log("Fetched participants:", data, "Error:", fetchError);
       if (fetchError) throw fetchError;
 
       if (data.length > 0) {
@@ -73,7 +68,6 @@
           .from("profiles")
           .select("id, username")
           .in("id", userIds);
-        console.log("Fetched profiles:", profilesData, "Error:", profilesError);
         if (profilesError) throw profilesError;
 
         contestants = data.map((participant) => {
@@ -99,7 +93,6 @@
       }
     } catch (err) {
       error = err.message;
-      console.error("Fetch contestants error:", err);
     }
   }
 
@@ -110,12 +103,10 @@
         .select("*")
         .eq("challenge_id", challengeId)
         .order("created_at", { ascending: true });
-      console.log("Fetched tasks:", data, "Error:", fetchError);
       if (fetchError) throw fetchError;
       tasks = data;
     } catch (err) {
       error = err.message;
-      console.error("Fetch tasks error:", err);
     }
   }
 
@@ -151,12 +142,6 @@
   }
 
   function toggleEdit() {
-    console.log(
-      "Toggling edit mode. Current showChallengeCreation:",
-      $showChallengeCreation,
-      "Challenge:",
-      challenge
-    );
     $showChallengeCreation = true;
   }
 
@@ -195,19 +180,13 @@
         navigate("/");
       } catch (err) {
         error = err.message;
-        console.error("Cancel challenge error:", err);
       }
     }
   }
 
   async function editTask(taskId) {
-    console.log("Edit task:", taskId);
-    const selectedTask = tasks.find((t) => t.id === taskId);
-    if (selectedTask) {
-      console.log("Opening TaskCreation for edit with task:", selectedTask);
-      editingTaskId = taskId;
-      showTaskCreation = true;
-    }
+    editingTaskId = taskId;
+    showTaskCreation = true;
   }
 
   async function removeTask(taskId) {
@@ -221,7 +200,6 @@
         await fetchTasks();
       } catch (err) {
         error = err.message;
-        console.error("Remove task error:", err);
       }
     }
   }
@@ -354,12 +332,7 @@
                 >
               {/if}
               {#if !task.completed}
-                <button
-                  on:click={handleCompleteTask}
-                  on:keydown={(e) => e.key === "Enter" && handleCompleteTask()}
-                >
-                  Complete
-                </button>
+                <button on:click={handleCompleteTask}>Complete</button>
               {/if}
             </li>
           {/each}
@@ -443,19 +416,16 @@
     border-radius: 12px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   }
-
   .header-section {
     text-align: center;
     margin-bottom: 2rem;
   }
-
   h1 {
     font-size: 1.5rem;
     color: var(--charcoal);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     margin-bottom: 1.5rem;
   }
-
   .edit-btn,
   .add-task-btn,
   .cancel-btn {
@@ -468,29 +438,24 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     margin: 0.5rem;
   }
-
   .edit-btn:hover,
   .add-task-btn:hover,
   .cancel-btn:hover {
     background-color: #87ceeb;
     transform: translateY(-2px);
   }
-
   .cancel-btn {
     background-color: #e74c3c;
   }
-
   .cancel-btn:hover {
     background-color: #c0392b;
   }
-
   .header-table table {
     border-collapse: collapse;
     background: var(--white);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
-
   .header-table th,
   .header-table td {
     padding: 0.25rem 0.5rem;
@@ -499,7 +464,6 @@
     white-space: nowrap;
     text-align: left;
   }
-
   .header-table th {
     background: linear-gradient(to bottom, var(--carolina-blue), #87ceeb);
     color: var(--charcoal);
@@ -507,27 +471,23 @@
     text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
     width: 25%;
   }
-
   .header-table td {
     background-color: var(--white);
     color: var(--charcoal);
     width: 75%;
   }
-
   .action-buttons {
     display: flex;
     justify-content: center;
     gap: 1rem;
     margin-top: 1rem;
   }
-
   .countdown {
     margin-top: 1rem;
     font-size: 1.2rem;
     color: var(--tomato);
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
   }
-
   .cover-container {
     margin: 2rem auto;
     max-width: 700px;
@@ -538,7 +498,6 @@
     border-radius: 8px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
   }
-
   .cover-container img,
   .cover-container video {
     width: 100%;
@@ -546,59 +505,55 @@
     object-fit: contain;
     transition: transform 0.3s ease;
   }
-
   .cover-container img:hover,
   .cover-container video:hover {
     transform: scale(1.02);
   }
-
   .tasks,
   .contestants,
   .social-feed-container {
     margin-top: 2rem;
   }
-
   h2 {
     font-size: 1.2rem;
     color: var(--charcoal);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
   }
-
   .task-list {
     list-style: none;
     padding: 0;
   }
-
   .task-list li {
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
     color: var(--charcoal);
   }
-
   .task-list button {
     margin-left: 0.5rem;
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;
-  }
-
-  .edit-task-btn {
-    background-color: var(--carolina-blue);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--tomato);
     color: var(--white);
   }
-
+  .task-list button:hover {
+    background-color: var(--tomato-light);
+  }
+  .edit-task-btn {
+    background-color: var(--carolina-blue);
+  }
   .edit-task-btn:hover {
     background-color: #87ceeb;
   }
-
   .remove-task-btn {
     background-color: #e74c3c;
   }
-
   .remove-task-btn:hover {
     background-color: #c0392b;
   }
-
   .contestants-table {
     width: 100%;
     border-collapse: separate;
@@ -607,7 +562,6 @@
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
-
   .contestants-table th,
   .contestants-table td {
     padding: 0.75rem;
@@ -615,25 +569,21 @@
     text-align: left;
     font-size: 0.9rem;
   }
-
   .contestants-table th {
     background: linear-gradient(to bottom, var(--tomato), var(--tomato-light));
     color: var(--white);
     font-weight: bold;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
   }
-
   .contestants-table td {
     background-color: var(--white);
     color: var(--charcoal);
     transition: background-color 0.3s ease;
   }
-
   .contestants-table tr:hover td {
     background-color: var(--light-gray);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   }
-
   button {
     background-color: var(--tomato);
     color: var(--white);
@@ -646,13 +596,11 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     margin-top: 1.5rem;
   }
-
   button:hover {
     background-color: var(--tomato-light);
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
   }
-
   .modal-overlay {
     position: fixed;
     top: 0;
@@ -665,13 +613,11 @@
     justify-content: center;
     z-index: 2000;
   }
-
   .error {
     color: var(--tomato);
     font-size: 1.1rem;
     text-align: center;
   }
-
   .social-feed-container {
     background: var(--white);
     border-radius: 8px;
