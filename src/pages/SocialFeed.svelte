@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
-  import { navigate } from "svelte-routing"; // Add this import
+  import { navigate } from "svelte-routing";
   import Comment from "./Comment.svelte";
 
   export let challengeId = null;
@@ -69,7 +69,6 @@
               return;
             }
           }
-          // Add new post directly to local state
           const newPostData = await processPost(payload.new);
           posts = [
             newPostData,
@@ -227,7 +226,7 @@
             ...postsData.flatMap((post) =>
               post.post_reactions.map((r) => r.user_id)
             ),
-          ].filter((id) => id)
+          ].filter((id) => id) // Filter out null user_ids
         ),
       ];
       let profilesData = [];
@@ -264,6 +263,7 @@
           last_name: p.last_name,
           username: p.username,
           profile_photo_url: p.profile_photo_url,
+          isAutomated: p.isAutomated,
         }))
       );
     } catch (err) {
@@ -286,6 +286,7 @@
       mediaUrl = null;
     }
     const profile = post.user_id ? profilesMap.get(post.user_id) : null;
+    const isAutomated = post.user_id === null; // Automated posts have null user_id
     return {
       ...post,
       timestamp: new Date(post.created_at).toLocaleString("en-US", {
@@ -293,10 +294,12 @@
         minute: "numeric",
         hour12: true,
       }),
-      first_name: profile?.first_name || "Anonymous",
-      last_name: profile?.last_name || "",
-      username: profile?.username || "unknown",
-      profile_photo_url: profile?.profile_photo_url || null,
+      first_name: isAutomated ? "Bob" : profile?.first_name || "Anonymous",
+      last_name: isAutomated ? "leBlob" : profile?.last_name || "",
+      username: isAutomated ? "bob_leblob" : profile?.username || "unknown",
+      profile_photo_url: isAutomated
+        ? null
+        : profile?.profile_photo_url || null,
       reactions: post.post_reactions || [],
       media_url: mediaUrl,
       challenge_title: post.challenge_id
@@ -304,6 +307,7 @@
         : "bl0b-general",
       comments: [],
       isWhisper: false,
+      isAutomated: isAutomated,
     };
   }
 
@@ -332,6 +336,7 @@
       challenge_title: "Whisper",
       comments: [],
       isWhisper: true,
+      isAutomated: false,
     };
   }
 
@@ -632,9 +637,9 @@
 <div class="feed-container">
   <div class="feed">
     {#each posts.filter((post) => !post.parent_id) as post (post.id)}
-      <div class="post">
+      <div class="post" class:automated={post.isAutomated}>
         <div class="post-header">
-          {#if post.profile_photo_url}
+          {#if post.profile_photo_url && !post.isAutomated}
             <img
               src={post.profile_photo_url}
               alt={`${post.first_name} ${post.last_name}'s profile`}
@@ -644,7 +649,7 @@
               on:keydown={(e) =>
                 handleKeyPress(e, () => tagUser(post.id, post.username))}
             />
-          {:else}
+          {:else if !post.isAutomated}
             <div
               class="profile-pic-placeholder"
               title="@{post.username}"
@@ -654,16 +659,21 @@
             >
               {post.first_name.charAt(0)}{post.last_name.charAt(0)}
             </div>
+          {:else}
+            <div class="system-icon">📢</div>
           {/if}
           <div class="user-info">
             <div class="name-row">
               <span
                 class="full-name"
+                class:automated-name={post.isAutomated}
                 role="button"
                 tabindex="0"
                 title="@{post.username}"
-                on:click={() => tagUser(post.id, post.username)}
+                on:click={() =>
+                  !post.isAutomated && tagUser(post.id, post.username)}
                 on:keydown={(e) =>
+                  !post.isAutomated &&
                   handleKeyPress(e, () => tagUser(post.id, post.username))}
               >
                 {post.first_name}
@@ -960,6 +970,10 @@
     padding: 0.5rem 0;
     font-size: clamp(0.75rem, 2.5vw, 0.85rem);
   }
+  .post.automated {
+    background-color: #f0f8ff;
+    border-left: 4px solid var(--carolina-blue);
+  }
   .post-header {
     display: flex;
     align-items: flex-start;
@@ -984,6 +998,17 @@
     color: var(--charcoal);
     cursor: pointer;
   }
+  .system-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--carolina-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--white);
+  }
   .user-info {
     display: flex;
     flex-direction: column;
@@ -999,12 +1024,22 @@
     color: var(--charcoal);
     cursor: pointer;
   }
-  .full-name:hover {
+  .full-name.automated-name {
+    color: var(--charcoal);
+    font-weight: bold;
+    cursor: default;
+  }
+  .full-name:hover:not(.automated-name) {
     text-decoration: underline;
   }
   .channel-name {
     font-size: clamp(0.65rem, 2vw, 0.75rem);
     color: var(--dark-moderate-pink);
+    text-decoration: none;
+  }
+  .channel-name:hover {
+    text-decoration: underline;
+    color: var(--tomato);
   }
   .timestamp {
     font-size: clamp(0.6rem, 2vw, 0.7rem);

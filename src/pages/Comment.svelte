@@ -1,7 +1,7 @@
 <script>
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
-  import { navigate } from "svelte-routing"; // Add this import
+  import { navigate } from "svelte-routing";
   import Comment from "./Comment.svelte";
 
   export let comment;
@@ -17,7 +17,6 @@
   const REPLIES_PER_PAGE = 1;
   const REPLIES_EXPAND_COUNT = 20;
 
-  // Process post data to match SocialFeed's structure
   function processPost(post) {
     const profile =
       $user?.id === post.user_id
@@ -28,6 +27,7 @@
             profile_photo_url: comment.profile_photo_url,
           }
         : null;
+    const isAutomated = post.user_id === null;
     return {
       ...post,
       timestamp: new Date(post.created_at).toLocaleString("en-US", {
@@ -35,15 +35,18 @@
         minute: "numeric",
         hour12: true,
       }),
-      first_name: profile?.first_name || "Anonymous",
-      last_name: profile?.last_name || "",
-      username: profile?.username || "unknown",
-      profile_photo_url: profile?.profile_photo_url || null,
+      first_name: isAutomated ? "Bob" : profile?.first_name || "Anonymous",
+      last_name: isAutomated ? "leBlob" : profile?.last_name || "",
+      username: isAutomated ? "bob_leblob" : profile?.username || "unknown",
+      profile_photo_url: isAutomated
+        ? null
+        : profile?.profile_photo_url || null,
       reactions: [],
       media_url: null,
       challenge_title: challengeId ? "Challenge Post" : "bl0b-general",
       comments: [],
       isWhisper: false,
+      isAutomated: isAutomated,
     };
   }
 
@@ -145,9 +148,13 @@
   }
 </script>
 
-<div class="comment" style="margin-left: {level * 1}rem;">
+<div
+  class="comment"
+  class:automated={comment.isAutomated}
+  style="margin-left: {level * 1}rem;"
+>
   <div class="comment-header">
-    {#if comment.profile_photo_url}
+    {#if comment.profile_photo_url && !comment.isAutomated}
       <img
         src={comment.profile_photo_url}
         alt={`${comment.first_name} ${comment.last_name}'s profile`}
@@ -156,7 +163,7 @@
         on:click={() => toggleReply(comment.id)}
         on:keydown={(e) => handleKeyPress(e, () => toggleReply(comment.id))}
       />
-    {:else}
+    {:else if !comment.isAutomated}
       <div
         class="profile-pic-placeholder"
         title="@{comment.username}"
@@ -165,16 +172,21 @@
       >
         {comment.first_name.charAt(0)}{comment.last_name.charAt(0)}
       </div>
+    {:else}
+      <div class="system-icon">📢</div>
     {/if}
     <div class="user-info">
       <div class="name-row">
         <span
           class="full-name"
+          class:automated-name={comment.isAutomated}
           role="button"
           tabindex="0"
           title="@{comment.username}"
-          on:click={() => toggleReply(comment.id)}
-          on:keydown={(e) => handleKeyPress(e, () => toggleReply(comment.id))}
+          on:click={() => !comment.isAutomated && toggleReply(comment.id)}
+          on:keydown={(e) =>
+            !comment.isAutomated &&
+            handleKeyPress(e, () => toggleReply(comment.id))}
         >
           {comment.first_name}
           {comment.last_name}
@@ -308,6 +320,10 @@
     padding: 0.5rem 0;
     font-size: clamp(0.75rem, 2.5vw, 0.85rem);
   }
+  .comment.automated {
+    background-color: #f0f8ff;
+    border-left: 4px solid var(--carolina-blue);
+  }
   .comment-header {
     display: flex;
     align-items: flex-start;
@@ -332,6 +348,17 @@
     color: var(--charcoal);
     cursor: pointer;
   }
+  .system-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--carolina-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--white);
+  }
   .user-info {
     display: flex;
     flex-direction: column;
@@ -347,17 +374,22 @@
     color: var(--charcoal);
     cursor: pointer;
   }
-  .full-name:hover {
+  .full-name.automated-name {
+    color: var(--charcoal);
+    font-weight: bold;
+    cursor: default;
+  }
+  .full-name:hover:not(.automated-name) {
     text-decoration: underline;
   }
   .channel-name {
     font-size: clamp(0.65rem, 2vw, 0.75rem);
     color: var(--dark-moderate-pink);
-    text-decoration: none; /* Remove default underline */
+    text-decoration: none;
   }
   .channel-name:hover {
-    text-decoration: underline; /* Add hover effect */
-    color: var(--tomato); /* Optional: match hover color */
+    text-decoration: underline;
+    color: var(--tomato);
   }
   .timestamp {
     font-size: clamp(0.6rem, 2vw, 0.7rem);

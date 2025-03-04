@@ -8,6 +8,7 @@
   let error = null;
   let editingPersonal = false;
   let editingAccount = false;
+  let editingPassword = false; // Separate state for password editing
   let passwordForm = {
     currentPassword: "",
     newPassword: "",
@@ -34,7 +35,7 @@
       loading = true;
       const { data, error: fetchError } = await supabase
         .from("profiles")
-        .select("*") // Updated to fetch all fields including visibility toggles
+        .select("*")
         .eq("id", $user.id)
         .maybeSingle();
 
@@ -44,6 +45,11 @@
 
       if (data) {
         profile = data;
+        // Ensure always-public fields are set
+        profile.first_name_public = true;
+        profile.last_name_public = true;
+        profile.username_public = true;
+        profile.gender_public = true;
       } else {
         profile = {
           id: $user.id,
@@ -58,17 +64,17 @@
           dob: "",
           height: 0,
           weight: 0,
-          body_fat_percentage: 0,
+          body_fat_percentage: null, // Optional, default null
           profile_photo_url: "",
           bmi: null,
           bmr: null,
-          first_name_public: false,
-          last_name_public: false,
-          username_public: true,
+          first_name_public: true, // Always public
+          last_name_public: true, // Always public
+          username_public: true, // Always public
           phone_number_public: false,
           address_public: false,
           participates_in_challenges_public: false,
-          gender_public: false,
+          gender_public: true, // Always public
           dob_public: false,
           height_public: false,
           weight_public: false,
@@ -96,33 +102,77 @@
     return `${feet}'${remainingInches}"`;
   }
 
+  function calculateAge(dob) {
+    if (!dob) return "Not set";
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+    return age;
+  }
+
   function calculateBMI(height, weight) {
-    if (!height || !weight) return null;
-    return (weight / (height * height)) * 703;
+    if (!height || !weight) return "Not calculated";
+    return ((weight / (height * height)) * 703).toFixed(1);
   }
 
   function calculateBMR(height, weight, gender, dob) {
-    if (!height || !weight || !gender || !dob) return null;
+    if (!height || !weight || !gender || !dob) return "Not calculated";
     const weightKg = weight * 0.453592;
     const heightCm = height * 2.54;
-    const age = new Date().getFullYear() - new Date(dob).getFullYear();
+    const age = calculateAge(dob);
     if (gender === "Male") {
-      return 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+      return (10 * weightKg + 6.25 * heightCm - 5 * age + 5).toFixed(0);
     } else if (gender === "Female") {
-      return 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+      return (10 * weightKg + 6.25 * heightCm - 5 * age - 161).toFixed(0);
     }
-    return null;
+    return "Not calculated";
   }
 
   async function updateProfile() {
     try {
-      profile.bmi = calculateBMI(profile.height, profile.weight)?.toFixed(1);
+      // Enforce required contact fields
+      if (
+        !profile.first_name ||
+        !profile.last_name ||
+        !profile.phone_number ||
+        !profile.address
+      ) {
+        throw new Error("All contact information fields are required.");
+      }
+      // Enforce required physical fields if participating in challenges
+      if (profile.participates_in_challenges) {
+        if (
+          !profile.gender ||
+          !profile.dob ||
+          !profile.height ||
+          !profile.weight
+        ) {
+          throw new Error(
+            "Gender, DOB, Height, and Weight are required when participating in fitness challenges."
+          );
+        }
+      }
+
+      profile.bmi = calculateBMI(profile.height, profile.weight);
       profile.bmr = calculateBMR(
         profile.height,
         profile.weight,
         profile.gender,
         profile.dob
-      )?.toFixed(0);
+      );
+
+      // Ensure always-public fields remain true
+      profile.first_name_public = true;
+      profile.last_name_public = true;
+      profile.username_public = true;
+      profile.gender_public = true;
 
       const updates = { ...profile, id: $user.id };
 
@@ -136,6 +186,34 @@
       alert("Profile updated successfully");
     } catch (err) {
       alert("Failed to update profile: " + err.message);
+    }
+  }
+
+  async function updateUsername() {
+    try {
+      if (!profile.username) {
+        throw new Error("Username is required.");
+      }
+
+      // Ensure always-public field remains true
+      profile.username_public = true;
+
+      const updates = {
+        id: $user.id,
+        username: profile.username,
+        username_public: true,
+      };
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .upsert(updates, { onConflict: "id" });
+
+      if (updateError) throw updateError;
+
+      editingAccount = false;
+      alert("Username updated successfully");
+    } catch (err) {
+      alert("Failed to update username: " + err.message);
     }
   }
 
@@ -157,7 +235,7 @@
         newPassword: "",
         confirmPassword: "",
       };
-      editingAccount = false;
+      editingPassword = false;
     } catch (err) {
       alert("Failed to change password: " + err.message);
     }
@@ -167,533 +245,659 @@
     if (!profilePhotoFile) return;
 
     try {
-      if (!$user || !$user.id) {
-        throw new Error("User not authenticated");
-      }
-      console.log("User authenticated for upload:", $user);
       const fileExt = profilePhotoFile.name.split(".").pop();
       const fileName = `${$user.id}.${fileExt}`;
-      console.log("Uploading to profile_photos:", fileName);
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("profile_photos")
         .upload(fileName, profilePhotoFile, { upsert: true });
 
-      if (uploadError) {
-        console.error(
-          "Storage upload failed:",
-          uploadError.message,
-          uploadError
-        );
-        throw uploadError;
-      }
-      console.log("Upload successful:", uploadData);
+      if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data } = supabase.storage
         .from("profile_photos")
         .getPublicUrl(fileName);
-      const publicURL = urlData.publicUrl;
-      console.log("Generated public URL:", publicURL);
+      const publicURL = data.publicUrl;
 
-      // Test URL accessibility
-      const response = await fetch(publicURL);
-      console.log("URL fetch response:", response.status, response.ok);
-
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("profiles")
         .update({ profile_photo_url: publicURL })
-        .eq("id", $user.id)
-        .select()
-        .single();
+        .eq("id", $user.id);
 
-      if (updateError) {
-        console.error(
-          "Profile update failed:",
-          updateError.message,
-          updateError
-        );
-        throw updateError;
-      }
-      console.log("Profile update successful, updated data:", updateData);
+      if (updateError) throw updateError;
 
-      profile = { ...profile, ...updateData };
-      console.log("Updated profile object:", profile);
-
+      profile.profile_photo_url = publicURL;
       alert("Profile photo updated successfully");
     } catch (err) {
-      console.error("Upload error details:", err.message, err);
       alert("Failed to upload profile photo: " + err.message);
     }
   }
 </script>
 
 <div class="profile-page">
-  <div class="sidebar">
-    <nav>
-      <a href="#personal-details">Personal Details</a>
-      <a href="#account-info">Account Info</a>
-    </nav>
-  </div>
-  <div class="content">
-    {#if loading}
-      <p>Loading...</p>
-    {:else if error}
-      <p class="error">Error: {error}</p>
-    {:else}
-      <section id="personal-details" class="container">
-        <h2>Personal Details</h2>
-        {#if editingPersonal}
-          <form on:submit|preventDefault={updateProfile}>
-            <div class="field-group">
-              <label>
-                First Name:
-                <input type="text" bind:value={profile.first_name} required />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.first_name_public}
-                  />
-                </label>
-              </label>
-              <label>
-                Last Name:
-                <input type="text" bind:value={profile.last_name} required />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.last_name_public}
-                  />
-                </label>
-              </label>
+  {#if loading}
+    <p>Loading...</p>
+  {:else if error}
+    <p class="error">Error: {error}</p>
+  {:else}
+    <div class="profile-container">
+      <div class="photo-section">
+        {#if profile.profile_photo_url}
+          <img
+            src={profile.profile_photo_url}
+            alt="Profile"
+            class="profile-photo"
+          />
+        {:else}
+          <div class="photo-placeholder">No Photo</div>
+        {/if}
+        <input
+          type="file"
+          id="profilePhoto"
+          accept="image/*"
+          on:change={(e) => (profilePhotoFile = e.target.files[0])}
+          hidden
+        />
+        <button
+          class="edit-photo-btn"
+          on:click={() => document.getElementById("profilePhoto").click()}
+        >
+          Edit Photo
+        </button>
+        <button class="upload-btn" on:click={uploadProfilePhoto}>
+          Upload
+        </button>
+      </div>
+
+      <div class="details-section">
+        <section id="personal-details">
+          <h2>Personal Details</h2>
+
+          <h3>Contact Information</h3>
+          <table class="info-table">
+            <tbody>
+              <tr>
+                <th>Name</th>
+                <td>
+                  {#if editingPersonal}
+                    <input
+                      type="text"
+                      bind:value={profile.first_name}
+                      placeholder="First Name"
+                      required
+                    />
+                    <input
+                      type="text"
+                      bind:value={profile.last_name}
+                      placeholder="Last Name"
+                      required
+                    />
+                  {:else}
+                    {profile.first_name} {profile.last_name}
+                  {/if}
+                </td>
+                <td>(Always Public)</td>
+              </tr>
+              <tr>
+                <th>Phone</th>
+                <td>
+                  {#if editingPersonal}
+                    <input
+                      type="text"
+                      bind:value={profile.phone_number}
+                      placeholder="Phone Number"
+                      required
+                    />
+                  {:else}
+                    {profile.phone_number}
+                  {/if}
+                </td>
+                <td>
+                  {#if editingPersonal}
+                    <label>
+                      Public: <input
+                        type="checkbox"
+                        bind:checked={profile.phone_number_public}
+                      />
+                    </label>
+                  {:else}
+                    (Public: {profile.phone_number_public ? "Yes" : "No"})
+                  {/if}
+                </td>
+              </tr>
+              <tr>
+                <th>Email</th>
+                <td>{$user.email}</td>
+                <td>(Not editable)</td>
+              </tr>
+              <tr>
+                <th>Address</th>
+                <td>
+                  {#if editingPersonal}
+                    <input
+                      type="text"
+                      bind:value={profile.address}
+                      placeholder="Address"
+                      required
+                    />
+                  {:else}
+                    {profile.address}
+                  {/if}
+                </td>
+                <td>
+                  {#if editingPersonal}
+                    <label>
+                      Public: <input
+                        type="checkbox"
+                        bind:checked={profile.address_public}
+                      />
+                    </label>
+                  {:else}
+                    (Public: {profile.address_public ? "Yes" : "No"})
+                  {/if}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Physical Details</h3>
+          <div class="toggle-container">
+            <label for="participatesInChallenges"
+              >Participates in Fitness Challenges?</label
+            >
+            <div class="switch">
+              <span class="toggle-label no">N</span>
+              <input
+                type="checkbox"
+                id="participatesInChallenges"
+                bind:checked={profile.participates_in_challenges}
+                disabled={!editingPersonal}
+              />
+              <span class="slider"></span>
+              <span class="toggle-label yes">Y</span>
             </div>
-            <div class="field-group">
+            {#if editingPersonal}
               <label>
-                Username:
-                <input type="text" bind:value={profile.username} required />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.username_public}
-                  />
-                </label>
-              </label>
-              <label>
-                Phone Number:
-                <input type="text" bind:value={profile.phone_number} />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.phone_number_public}
-                  />
-                </label>
-              </label>
-            </div>
-            <div class="field-group">
-              <label>
-                Address:
-                <input type="text" bind:value={profile.address} />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.address_public}
-                  />
-                </label>
-              </label>
-              <label>
-                Participates in Challenges:
-                <input
+                Public: <input
                   type="checkbox"
-                  bind:checked={profile.participates_in_challenges}
+                  bind:checked={profile.participates_in_challenges_public}
                 />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.participates_in_challenges_public}
-                  />
-                </label>
               </label>
-            </div>
-            <div class="field-group">
-              <label>
-                Gender:
-                <div class="radio-group">
-                  <label
-                    ><input
-                      type="radio"
-                      bind:group={profile.gender}
-                      value="Male"
-                    /> Male</label
+            {/if}
+          </div>
+          {#if profile.participates_in_challenges}
+            <table class="info-table">
+              <tbody>
+                <tr>
+                  <th>Gender</th>
+                  <td>
+                    {#if editingPersonal}
+                      <div class="radio-group">
+                        <label>
+                          <input
+                            type="radio"
+                            bind:group={profile.gender}
+                            value="Male"
+                            required
+                          /> Male
+                        </label>
+                        <label>
+                          <input
+                            type="radio"
+                            bind:group={profile.gender}
+                            value="Female"
+                            required
+                          /> Female
+                        </label>
+                      </div>
+                    {:else}
+                      {profile.gender}
+                    {/if}
+                  </td>
+                  <td>(Always Public)</td>
+                </tr>
+                <tr>
+                  <th>DOB (Age)</th>
+                  <td>
+                    {#if editingPersonal}
+                      <input type="date" bind:value={profile.dob} required />
+                    {:else}
+                      {profile.dob} ({calculateAge(profile.dob)})
+                    {/if}
+                  </td>
+                  <td>
+                    {#if editingPersonal}
+                      <label>
+                        Public: <input
+                          type="checkbox"
+                          bind:checked={profile.dob_public}
+                        />
+                      </label>
+                    {:else}
+                      (Public: {profile.dob_public ? "Yes" : "No"})
+                    {/if}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Height</th>
+                  <td>
+                    {#if editingPersonal}
+                      <input
+                        type="number"
+                        bind:value={profile.height}
+                        min="0"
+                        step="1"
+                        placeholder="Inches"
+                        required
+                      />
+                    {:else}
+                      {formatHeight(profile.height)}
+                    {/if}
+                  </td>
+                  <td>
+                    {#if editingPersonal}
+                      <label>
+                        Public: <input
+                          type="checkbox"
+                          bind:checked={profile.height_public}
+                        />
+                      </label>
+                    {:else}
+                      (Public: {profile.height_public ? "Yes" : "No"})
+                    {/if}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Weight</th>
+                  <td>
+                    {#if editingPersonal}
+                      <input
+                        type="number"
+                        bind:value={profile.weight}
+                        min="0"
+                        step="1"
+                        placeholder="lbs"
+                        required
+                      />
+                    {:else}
+                      {profile.weight ? `${profile.weight} lbs` : "Not set"}
+                    {/if}
+                  </td>
+                  <td>
+                    {#if editingPersonal}
+                      <label>
+                        Public: <input
+                          type="checkbox"
+                          bind:checked={profile.weight_public}
+                        />
+                      </label>
+                    {:else}
+                      (Public: {profile.weight_public ? "Yes" : "No"})
+                    {/if}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Body Fat %</th>
+                  <td>
+                    {#if editingPersonal}
+                      <input
+                        type="number"
+                        bind:value={profile.body_fat_percentage}
+                        min="0"
+                        max="100"
+                        placeholder="%"
+                      />
+                    {:else}
+                      {profile.body_fat_percentage
+                        ? `${profile.body_fat_percentage}%`
+                        : "Not set"}
+                    {/if}
+                  </td>
+                  <td>
+                    {#if editingPersonal}
+                      <label>
+                        Public: <input
+                          type="checkbox"
+                          bind:checked={profile.body_fat_percentage_public}
+                        />
+                      </label>
+                    {:else}
+                      (Public: {profile.body_fat_percentage_public
+                        ? "Yes"
+                        : "No"})
+                    {/if}
+                  </td>
+                </tr>
+                <tr>
+                  <th>BMI</th>
+                  <td>{calculateBMI(profile.height, profile.weight)}</td>
+                  <td
+                    >{editingPersonal
+                      ? ""
+                      : `(Public: ${profile.bmi_public ? "Yes" : "No"})`}</td
                   >
-                  <label
-                    ><input
-                      type="radio"
-                      bind:group={profile.gender}
-                      value="Female"
-                    /> Female</label
+                </tr>
+                <tr>
+                  <th>BMR</th>
+                  <td
+                    >{calculateBMR(
+                      profile.height,
+                      profile.weight,
+                      profile.gender,
+                      profile.dob
+                    )} kcal/day</td
                   >
-                </div>
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.gender_public}
-                  />
-                </label>
-              </label>
-              <label>
-                Date of Birth:
-                <input type="date" bind:value={profile.dob} />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.dob_public}
-                  />
-                </label>
-              </label>
-            </div>
-            <div class="field-group">
-              <label>
-                Height (in inches):
-                <input
-                  type="number"
-                  bind:value={profile.height}
-                  min="0"
-                  step="1"
-                />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.height_public}
-                  />
-                </label>
-              </label>
-              <label>
-                Weight (in lbs):
-                <input
-                  type="number"
-                  bind:value={profile.weight}
-                  min="0"
-                  step="1"
-                />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.weight_public}
-                  />
-                </label>
-              </label>
-            </div>
-            <div class="field-group">
-              <label>
-                Body Fat Percentage:
-                <input
-                  type="number"
-                  bind:value={profile.body_fat_percentage}
-                  min="0"
-                  max="100"
-                />
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.body_fat_percentage_public}
-                  />
-                </label>
-              </label>
-              <label>
-                Profile Photo:
-                <input
-                  type="file"
-                  accept="image/*"
-                  on:change={(e) => (profilePhotoFile = e.target.files[0])}
-                />
-                <button type="button" on:click={uploadProfilePhoto}
-                  >Upload Photo</button
-                >
-                <label>
-                  Public: <input
-                    type="checkbox"
-                    bind:checked={profile.profile_photo_url_public}
-                  />
-                </label>
-              </label>
-            </div>
+                  <td
+                    >{editingPersonal
+                      ? ""
+                      : `(Public: ${profile.bmr_public ? "Yes" : "No"})`}</td
+                  >
+                </tr>
+              </tbody>
+            </table>
+          {/if}
+
+          {#if editingPersonal}
             <div class="buttons">
-              <button type="submit">Save Changes</button>
+              <button on:click={updateProfile}>Save Changes</button>
               <button
-                type="button"
                 class="cancel-btn"
                 on:click={() => (editingPersonal = false)}>Cancel</button
               >
             </div>
-          </form>
-        {:else}
-          <div class="field-group">
-            <p>
-              First Name: {profile.first_name || "Not set"} (Public: {profile.first_name_public
-                ? "Yes"
-                : "No"})
-            </p>
-            <p>
-              Last Name: {profile.last_name || "Not set"} (Public: {profile.last_name_public
-                ? "Yes"
-                : "No"})
-            </p>
-          </div>
-          <div class="field-group">
-            <p>
-              Username: @{profile.username || "Not set"} (Public: {profile.username_public
-                ? "Yes"
-                : "No"})
-            </p>
-            <p>
-              Phone Number: {profile.phone_number || "Not set"} (Public: {profile.phone_number_public
-                ? "Yes"
-                : "No"})
-            </p>
-          </div>
-          <div class="field-group">
-            <p>
-              Address: {profile.address || "Not set"} (Public: {profile.address_public
-                ? "Yes"
-                : "No"})
-            </p>
-            <p>
-              Participates in Challenges: {profile.participates_in_challenges
-                ? "Yes"
-                : "No"} (Public: {profile.participates_in_challenges_public
-                ? "Yes"
-                : "No"})
-            </p>
-          </div>
-          <div class="field-group">
-            <p>
-              Gender: {profile.gender || "Not set"} (Public: {profile.gender_public
-                ? "Yes"
-                : "No"})
-            </p>
-            <p>
-              Date of Birth: {profile.dob || "Not set"} (Public: {profile.dob_public
-                ? "Yes"
-                : "No"})
-            </p>
-          </div>
-          <div class="field-group">
-            <p>
-              Height: {formatHeight(profile.height)} (Public: {profile.height_public
-                ? "Yes"
-                : "No"})
-            </p>
-            <p>
-              Weight: {profile.weight ? `${profile.weight} lbs` : "Not set"} (Public:
-              {profile.weight_public ? "Yes" : "No"})
-            </p>
-          </div>
-          <div class="field-group">
-            <p>
-              Body Fat Percentage: {profile.body_fat_percentage || "Not set"}%
-              (Public: {profile.body_fat_percentage_public ? "Yes" : "No"})
-            </p>
-            <p>
-              BMI: {profile.bmi || "Not calculated"} (Public: {profile.bmi_public
-                ? "Yes"
-                : "No"})
-            </p>
-          </div>
-          <div class="field-group">
-            <p>
-              BMR: {profile.bmr ? `${profile.bmr} kcal/day` : "Not calculated"} (Public:
-              {profile.bmr_public ? "Yes" : "No"})
-            </p>
-          </div>
-          {#if profile.profile_photo_url}
-            <div class="field-group">
-              <img
-                src={profile.profile_photo_url}
-                alt="User profile"
-                class="profile-photo"
-              />
-              <p>(Public: {profile.profile_photo_url_public ? "Yes" : "No"})</p>
-            </div>
+          {:else}
+            <button class="edit-btn" on:click={() => (editingPersonal = true)}
+              >Edit Personal Details</button
+            >
           {/if}
-          <button on:click={() => (editingPersonal = true)}>Edit</button>
-        {/if}
-      </section>
+        </section>
 
-      <section id="account-info" class="container">
-        <h2>Account Info</h2>
-        {#if editingAccount}
-          <form on:submit|preventDefault={changePassword}>
-            <div class="field-group">
-              <label>
-                Email:
-                <input type="email" value={$user.email} disabled />
-              </label>
-              <label>
-                Username:
-                <input
-                  type="text"
-                  value="@{profile.username || 'Not set'}"
-                  disabled
-                />
-              </label>
-            </div>
-            <div class="field-group">
-              <label>
-                Current Password:
-                <input
-                  type="password"
-                  bind:value={passwordForm.currentPassword}
-                  required
-                />
-              </label>
-              <label>
-                New Password:
-                <input
-                  type="password"
-                  bind:value={passwordForm.newPassword}
-                  required
-                />
-              </label>
-            </div>
-            <div class="field-group">
-              <label>
-                Confirm New Password:
-                <input
-                  type="password"
-                  bind:value={passwordForm.confirmPassword}
-                  required
-                />
-              </label>
-            </div>
+        <section id="account-details">
+          <h2>Account Details</h2>
+          <table class="info-table">
+            <tbody>
+              <tr>
+                <th>Username</th>
+                <td>
+                  {#if editingAccount}
+                    <input type="text" bind:value={profile.username} required />
+                  {:else}
+                    @{profile.username}
+                  {/if}
+                </td>
+                <td>(Always Public)</td>
+              </tr>
+              {#if editingPassword}
+                <tr>
+                  <th>Current Password</th>
+                  <td
+                    ><input
+                      type="password"
+                      bind:value={passwordForm.currentPassword}
+                      required
+                    /></td
+                  >
+                  <td></td>
+                </tr>
+                <tr>
+                  <th>New Password</th>
+                  <td
+                    ><input
+                      type="password"
+                      bind:value={passwordForm.newPassword}
+                      required
+                    /></td
+                  >
+                  <td></td>
+                </tr>
+                <tr>
+                  <th>Confirm New Password</th>
+                  <td
+                    ><input
+                      type="password"
+                      bind:value={passwordForm.confirmPassword}
+                      required
+                    /></td
+                  >
+                  <td></td>
+                </tr>
+              {/if}
+            </tbody>
+          </table>
+
+          {#if editingAccount}
             <div class="buttons">
-              <button type="submit">Change Password</button>
+              <button on:click={updateUsername}>Save Username</button>
               <button
-                type="button"
                 class="cancel-btn"
                 on:click={() => (editingAccount = false)}>Cancel</button
               >
             </div>
-          </form>
-        {:else}
-          <div class="field-group">
-            <p>Email: {$user.email}</p>
-            <p>Username: @{profile.username || "Not set"}</p>
-          </div>
-          <button on:click={() => (editingAccount = true)}>Edit</button>
-        {/if}
-      </section>
-    {/if}
-  </div>
+          {:else if editingPassword}
+            <div class="buttons">
+              <button on:click={changePassword}>Save Password</button>
+              <button
+                class="cancel-btn"
+                on:click={() => (editingPassword = false)}>Cancel</button
+              >
+            </div>
+          {:else}
+            <div class="buttons">
+              <button class="edit-btn" on:click={() => (editingAccount = true)}
+                >Edit Username</button
+              >
+              <button class="edit-btn" on:click={() => (editingPassword = true)}
+                >Change Password</button
+              >
+            </div>
+          {/if}
+        </section>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
   .profile-page {
-    display: flex;
-    gap: clamp(1rem, 2vw, 2rem);
-    padding: clamp(1rem, 2vw, 2rem);
+    padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
+    background-color: #f9f9f9;
+    min-height: 100vh;
   }
 
-  .sidebar {
-    width: clamp(100px, 15vw, 200px);
-  }
-
-  .sidebar nav {
+  .profile-container {
     display: flex;
     flex-direction: column;
-    gap: clamp(0.5rem, 1vw, 1rem);
+    gap: 2rem;
   }
 
-  .sidebar a {
-    text-decoration: none;
-    color: var(--charcoal);
-    padding: clamp(0.25rem, 1vw, 0.5rem);
-    font-size: clamp(0.8rem, 1.5vw, 1rem);
-  }
-
-  .sidebar a:hover {
-    background-color: var(--light-gray);
-  }
-
-  .content {
-    flex: 1;
+  .photo-section {
     display: flex;
-    flex-direction: column;
-    gap: clamp(1rem, 2vw, 2rem);
-  }
-
-  .container {
-    background-color: var(--white);
-    padding: clamp(1rem, 2vw, 2rem);
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  h2 {
-    margin: 0 0 clamp(0.5rem, 1vw, 1rem);
-    font-size: clamp(1.2rem, 2vw, 1.5rem);
-    color: var(--charcoal);
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(0.5rem, 1vw, 1rem);
-  }
-
-  .field-group {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: clamp(0.5rem, 1vw, 1rem);
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: clamp(0.8rem, 1.5vw, 1rem);
-  }
-
-  .radio-group {
-    display: flex;
-    gap: clamp(0.5rem, 1vw, 1rem);
-    margin-top: 0.25rem;
-  }
-
-  .radio-group label {
-    flex-direction: row;
     align-items: center;
-    gap: 0.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
-  input {
-    padding: clamp(0.25rem, 0.5vw, 0.5rem);
-    border: 1px solid var(--light-gray);
-    border-radius: 4px;
-    font-size: clamp(0.7rem, 1.2vw, 1rem);
+  .profile-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--charcoal);
   }
 
-  p {
-    font-size: clamp(0.8rem, 1.5vw, 1rem);
-    margin: 0.5rem 0;
-  }
-
-  .buttons {
+  .photo-placeholder {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
     display: flex;
-    gap: clamp(0.5rem, 1vw, 1rem);
-    margin-top: clamp(0.5rem, 1vw, 1rem);
+    align-items: center;
+    justify-content: center;
+    color: var(--charcoal);
+    font-size: 1.2rem;
+    border: 2px dashed var(--gray);
   }
 
-  button {
-    padding: clamp(0.25rem, 0.5vw, 0.5rem) clamp(0.5rem, 1vw, 1rem);
+  .edit-photo-btn,
+  .upload-btn {
+    padding: 0.5rem 1rem;
     border: none;
     border-radius: 4px;
     background-color: var(--carolina-blue);
     color: var(--white);
     cursor: pointer;
-    font-size: clamp(0.7rem, 1.2vw, 1rem);
+    font-size: 1rem;
+    transition: background-color 0.3s;
   }
 
+  .edit-photo-btn:hover,
+  .upload-btn:hover {
+    background-color: var(--tomato);
+  }
+
+  .details-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    color: var(--charcoal);
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--tomato);
+    padding-bottom: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    color: var(--charcoal);
+    margin: 1rem 0 0.5rem;
+  }
+
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    background-color: var(--white);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-table th,
+  .info-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--light-gray);
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  .info-table th {
+    background-color: var(--carolina-blue);
+    color: var(--white);
+    width: 25%;
+  }
+
+  .info-table td {
+    background-color: var(--white);
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 60px;
+    height: 34px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 60px;
+    height: 34px;
+    position: absolute;
+    z-index: 2;
+    cursor: pointer;
+  }
+
+  .slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+    z-index: 1;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: var(--tomato);
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .toggle-label {
+    font-size: 1rem;
+    color: var(--charcoal);
+    position: absolute;
+    z-index: 3;
+  }
+
+  .no {
+    left: 10px;
+  }
+
+  .yes {
+    right: 10px;
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .edit-btn,
+  button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--carolina-blue);
+    color: var(--white);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+  }
+
+  .edit-btn:hover,
   button:hover {
     background-color: var(--tomato);
   }
@@ -706,34 +910,32 @@
     background-color: var(--tomato-light);
   }
 
-  .profile-photo {
-    max-width: clamp(100px, 20vw, 200px);
-    border-radius: 50%;
-    margin: clamp(0.5rem, 1vw, 1rem) 0;
-  }
-
   .error {
     color: var(--tomato);
-    font-size: clamp(0.8rem, 1.5vw, 1rem);
+    font-size: 1rem;
+    text-align: center;
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 768px) {
     .profile-page {
+      padding: 1rem;
+    }
+
+    .photo-section {
       flex-direction: column;
+      align-items: flex-start;
     }
 
-    .sidebar {
-      width: 100%;
-      margin-bottom: clamp(0.5rem, 1vw, 1rem);
+    .profile-photo,
+    .photo-placeholder {
+      width: 120px;
+      height: 120px;
     }
 
-    .sidebar nav {
-      flex-direction: row;
-      justify-content: space-around;
-    }
-
-    .field-group {
-      grid-template-columns: 1fr;
+    .info-table th,
+    .info-table td {
+      font-size: 0.9rem;
+      padding: 0.5rem;
     }
   }
 </style>

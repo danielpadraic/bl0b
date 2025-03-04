@@ -1,6 +1,6 @@
 <script>
   import { supabase } from "../supabase.js";
-  import { user } from "../stores.js"; // Ensure correct import path
+  import { user } from "../stores.js";
   import { navigate } from "svelte-routing";
 
   let firstName = "";
@@ -12,7 +12,7 @@
   let username = "";
   let password = "";
   let confirmPassword = "";
-  let profilePhotoFile = null; // Add profile photo file
+  let profilePhotoFile = null;
   let error = "";
   let usernameError = "";
   let passwordMatchError = "";
@@ -23,11 +23,11 @@
   let dob = "";
   let height = "";
   let weight = "";
-  let bodyFatPercentage = 3;
+  let bodyFatPercentage = null; // Optional, default null
 
   async function checkUsername() {
     const { data, error: err } = await supabase
-      .from("profiles") // Change to "profiles" since that's where username lives
+      .from("profiles")
       .select("username")
       .eq("username", username);
     if (err) {
@@ -78,14 +78,14 @@
     const fileExt = profilePhotoFile.name.split(".").pop();
     const fileName = `${userId}.${fileExt}`;
     const { error: uploadError } = await supabase.storage
-      .from("profile_photos") // Use bucket ID
+      .from("profile_photos")
       .upload(fileName, profilePhotoFile, { upsert: true });
 
     if (uploadError) throw uploadError;
 
     const { data } = supabase.storage
       .from("profile_photos")
-      .getPublicUrl(fileName); // Use bucket ID
+      .getPublicUrl(fileName);
     return data.publicUrl;
   }
 
@@ -97,6 +97,25 @@
 
     if (phoneNumberRaw.length !== 10) {
       error = "Phone number must be exactly 10 digits";
+      return;
+    }
+
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phoneNumberRaw ||
+      !address ||
+      !username
+    ) {
+      error =
+        "All contact information fields (including username) are required";
+      return;
+    }
+
+    if (participatesInChallenges && (!gender || !dob || !height || !weight)) {
+      error =
+        "Gender, Date of Birth, Height, and Weight are required for fitness challenges";
       return;
     }
 
@@ -129,22 +148,25 @@
       username,
       participates_in_challenges: participatesInChallenges,
       email,
-      profile_photo_url: profilePhotoUrl, // Add profile photo URL
+      profile_photo_url: profilePhotoUrl,
+      first_name_public: true, // Always public
+      last_name_public: true, // Always public
+      username_public: true, // Always public
     };
 
     if (participatesInChallenges) {
       userData.gender = gender;
       userData.dob = dob;
-      userData.height = parseInt(height) || null;
-      userData.weight = parseInt(weight) || null;
-      userData.body_fat_percentage =
-        bodyFatPercentage === 60 ? null : bodyFatPercentage;
+      userData.height = parseInt(height) || 0;
+      userData.weight = parseInt(weight) || 0;
+      userData.body_fat_percentage = bodyFatPercentage; // Optional
+      userData.gender_public = true; // Always public
     }
 
     console.log("Inserting user data into profiles table:", userData);
 
     const { data: insertData, error: dbError } = await supabase
-      .from("profiles") // Change to "profiles" to match your schema
+      .from("profiles")
       .insert([userData]);
 
     if (dbError) {
@@ -163,7 +185,8 @@
   <form on:submit|preventDefault={signUp}>
     <div class="name-row">
       <div class="name-field">
-        <label for="firstName">First Name</label>
+        <label for="firstName">First Name <span class="required">*</span></label
+        >
         <input
           type="text"
           id="firstName"
@@ -173,7 +196,7 @@
         />
       </div>
       <div class="name-field">
-        <label for="lastName">Last Name</label>
+        <label for="lastName">Last Name <span class="required">*</span></label>
         <input
           type="text"
           id="lastName"
@@ -184,7 +207,7 @@
       </div>
     </div>
 
-    <label for="email">Email</label>
+    <label for="email">Email <span class="required">*</span></label>
     <input
       type="email"
       id="email"
@@ -193,7 +216,8 @@
       required
     />
 
-    <label for="phoneNumber">Phone Number</label>
+    <label for="phoneNumber">Phone Number <span class="required">*</span></label
+    >
     <input
       type="tel"
       id="phoneNumber"
@@ -207,7 +231,7 @@
       <p class="error">{phoneNumberError}</p>
     {/if}
 
-    <label for="address">Address</label>
+    <label for="address">Address <span class="required">*</span></label>
     <input
       type="text"
       id="address"
@@ -216,7 +240,7 @@
       required
     />
 
-    <label for="username">Username</label>
+    <label for="username">Username <span class="required">*</span></label>
     <input
       type="text"
       id="username"
@@ -229,7 +253,7 @@
       <p class="error">{usernameError}</p>
     {/if}
 
-    <label for="password">Password</label>
+    <label for="password">Password <span class="required">*</span></label>
     <input
       type="password"
       id="password"
@@ -239,7 +263,9 @@
       required
     />
 
-    <label for="confirmPassword">Confirm Password</label>
+    <label for="confirmPassword"
+      >Confirm Password <span class="required">*</span></label
+    >
     <input
       type="password"
       id="confirmPassword"
@@ -261,9 +287,9 @@
     />
 
     <div class="toggle-container">
-      <label for="participatesInChallenges"
-        >Will you be participating in Fitness Challenges?</label
-      >
+      <label for="participatesInChallenges">
+        Will you be participating in Fitness Challenges?
+      </label>
       <div class="switch">
         <span class="toggle-label no">N</span>
         <input
@@ -280,7 +306,7 @@
       <div class="fitness-row">
         <div class="fitness-field gender-field">
           <fieldset>
-            <legend>Gender</legend>
+            <legend>Gender <span class="required">*</span></legend>
             <div class="radio-option">
               <input
                 type="radio"
@@ -299,13 +325,15 @@
                 name="gender"
                 value="Female"
                 bind:group={gender}
+                required
               />
               <label for="female">Female</label>
             </div>
           </fieldset>
         </div>
         <div class="fitness-field">
-          <label for="height">Height (in)</label>
+          <label for="height">Height (in) <span class="required">*</span></label
+          >
           <input
             type="number"
             id="height"
@@ -317,7 +345,9 @@
           />
         </div>
         <div class="fitness-field">
-          <label for="weight">Weight (lbs)</label>
+          <label for="weight"
+            >Weight (lbs) <span class="required">*</span></label
+          >
           <input
             type="number"
             id="weight"
@@ -330,7 +360,7 @@
         </div>
       </div>
 
-      <label for="dob">Date of Birth</label>
+      <label for="dob">Date of Birth <span class="required">*</span></label>
       <input type="date" id="dob" bind:value={dob} required />
 
       <label for="bodyFat">Body Fat Percentage (optional)</label>
