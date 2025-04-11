@@ -11,9 +11,9 @@
     "push-and-dev": "git add . && git commit -m \"Update project files\" && git push origin main && npm run dev"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "svelte": "^5.0.0",
-    "vite": "^6.2.6"
+    "@sveltejs/vite-plugin-svelte": "^3.0.2",
+    "svelte": "^4.2.12",
+    "vite": "^5.1.6"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",

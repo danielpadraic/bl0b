@@ -1,22 +1,20 @@
 <script>
-  import { onMount, onDestroy, tick } from "svelte";
-  import { navigate } from "svelte-routing";
+  import { onMount, onDestroy } from "svelte";
   import { user, showChallengeCreation } from "../stores.js";
   import { supabase } from "../supabase.js";
   import ChallengeCard from "../components/ChallengeCard.svelte";
   import ReelsCarousel from "../components/ReelsCarousel.svelte";
   import StoriesBanner from "../components/StoriesBanner.svelte";
   import NewChallengeButton from "../components/NewChallengeButton.svelte";
-  import BottomNav from "../components/BottomNav.svelte";
   import LoadingSpinner from "../components/LoadingSpinner.svelte";
   import ChallengeCreation from "../components/ChallengeCreation.svelte";
 
   let challenges = [];
-  let activeChallenges = null;
-  let upcomingChallenges = null;
-  let popularChallenges = null;
+  let activeChallenges = [];
+  let upcomingChallenges = [];
+  let popularChallenges = [];
   let loading = true;
-  let mountedPromise = null;
+  let isComponentMounted = false;
   let error = null;
   let searchQuery = "";
   let selectedFilter = "all";
@@ -34,32 +32,24 @@
 
   onMount(async () => {
     console.log("Home.svelte: Mounting component");
+    isComponentMounted = true;
 
-    mountedPromise = new Promise(async (resolve) => {
-      try {
-        if ($user) {
-          console.log(
-            "User authenticated, fetching challenges and notifications"
-          );
-          await Promise.all([fetchChallenges(), fetchNotificationCount()]);
-        } else {
-          console.log("No user, fetching public challenges");
-          await fetchPublicChallenges();
-        }
-      } catch (err) {
-        console.error("Error during initial data fetch:", err);
-        error = "Failed to load content. Please try again.";
+    try {
+      if ($user) {
+        console.log(
+          "User authenticated, fetching challenges and notifications"
+        );
+        await fetchChallenges();
+      } else {
+        console.log("No user, fetching public challenges");
+        await fetchPublicChallenges();
       }
-
-      await tick();
-      console.log("Home.svelte: DOM settled, checking DOM readiness");
-      console.log("DOM ready:", document.querySelector(".challenges-section"));
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      console.log("Home.svelte: Updating state");
+    } catch (err) {
+      console.error("Error during initial data fetch:", err);
+      error = "Failed to load content. Please try again.";
+    } finally {
       loading = false;
-      resolve(true);
-    });
+    }
 
     console.log("Home.svelte: Adding touch event listeners");
     document.addEventListener("touchstart", handleTouchStart, {
@@ -67,12 +57,11 @@
     });
     document.addEventListener("touchmove", handleTouchMove, { passive: true });
     document.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    await mountedPromise;
   });
 
   onDestroy(() => {
     console.log("Home.svelte: Destroying component, removing event listeners");
+    isComponentMounted = false;
     document.removeEventListener("touchstart", handleTouchStart);
     document.removeEventListener("touchmove", handleTouchMove);
     document.removeEventListener("touchend", handleTouchEnd);
@@ -105,18 +94,21 @@
     refreshing = true;
     try {
       if ($user) {
-        await Promise.all([fetchChallenges(), fetchNotificationCount()]);
+        await fetchChallenges();
       } else {
         await fetchPublicChallenges();
       }
     } catch (err) {
       console.error("Error during refresh:", err);
       error = "Failed to refresh content. Please try again.";
+    } finally {
+      refreshing = false;
     }
-    refreshing = false;
   }
 
   async function fetchChallenges() {
+    if (!isComponentMounted) return;
+
     try {
       const { data: participantData, error: participantError } = await supabase
         .from("challenge_participants")
@@ -130,23 +122,24 @@
 
       const { data: challengeData, error: challengeError } =
         await supabase.from("challenges").select(`
-            id, 
-            title, 
-            type, 
-            cover_media, 
-            participants_max, 
-            participants_current,
-            prize_pool,
-            buy_in_cost,
-            start_datetime,
-            end_datetime,
-            is_private,
-            profiles!challenges_creator_id_fkey(username, profile_photo_url)
-          `);
+              id, 
+              title, 
+              type, 
+              cover_media, 
+              participants_max, 
+              participants_current,
+              prize_pool,
+              buy_in_cost,
+              start_datetime,
+              end_datetime,
+              is_private,
+              profiles!challenges_creator_id_fkey(username, profile_photo_url)
+            `);
 
       if (challengeError) throw challengeError;
 
-      const now = new Date();
+      if (!isComponentMounted) return;
+
       const processedChallenges = challengeData.map((challenge) => ({
         ...challenge,
         isJoined: userChallengeIds.includes(challenge.id),
@@ -176,30 +169,33 @@
   }
 
   async function fetchPublicChallenges() {
+    if (!isComponentMounted) return;
+
     try {
       const { data: challengeData, error: challengeError } = await supabase
         .from("challenges")
         .select(
           `
-              id, 
-              title, 
-              type, 
-              cover_media, 
-              participants_max, 
-              participants_current,
-              prize_pool,
-              buy_in_cost,
-              start_datetime,
-              end_datetime,
-              is_private,
-              profiles!challenges_creator_id_fkey(username, profile_photo_url)
-            `
+                id, 
+                title, 
+                type, 
+                cover_media, 
+                participants_max, 
+                participants_current,
+                prize_pool,
+                buy_in_cost,
+                start_datetime,
+                end_datetime,
+                is_private,
+                profiles!challenges_creator_id_fkey(username, profile_photo_url)
+              `
         )
         .eq("is_private", false);
 
       if (challengeError) throw challengeError;
 
-      const now = new Date();
+      if (!isComponentMounted) return;
+
       const processedChallenges = challengeData.map((challenge) => ({
         ...challenge,
         isJoined: false,
@@ -224,24 +220,6 @@
       activeChallenges = [];
       upcomingChallenges = [];
       popularChallenges = [];
-    }
-  }
-
-  async function fetchNotificationCount() {
-    if (!$user) return;
-
-    try {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact" })
-        .eq("user_id", $user.id)
-        .eq("read", false);
-
-      if (!error) {
-        notificationCount = count || 0;
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
     }
   }
 
@@ -299,7 +277,7 @@
       return;
     }
 
-    navigate(`/challenge/${challengeId}`);
+    window.navigateTo(`/challenge/${challengeId}`);
   }
 
   function openAuthPrompt(event) {
@@ -319,12 +297,12 @@
 
   function handleLogin() {
     closeAuthPrompt();
-    navigate("/login");
+    window.navigateTo("/login");
   }
 
   function handleSignup() {
     closeAuthPrompt();
-    navigate("/signup");
+    window.navigateTo("/signup");
   }
 
   function handleOverlayClick(event) {
@@ -334,12 +312,12 @@
   }
 </script>
 
-{#await mountedPromise}
-  <div class="app-loading">
-    <LoadingSpinner />
-  </div>
-{:then}
-  <div class="home-container" class:pulling={pullDistance > 0}>
+<div class="home-container" class:pulling={pullDistance > 0}>
+  {#if loading}
+    <div class="app-loading">
+      <LoadingSpinner />
+    </div>
+  {:else}
     {#if pullDistance > 0 || refreshing}
       <div
         class="pull-indicator"
@@ -376,14 +354,11 @@
               <a href="/my-challenges" class="see-all">See All</a>
             </div>
             <div class="challenge-grid">
-              {console.log(
-                "Rendering activeChallenges, DOM ready:",
-                document.querySelector(".challenge-grid")
-              )}
               {#each activeChallenges.slice(0, 3) as challenge (challenge.id)}
                 <ChallengeCard
                   {challenge}
-                  on:click={() => navigate(`/challenge/${challenge.id}`)}
+                  on:click={() =>
+                    window.navigateTo(`/challenge/${challenge.id}`)}
                 />
               {/each}
             </div>
@@ -398,7 +373,8 @@
               {#each upcomingChallenges.slice(0, 3) as challenge (challenge.id)}
                 <ChallengeCard
                   {challenge}
-                  on:click={() => navigate(`/challenge/${challenge.id}`)}
+                  on:click={() =>
+                    window.navigateTo(`/challenge/${challenge.id}`)}
                 />
               {/each}
             </div>
@@ -413,7 +389,8 @@
               {#each popularChallenges.slice(0, 6) as challenge (challenge.id)}
                 <ChallengeCard
                   {challenge}
-                  on:click={() => navigate(`/challenge/${challenge.id}`)}
+                  on:click={() =>
+                    window.navigateTo(`/challenge/${challenge.id}`)}
                 />
               {/each}
             </div>
@@ -427,7 +404,7 @@
             <div class="challenge-grid">
               <div class="empty-state">
                 <p>Your friends' challenges will appear here</p>
-                <button on:click={() => navigate("/social")}>
+                <button on:click={() => window.navigateTo("/social")}>
                   Find Friends
                 </button>
               </div>
@@ -438,7 +415,6 @@
     </div>
 
     <NewChallengeButton on:click={handleCreateChallenge} />
-    <BottomNav activeTab="home" {notificationCount} />
 
     {#if showAuthPrompt}
       <div
@@ -480,8 +456,8 @@
     {#if $showChallengeCreation}
       <ChallengeCreation />
     {/if}
-  </div>
-{/await}
+  {/if}
+</div>
 
 <style>
   .home-container {

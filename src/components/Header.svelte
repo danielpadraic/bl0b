@@ -12,11 +12,19 @@
     // Dispatch logout event using standard DOM event
     document.dispatchEvent(new CustomEvent("logout"));
   }
+
+  function navigateTo(path) {
+    if (window.navigateTo) {
+      window.navigateTo(path);
+    } else {
+      window.location.href = path;
+    }
+  }
 </script>
 
 <header class="app-header">
   <div class="header-content">
-    <div class="logo">
+    <div class="logo" on:click={() => navigateTo("/")}>
       <span class="logo-text">bl0b</span>
     </div>
 
@@ -57,8 +65,8 @@
         {#if currentUser}
           <button on:click={handleLogout}>Logout</button>
         {:else}
-          <a href="/login">Login</a>
-          <a href="/signup">Sign Up</a>
+          <button on:click={() => navigateTo("/login")}>Login</button>
+          <button on:click={() => navigateTo("/signup")}>Sign Up</button>
         {/if}
       </div>
     </div>
@@ -66,7 +74,6 @@
 </header>
 
 <style>
-  /* Styles remain unchanged */
   .app-header {
     position: fixed;
     top: 0;
@@ -89,6 +96,7 @@
   .logo {
     font-weight: bold;
     font-size: 1.5rem;
+    cursor: pointer;
   }
 
   .menu-button {
@@ -146,5 +154,21 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .menu-content button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 16px;
+    color: var(--charcoal);
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+  }
+
+  .menu-content button:hover {
+    background-color: var(--light-gray);
   }
 </style>

@@ -1,6 +1,6 @@
 <script>
-  import { onMount, onDestroy, tick } from "svelte";
-  import { navigate, Router, Route } from "svelte-routing";
+  import { onMount, onDestroy } from "svelte";
+  import { navigate } from "svelte-routing";
   import {
     showChallengeCreation,
     user,
@@ -17,6 +17,7 @@
   import SignUp from "./pages/SignUp.svelte";
   import Discover from "./pages/Discover.svelte";
   import Notifications from "./pages/Notifications.svelte";
+  import SocialFeed from "./components/SocialFeed.svelte";
 
   // Components
   import Header from "./components/Header.svelte";
@@ -24,15 +25,68 @@
   import TaskCompletionForm from "./components/TaskCompletionForm.svelte";
   import ChallengeCreation from "./components/ChallengeCreation.svelte";
   import LoadingSpinner from "./components/LoadingSpinner.svelte";
-  import SocialFeed from "./components/SocialFeed.svelte"; // Added import
 
   let menuOpen = false;
   let currentUser = null;
   let appLoading = true;
   let notificationCount = 0;
+  let currentPage = "home";
+  let pageProps = {};
+
+  // Simple router function
+  function handleNavigate(path) {
+    if (typeof path !== "string") return;
+    const parts = path.split("/").filter(Boolean);
+
+    if (parts.length === 0 || path === "/") {
+      currentPage = "home";
+      pageProps = {};
+    } else if (parts[0] === "challenge" && parts.length > 1) {
+      currentPage = "challenge";
+      pageProps = { challengeId: parts[1] };
+    } else if (parts[0] === "profile" && parts.length > 1) {
+      currentPage = "public-profile";
+      pageProps = { username: parts[1] };
+    } else if (parts[0] === "profile") {
+      currentPage = "profile";
+      pageProps = {};
+    } else if (parts[0] === "login") {
+      currentPage = "login";
+      pageProps = {};
+    } else if (parts[0] === "signup") {
+      currentPage = "signup";
+      pageProps = {};
+    } else if (parts[0] === "social") {
+      currentPage = "social";
+      pageProps = {};
+    } else if (parts[0] === "discover") {
+      currentPage = "discover";
+      pageProps = {};
+    } else if (parts[0] === "notifications") {
+      currentPage = "notifications";
+      pageProps = {};
+    } else {
+      currentPage = "not-found";
+      pageProps = {};
+    }
+  }
+
+  // Patch the navigate function from svelte-routing
+  window.navigateTo = (path) => {
+    handleNavigate(path);
+    window.history.pushState({}, "", path);
+  };
 
   onMount(async () => {
     console.log("App mounted");
+
+    // Handle initial path
+    handleNavigate(window.location.pathname);
+
+    // Add popstate listener for back/forward navigation
+    window.addEventListener("popstate", () => {
+      handleNavigate(window.location.pathname);
+    });
 
     const {
       data: { session },
@@ -53,7 +107,7 @@
       currentUser = session?.user ?? null;
       $user = currentUser;
       if (event === "SIGNED_OUT") {
-        navigate("/login");
+        window.navigateTo("/login");
       }
     });
 
@@ -61,7 +115,6 @@
       await fetchNotificationCount();
     }
 
-    await tick();
     appLoading = false;
 
     document.addEventListener("toggleMenu", () => toggleMenu());
@@ -71,6 +124,9 @@
       subscription.unsubscribe();
       document.removeEventListener("toggleMenu", () => toggleMenu());
       document.removeEventListener("logout", handleLogout);
+      window.removeEventListener("popstate", () => {
+        handleNavigate(window.location.pathname);
+      });
     };
   });
 
@@ -110,56 +166,68 @@
   </div>
 {:else}
   <div class="app">
-    <Router>
-      <Header bind:menuOpen {currentUser} />
-      <main>
-        <Route path="/" component={Home} />
-        <Route path="/challenge/:challengeId" component={ChallengeDetails} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/profile/:username" component={PublicProfile} />
-        <Route path="/login" component={Login} />
-        <Route path="/signup" component={SignUp} />
-        <Route path="/social" component={SocialFeed} />
-        <Route path="/discover" component={Discover} />
-        <Route path="/notifications" component={Notifications} />
-      </main>
-      <BottomNav {notificationCount} />
-      {#if $showChallengeCreation}
-        <div
-          class="modal-overlay"
-          on:click={() => ($showChallengeCreation = false)}
-          on:keydown={(e) => {
-            if (e.key === "Enter" || e.key === "Space") {
-              $showChallengeCreation = false;
-            }
-          }}
-          role="button"
-          tabindex="0"
-        >
-          <ChallengeCreation
-            on:close={() => ($showChallengeCreation = false)}
-          />
+    <Header bind:menuOpen {currentUser} />
+    <main>
+      {#if currentPage === "home"}
+        <Home />
+      {:else if currentPage === "challenge"}
+        <ChallengeDetails challengeId={pageProps.challengeId} />
+      {:else if currentPage === "profile"}
+        <Profile />
+      {:else if currentPage === "public-profile"}
+        <PublicProfile username={pageProps.username} />
+      {:else if currentPage === "login"}
+        <Login />
+      {:else if currentPage === "signup"}
+        <SignUp />
+      {:else if currentPage === "social"}
+        <SocialFeed />
+      {:else if currentPage === "discover"}
+        <Discover />
+      {:else if currentPage === "notifications"}
+        <Notifications />
+      {:else}
+        <div class="not-found">
+          <h1>Page Not Found</h1>
+          <p>Sorry, the page you're looking for doesn't exist.</p>
+          <button on:click={() => window.navigateTo("/")}>Go Home</button>
         </div>
       {/if}
-      {#if $showTaskCompletionForm}
-        <div
-          class="modal-overlay"
-          role="dialog"
-          aria-label="Close task completion form"
-          on:click={() => ($showTaskCompletionForm = false)}
-          on:keydown={(e) => {
-            if (e.key === "Enter" || e.key === "Space" || e.key === "Escape") {
-              $showTaskCompletionForm = false;
-            }
-          }}
-          tabindex="0"
-        >
-          <TaskCompletionForm
-            on:close={() => ($showTaskCompletionForm = false)}
-          />
-        </div>
-      {/if}
-    </Router>
+    </main>
+    <BottomNav {notificationCount} activeTab={currentPage} />
+    {#if $showChallengeCreation}
+      <div
+        class="modal-overlay"
+        on:click={() => ($showChallengeCreation = false)}
+        on:keydown={(e) => {
+          if (e.key === "Enter" || e.key === "Space") {
+            $showChallengeCreation = false;
+          }
+        }}
+        role="button"
+        tabindex="0"
+      >
+        <ChallengeCreation on:close={() => ($showChallengeCreation = false)} />
+      </div>
+    {/if}
+    {#if $showTaskCompletionForm}
+      <div
+        class="modal-overlay"
+        role="dialog"
+        aria-label="Close task completion form"
+        on:click={() => ($showTaskCompletionForm = false)}
+        on:keydown={(e) => {
+          if (e.key === "Enter" || e.key === "Space" || e.key === "Escape") {
+            $showTaskCompletionForm = false;
+          }
+        }}
+        tabindex="0"
+      >
+        <TaskCompletionForm
+          on:close={() => ($showTaskCompletionForm = false)}
+        />
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -206,6 +274,28 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
+  }
+
+  .not-found {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .not-found h1 {
+    font-size: 2rem;
+    color: var(--tomato);
+    margin-bottom: 16px;
+  }
+
+  .not-found button {
+    margin-top: 24px;
+    background-color: var(--tomato);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   :global(body) {

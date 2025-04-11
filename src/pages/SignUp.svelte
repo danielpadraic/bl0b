@@ -1,7 +1,7 @@
 <script>
   import { supabase } from "../supabase.js";
   import { user } from "../stores.js";
-  import { navigate } from "svelte-routing";
+  import EmailVerificationPopup from "../components/EmailVerificationPopup.svelte";
 
   let firstName = "";
   let lastName = "";
@@ -17,6 +17,8 @@
   let usernameError = "";
   let passwordMatchError = "";
   let phoneNumberError = "";
+  let showVerificationPopup = false;
+  let isSubmitting = false;
 
   let participatesInChallenges = false;
   let gender = "";
@@ -90,6 +92,8 @@
   }
 
   async function signUp() {
+    if (isSubmitting) return;
+
     if (password !== confirmPassword) {
       error = "Passwords must match";
       return;
@@ -119,64 +123,93 @@
       return;
     }
 
+    isSubmitting = true;
+    error = "";
+
     console.log("Attempting signup with:", { email, username, phoneNumberRaw });
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            username: username,
+          },
+        },
+      });
 
-    if (authError) {
-      console.error("Auth signup error:", authError.message);
-      error = authError.message;
-      return;
-    }
+      if (authError) {
+        console.error("Auth signup error:", authError.message);
+        error = authError.message;
+        isSubmitting = false;
+        return;
+      }
 
-    console.log("Auth signup successful, user:", authData.user);
+      console.log("Auth signup successful, user:", authData.user);
 
-    let profilePhotoUrl = null;
-    if (profilePhotoFile) {
-      profilePhotoUrl = await uploadProfilePhoto(authData.user.id);
-    }
+      let profilePhotoUrl = null;
+      if (profilePhotoFile) {
+        profilePhotoUrl = await uploadProfilePhoto(authData.user.id);
+      }
 
-    const userData = {
-      id: authData.user.id,
-      first_name: firstName,
-      last_name: lastName,
-      phone_number: phoneNumberRaw,
-      address,
-      username,
-      participates_in_challenges: participatesInChallenges,
-      email,
-      profile_photo_url: profilePhotoUrl,
-      first_name_public: true, // Always public
-      last_name_public: true, // Always public
-      username_public: true, // Always public
-    };
+      const userData = {
+        id: authData.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumberRaw,
+        address,
+        username,
+        participates_in_challenges: participatesInChallenges,
+        profile_photo_url: profilePhotoUrl,
+        first_name_public: true, // Always public
+        last_name_public: true, // Always public
+        username_public: true, // Always public
+      };
 
-    if (participatesInChallenges) {
-      userData.gender = gender;
-      userData.dob = dob;
-      userData.height = parseInt(height) || 0;
-      userData.weight = parseInt(weight) || 0;
-      userData.body_fat_percentage = bodyFatPercentage; // Optional
-      userData.gender_public = true; // Always public
-    }
+      if (participatesInChallenges) {
+        userData.gender = gender;
+        userData.dob = dob;
+        userData.height = parseInt(height) || 0;
+        userData.weight = parseInt(weight) || 0;
+        userData.body_fat_percentage = bodyFatPercentage; // Optional
+        userData.gender_public = true; // Always public
+      }
 
-    console.log("Inserting user data into profiles table:", userData);
+      console.log("Inserting user data into profiles table:", userData);
 
-    const { data: insertData, error: dbError } = await supabase
-      .from("profiles")
-      .insert([userData]);
+      const { data: insertData, error: dbError } = await supabase
+        .from("profiles")
+        .insert([userData]);
 
-    if (dbError) {
-      console.error("Database insert error:", dbError.message);
-      error = dbError.message;
-    } else {
+      if (dbError) {
+        console.error("Database insert error:", dbError.message);
+        error = dbError.message;
+        isSubmitting = false;
+        return;
+      }
+
       console.log("User data inserted successfully:", insertData);
+
+      // Show the verification popup instead of immediately redirecting
+      showVerificationPopup = true;
+
+      // Update user state
       user.set(authData.user);
-      navigate("/");
+    } catch (err) {
+      console.error("Signup error:", err);
+      error = err.message || "An unexpected error occurred during signup";
+      isSubmitting = false;
     }
+  }
+
+  function handleVerificationPopupClose() {
+    showVerificationPopup = false;
+
+    // Navigate to home page after closing the popup
+    window.navigateTo("/");
   }
 </script>
 
@@ -372,18 +405,36 @@
         max="60"
         step="1"
       />
-      <p>{bodyFatPercentage === 60 ? "60%+" : `${bodyFatPercentage}%`}</p>
+      <p>
+        {bodyFatPercentage === null
+          ? "Not set"
+          : bodyFatPercentage === 60
+            ? "60%+"
+            : `${bodyFatPercentage}%`}
+      </p>
     {/if}
 
     <button
       type="submit"
-      disabled={usernameError || passwordMatchError || phoneNumberError}
+      disabled={usernameError ||
+        passwordMatchError ||
+        phoneNumberError ||
+        isSubmitting}
+      class:loading={isSubmitting}
     >
-      Sign Up
+      {isSubmitting ? "Signing Up..." : "Sign Up"}
     </button>
   </form>
+
   {#if error}
     <p class="error">{error}</p>
+  {/if}
+
+  {#if showVerificationPopup}
+    <EmailVerificationPopup
+      userEmail={email}
+      on:close={handleVerificationPopupClose}
+    />
   {/if}
 </div>
 
@@ -492,6 +543,56 @@
     display: flex;
     align-items: center;
     gap: 5px;
+  }
+
+  button {
+    position: relative;
+    padding: 12px;
+    border-radius: 8px;
+    background-color: var(--tomato);
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 20px;
+    transition: background-color 0.3s;
+  }
+
+  button:hover:not(:disabled) {
+    background-color: var(--tomato-light);
+  }
+
+  button:disabled {
+    background-color: var(--gray);
+    cursor: not-allowed;
+  }
+
+  button.loading {
+    background-color: var(--tomato-light);
+  }
+
+  button.loading::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: calc(50% - 10px);
+    right: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s infinite linear;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   @media (min-width: 768px) {

@@ -1,5 +1,4 @@
 <script>
-  import { navigate } from "svelte-routing";
   import { showTaskCompletionForm } from "../stores.js";
 
   // Props
@@ -8,7 +7,13 @@
 
   // Handle navigation
   function navigateTo(route) {
-    navigate(route);
+    // Use the custom navigation function added to the window object
+    if (window.navigateTo) {
+      window.navigateTo(route);
+    } else {
+      // Fallback to simple location change if navigateTo isn't available
+      window.location.href = route;
+    }
   }
 
   // Show task completion form

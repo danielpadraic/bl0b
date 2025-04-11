@@ -273,224 +273,89 @@
   }
 </script>
 
-<div class="profile-page">
-  {#if loading}
-    <p>Loading...</p>
-  {:else if error}
-    <p class="error">Error: {error}</p>
-  {:else}
-    <div class="profile-container">
-      <div class="photo-section">
-        {#if profile.profile_photo_url}
-          <img
-            src={profile.profile_photo_url}
-            alt="Profile"
-            class="profile-photo"
-          />
-        {:else}
-          <div class="photo-placeholder">No Photo</div>
-        {/if}
-        <input
-          type="file"
-          id="profilePhoto"
-          accept="image/*"
-          on:change={(e) => (profilePhotoFile = e.target.files[0])}
-          hidden
-        />
-        <button
-          class="edit-photo-btn"
-          on:click={() => document.getElementById("profilePhoto").click()}
-        >
-          Edit Photo
-        </button>
-        <button class="upload-btn" on:click={uploadProfilePhoto}>
-          Upload
-        </button>
+<div class="profile-page-wrapper">
+  <div class="profile-page-container">
+    {#if loading}
+      <div class="loading-state">
+        <p>Loading...</p>
       </div>
-
-      <div class="details-section">
-        <section id="personal-details">
-          <h2>Personal Details</h2>
-
-          <h3>Contact Information</h3>
-          <table class="info-table">
-            <tbody>
-              <tr>
-                <th>Name</th>
-                <td>
-                  {#if editingPersonal}
-                    <input
-                      type="text"
-                      bind:value={profile.first_name}
-                      placeholder="First Name"
-                      required
-                    />
-                    <input
-                      type="text"
-                      bind:value={profile.last_name}
-                      placeholder="Last Name"
-                      required
-                    />
-                  {:else}
-                    {profile.first_name} {profile.last_name}
-                  {/if}
-                </td>
-                <td>(Always Public)</td>
-              </tr>
-              <tr>
-                <th>Phone</th>
-                <td>
-                  {#if editingPersonal}
-                    <input
-                      type="text"
-                      bind:value={profile.phone_number}
-                      placeholder="Phone Number"
-                      required
-                    />
-                  {:else}
-                    {profile.phone_number}
-                  {/if}
-                </td>
-                <td>
-                  {#if editingPersonal}
-                    <label>
-                      Public: <input
-                        type="checkbox"
-                        bind:checked={profile.phone_number_public}
-                      />
-                    </label>
-                  {:else}
-                    (Public: {profile.phone_number_public ? "Yes" : "No"})
-                  {/if}
-                </td>
-              </tr>
-              <tr>
-                <th>Email</th>
-                <td>{$user.email}</td>
-                <td>(Not editable)</td>
-              </tr>
-              <tr>
-                <th>Address</th>
-                <td>
-                  {#if editingPersonal}
-                    <input
-                      type="text"
-                      bind:value={profile.address}
-                      placeholder="Address"
-                      required
-                    />
-                  {:else}
-                    {profile.address}
-                  {/if}
-                </td>
-                <td>
-                  {#if editingPersonal}
-                    <label>
-                      Public: <input
-                        type="checkbox"
-                        bind:checked={profile.address_public}
-                      />
-                    </label>
-                  {:else}
-                    (Public: {profile.address_public ? "Yes" : "No"})
-                  {/if}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <h3>Physical Details</h3>
-          <div class="toggle-container">
-            <label for="participatesInChallenges"
-              >Participates in Fitness Challenges?</label
+    {:else if error}
+      <div class="error-state">
+        <p class="error">{error}</p>
+      </div>
+    {:else}
+      <div class="profile-container">
+        <div class="photo-section">
+          {#if profile.profile_photo_url}
+            <img
+              src={profile.profile_photo_url}
+              alt="Profile"
+              class="profile-photo"
+            />
+          {:else}
+            <div class="photo-placeholder">No Photo</div>
+          {/if}
+          <input
+            type="file"
+            id="profilePhoto"
+            accept="image/*"
+            on:change={(e) => (profilePhotoFile = e.target.files[0])}
+            hidden
+          />
+          <div class="photo-actions">
+            <button
+              class="edit-photo-btn"
+              on:click={() => document.getElementById("profilePhoto").click()}
             >
-            <div class="switch">
-              <span class="toggle-label no">N</span>
-              <input
-                type="checkbox"
-                id="participatesInChallenges"
-                bind:checked={profile.participates_in_challenges}
-                disabled={!editingPersonal}
-              />
-              <span class="slider"></span>
-              <span class="toggle-label yes">Y</span>
-            </div>
-            {#if editingPersonal}
-              <label>
-                Public: <input
-                  type="checkbox"
-                  bind:checked={profile.participates_in_challenges_public}
-                />
-              </label>
-            {/if}
+              Edit Photo
+            </button>
+            <button class="upload-btn" on:click={uploadProfilePhoto}>
+              Upload
+            </button>
           </div>
-          {#if profile.participates_in_challenges}
+        </div>
+
+        <div class="details-section">
+          <section id="personal-details">
+            <h2>Personal Details</h2>
+
+            <h3>Contact Information</h3>
             <table class="info-table">
               <tbody>
                 <tr>
-                  <th>Gender</th>
+                  <th>Name</th>
                   <td>
                     {#if editingPersonal}
-                      <div class="radio-group">
-                        <label>
-                          <input
-                            type="radio"
-                            bind:group={profile.gender}
-                            value="Male"
-                            required
-                          /> Male
-                        </label>
-                        <label>
-                          <input
-                            type="radio"
-                            bind:group={profile.gender}
-                            value="Female"
-                            required
-                          /> Female
-                        </label>
-                      </div>
+                      <input
+                        type="text"
+                        bind:value={profile.first_name}
+                        placeholder="First Name"
+                        required
+                      />
+                      <input
+                        type="text"
+                        bind:value={profile.last_name}
+                        placeholder="Last Name"
+                        required
+                      />
                     {:else}
-                      {profile.gender}
+                      {profile.first_name} {profile.last_name}
                     {/if}
                   </td>
                   <td>(Always Public)</td>
                 </tr>
                 <tr>
-                  <th>DOB (Age)</th>
-                  <td>
-                    {#if editingPersonal}
-                      <input type="date" bind:value={profile.dob} required />
-                    {:else}
-                      {profile.dob} ({calculateAge(profile.dob)})
-                    {/if}
-                  </td>
-                  <td>
-                    {#if editingPersonal}
-                      <label>
-                        Public: <input
-                          type="checkbox"
-                          bind:checked={profile.dob_public}
-                        />
-                      </label>
-                    {:else}
-                      (Public: {profile.dob_public ? "Yes" : "No"})
-                    {/if}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Height</th>
+                  <th>Phone</th>
                   <td>
                     {#if editingPersonal}
                       <input
-                        type="number"
-                        bind:value={profile.height}
-                        min="0"
-                        step="1"
-                        placeholder="Inches"
+                        type="text"
+                        bind:value={profile.phone_number}
+                        placeholder="Phone Number"
                         required
                       />
                     {:else}
-                      {formatHeight(profile.height)}
+                      {profile.phone_number}
                     {/if}
                   </td>
                   <td>
@@ -498,28 +363,31 @@
                       <label>
                         Public: <input
                           type="checkbox"
-                          bind:checked={profile.height_public}
+                          bind:checked={profile.phone_number_public}
                         />
                       </label>
                     {:else}
-                      (Public: {profile.height_public ? "Yes" : "No"})
+                      (Public: {profile.phone_number_public ? "Yes" : "No"})
                     {/if}
                   </td>
                 </tr>
                 <tr>
-                  <th>Weight</th>
+                  <th>Email</th>
+                  <td>{$user.email}</td>
+                  <td>(Not editable)</td>
+                </tr>
+                <tr>
+                  <th>Address</th>
                   <td>
                     {#if editingPersonal}
                       <input
-                        type="number"
-                        bind:value={profile.weight}
-                        min="0"
-                        step="1"
-                        placeholder="lbs"
+                        type="text"
+                        bind:value={profile.address}
+                        placeholder="Address"
                         required
                       />
                     {:else}
-                      {profile.weight ? `${profile.weight} lbs` : "Not set"}
+                      {profile.address}
                     {/if}
                   </td>
                   <td>
@@ -527,182 +395,341 @@
                       <label>
                         Public: <input
                           type="checkbox"
-                          bind:checked={profile.weight_public}
+                          bind:checked={profile.address_public}
                         />
                       </label>
                     {:else}
-                      (Public: {profile.weight_public ? "Yes" : "No"})
+                      (Public: {profile.address_public ? "Yes" : "No"})
                     {/if}
                   </td>
-                </tr>
-                <tr>
-                  <th>Body Fat %</th>
-                  <td>
-                    {#if editingPersonal}
-                      <input
-                        type="number"
-                        bind:value={profile.body_fat_percentage}
-                        min="0"
-                        max="100"
-                        placeholder="%"
-                      />
-                    {:else}
-                      {profile.body_fat_percentage
-                        ? `${profile.body_fat_percentage}%`
-                        : "Not set"}
-                    {/if}
-                  </td>
-                  <td>
-                    {#if editingPersonal}
-                      <label>
-                        Public: <input
-                          type="checkbox"
-                          bind:checked={profile.body_fat_percentage_public}
-                        />
-                      </label>
-                    {:else}
-                      (Public: {profile.body_fat_percentage_public
-                        ? "Yes"
-                        : "No"})
-                    {/if}
-                  </td>
-                </tr>
-                <tr>
-                  <th>BMI</th>
-                  <td>{calculateBMI(profile.height, profile.weight)}</td>
-                  <td
-                    >{editingPersonal
-                      ? ""
-                      : `(Public: ${profile.bmi_public ? "Yes" : "No"})`}</td
-                  >
-                </tr>
-                <tr>
-                  <th>BMR</th>
-                  <td
-                    >{calculateBMR(
-                      profile.height,
-                      profile.weight,
-                      profile.gender,
-                      profile.dob
-                    )} kcal/day</td
-                  >
-                  <td
-                    >{editingPersonal
-                      ? ""
-                      : `(Public: ${profile.bmr_public ? "Yes" : "No"})`}</td
-                  >
                 </tr>
               </tbody>
             </table>
-          {/if}
 
-          {#if editingPersonal}
-            <div class="buttons">
-              <button on:click={updateProfile}>Save Changes</button>
-              <button
-                class="cancel-btn"
-                on:click={() => (editingPersonal = false)}>Cancel</button
+            <h3>Physical Details</h3>
+            <div class="toggle-container">
+              <label for="participatesInChallenges"
+                >Participates in Fitness Challenges?</label
               >
-            </div>
-          {:else}
-            <button class="edit-btn" on:click={() => (editingPersonal = true)}
-              >Edit Personal Details</button
-            >
-          {/if}
-        </section>
-
-        <section id="account-details">
-          <h2>Account Details</h2>
-          <table class="info-table">
-            <tbody>
-              <tr>
-                <th>Username</th>
-                <td>
-                  {#if editingAccount}
-                    <input type="text" bind:value={profile.username} required />
-                  {:else}
-                    @{profile.username}
-                  {/if}
-                </td>
-                <td>(Always Public)</td>
-              </tr>
-              {#if editingPassword}
-                <tr>
-                  <th>Current Password</th>
-                  <td
-                    ><input
-                      type="password"
-                      bind:value={passwordForm.currentPassword}
-                      required
-                    /></td
-                  >
-                  <td></td>
-                </tr>
-                <tr>
-                  <th>New Password</th>
-                  <td
-                    ><input
-                      type="password"
-                      bind:value={passwordForm.newPassword}
-                      required
-                    /></td
-                  >
-                  <td></td>
-                </tr>
-                <tr>
-                  <th>Confirm New Password</th>
-                  <td
-                    ><input
-                      type="password"
-                      bind:value={passwordForm.confirmPassword}
-                      required
-                    /></td
-                  >
-                  <td></td>
-                </tr>
+              <div class="switch">
+                <span class="toggle-label no">N</span>
+                <input
+                  type="checkbox"
+                  id="participatesInChallenges"
+                  bind:checked={profile.participates_in_challenges}
+                  disabled={!editingPersonal}
+                />
+                <span class="slider"></span>
+                <span class="toggle-label yes">Y</span>
+              </div>
+              {#if editingPersonal}
+                <label>
+                  Public: <input
+                    type="checkbox"
+                    bind:checked={profile.participates_in_challenges_public}
+                  />
+                </label>
               {/if}
-            </tbody>
-          </table>
+            </div>
+            {#if profile.participates_in_challenges}
+              <table class="info-table">
+                <tbody>
+                  <tr>
+                    <th>Gender</th>
+                    <td>
+                      {#if editingPersonal}
+                        <div class="radio-group">
+                          <label>
+                            <input
+                              type="radio"
+                              bind:group={profile.gender}
+                              value="Male"
+                              required
+                            /> Male
+                          </label>
+                          <label>
+                            <input
+                              type="radio"
+                              bind:group={profile.gender}
+                              value="Female"
+                              required
+                            /> Female
+                          </label>
+                        </div>
+                      {:else}
+                        {profile.gender}
+                      {/if}
+                    </td>
+                    <td>(Always Public)</td>
+                  </tr>
+                  <tr>
+                    <th>DOB (Age)</th>
+                    <td>
+                      {#if editingPersonal}
+                        <input type="date" bind:value={profile.dob} required />
+                      {:else}
+                        {profile.dob} ({calculateAge(profile.dob)})
+                      {/if}
+                    </td>
+                    <td>
+                      {#if editingPersonal}
+                        <label>
+                          Public: <input
+                            type="checkbox"
+                            bind:checked={profile.dob_public}
+                          />
+                        </label>
+                      {:else}
+                        (Public: {profile.dob_public ? "Yes" : "No"})
+                      {/if}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Height</th>
+                    <td>
+                      {#if editingPersonal}
+                        <input
+                          type="number"
+                          bind:value={profile.height}
+                          min="0"
+                          step="1"
+                          placeholder="Inches"
+                          required
+                        />
+                      {:else}
+                        {formatHeight(profile.height)}
+                      {/if}
+                    </td>
+                    <td>
+                      {#if editingPersonal}
+                        <label>
+                          Public: <input
+                            type="checkbox"
+                            bind:checked={profile.height_public}
+                          />
+                        </label>
+                      {:else}
+                        (Public: {profile.height_public ? "Yes" : "No"})
+                      {/if}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Weight</th>
+                    <td>
+                      {#if editingPersonal}
+                        <input
+                          type="number"
+                          bind:value={profile.weight}
+                          min="0"
+                          step="1"
+                          placeholder="lbs"
+                          required
+                        />
+                      {:else}
+                        {profile.weight ? `${profile.weight} lbs` : "Not set"}
+                      {/if}
+                    </td>
+                    <td>
+                      {#if editingPersonal}
+                        <label>
+                          Public: <input
+                            type="checkbox"
+                            bind:checked={profile.weight_public}
+                          />
+                        </label>
+                      {:else}
+                        (Public: {profile.weight_public ? "Yes" : "No"})
+                      {/if}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Body Fat %</th>
+                    <td>
+                      {#if editingPersonal}
+                        <input
+                          type="number"
+                          bind:value={profile.body_fat_percentage}
+                          min="0"
+                          max="100"
+                          placeholder="%"
+                        />
+                      {:else}
+                        {profile.body_fat_percentage
+                          ? `${profile.body_fat_percentage}%`
+                          : "Not set"}
+                      {/if}
+                    </td>
+                    <td>
+                      {#if editingPersonal}
+                        <label>
+                          Public: <input
+                            type="checkbox"
+                            bind:checked={profile.body_fat_percentage_public}
+                          />
+                        </label>
+                      {:else}
+                        (Public: {profile.body_fat_percentage_public
+                          ? "Yes"
+                          : "No"})
+                      {/if}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>BMI</th>
+                    <td>{calculateBMI(profile.height, profile.weight)}</td>
+                    <td
+                      >{editingPersonal
+                        ? ""
+                        : `(Public: ${profile.bmi_public ? "Yes" : "No"})`}</td
+                    >
+                  </tr>
+                  <tr>
+                    <th>BMR</th>
+                    <td
+                      >{calculateBMR(
+                        profile.height,
+                        profile.weight,
+                        profile.gender,
+                        profile.dob
+                      )} kcal/day</td
+                    >
+                    <td
+                      >{editingPersonal
+                        ? ""
+                        : `(Public: ${profile.bmr_public ? "Yes" : "No"})`}</td
+                    >
+                  </tr>
+                </tbody>
+              </table>
+            {/if}
 
-          {#if editingAccount}
-            <div class="buttons">
-              <button on:click={updateUsername}>Save Username</button>
-              <button
-                class="cancel-btn"
-                on:click={() => (editingAccount = false)}>Cancel</button
+            {#if editingPersonal}
+              <div class="buttons">
+                <button on:click={updateProfile}>Save Changes</button>
+                <button
+                  class="cancel-btn"
+                  on:click={() => (editingPersonal = false)}>Cancel</button
+                >
+              </div>
+            {:else}
+              <button class="edit-btn" on:click={() => (editingPersonal = true)}
+                >Edit Personal Details</button
               >
-            </div>
-          {:else if editingPassword}
-            <div class="buttons">
-              <button on:click={changePassword}>Save Password</button>
-              <button
-                class="cancel-btn"
-                on:click={() => (editingPassword = false)}>Cancel</button
-              >
-            </div>
-          {:else}
-            <div class="buttons">
-              <button class="edit-btn" on:click={() => (editingAccount = true)}
-                >Edit Username</button
-              >
-              <button class="edit-btn" on:click={() => (editingPassword = true)}
-                >Change Password</button
-              >
-            </div>
-          {/if}
-        </section>
+            {/if}
+          </section>
+
+          <section id="account-details">
+            <h2>Account Details</h2>
+            <table class="info-table">
+              <tbody>
+                <tr>
+                  <th>Username</th>
+                  <td>
+                    {#if editingAccount}
+                      <input
+                        type="text"
+                        bind:value={profile.username}
+                        required
+                      />
+                    {:else}
+                      @{profile.username}
+                    {/if}
+                  </td>
+                  <td>(Always Public)</td>
+                </tr>
+                {#if editingPassword}
+                  <tr>
+                    <th>Current Password</th>
+                    <td
+                      ><input
+                        type="password"
+                        bind:value={passwordForm.currentPassword}
+                        required
+                      /></td
+                    >
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <th>New Password</th>
+                    <td
+                      ><input
+                        type="password"
+                        bind:value={passwordForm.newPassword}
+                        required
+                      /></td
+                    >
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <th>Confirm New Password</th>
+                    <td
+                      ><input
+                        type="password"
+                        bind:value={passwordForm.confirmPassword}
+                        required
+                      /></td
+                    >
+                    <td></td>
+                  </tr>
+                {/if}
+              </tbody>
+            </table>
+
+            {#if editingAccount}
+              <div class="buttons">
+                <button on:click={updateUsername}>Save Username</button>
+                <button
+                  class="cancel-btn"
+                  on:click={() => (editingAccount = false)}>Cancel</button
+                >
+              </div>
+            {:else if editingPassword}
+              <div class="buttons">
+                <button on:click={changePassword}>Save Password</button>
+                <button
+                  class="cancel-btn"
+                  on:click={() => (editingPassword = false)}>Cancel</button
+                >
+              </div>
+            {:else}
+              <div class="buttons">
+                <button
+                  class="edit-btn"
+                  on:click={() => (editingAccount = true)}>Edit Username</button
+                >
+                <button
+                  class="edit-btn"
+                  on:click={() => (editingPassword = true)}
+                  >Change Password</button
+                >
+              </div>
+            {/if}
+          </section>
+        </div>
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
-  .profile-page {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    background-color: #f9f9f9;
+  .profile-page-wrapper {
+    padding-top: 60px; /* Space for header */
+    padding-bottom: 70px; /* Space for footer */
     min-height: 100vh;
+    background-color: var(--background);
+    overflow-y: auto;
+  }
+
+  .profile-page-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .loading-state,
+  .error-state {
+    padding: 2rem;
+    text-align: center;
   }
 
   .profile-container {
@@ -713,9 +740,9 @@
 
   .photo-section {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 1rem;
-    flex-wrap: wrap;
   }
 
   .profile-photo {
@@ -737,6 +764,13 @@
     color: var(--charcoal);
     font-size: 1.2rem;
     border: 2px dashed var(--gray);
+  }
+
+  .photo-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .edit-photo-btn,
@@ -883,6 +917,7 @@
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
+    flex-wrap: wrap;
   }
 
   .edit-btn,
@@ -917,13 +952,13 @@
   }
 
   @media (max-width: 768px) {
-    .profile-page {
+    .profile-page-container {
       padding: 1rem;
     }
 
     .photo-section {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
     }
 
     .profile-photo,
