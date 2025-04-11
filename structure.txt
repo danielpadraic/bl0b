@@ -1,0 +1,68 @@
+.
+├── .DS_Store
+├── .env
+├── .gitignore
+├── index.html
+├── package-lock.json
+├── package.json
+├── public
+│   ├── .DS_Store
+│   ├── assets
+│   │   ├── apple-icon.png
+│   │   ├── facebook-icon.png
+│   │   ├── google-icon.png
+│   │   └── logo.png
+│   ├── build
+│   ├── captions.vtt
+│   ├── favicon.ico
+│   ├── favicon.png
+│   └── manifest.json
+├── rls_policies.sql
+├── scripts
+│   └── setupTypeScript.js
+├── src
+│   ├── .DS_Store
+│   ├── App.svelte
+│   ├── components
+│   │   ├── BottomNav.svelte
+│   │   ├── ChallengeCard.svelte
+│   │   ├── ChallengeCreation.svelte
+│   │   ├── Comment.svelte
+│   │   ├── Header.svelte
+│   │   ├── LoadingSpinner.svelte
+│   │   ├── NewChallengeButton.svelte
+│   │   ├── NewsFeed.svelte
+│   │   ├── ReelsCarousel.svelte
+│   │   ├── SocialFeed.svelte
+│   │   ├── StoriesBanner.svelte
+│   │   ├── TaskButtonWithMenu.svelte
+│   │   ├── TaskCompletionForm.svelte
+│   │   └── TaskCreation.svelte
+│   ├── global.css
+│   ├── main.js
+│   ├── pages
+│   │   ├── .DS_Store
+│   │   ├── ChallengeDetails.svelte
+│   │   ├── Discover.svelte
+│   │   ├── Home.svelte
+│   │   ├── Leaderboards.svelte
+│   │   ├── Login.svelte
+│   │   ├── Notifications.svelte
+│   │   ├── Profile.svelte
+│   │   ├── PublicProfile.svelte
+│   │   ├── SignUp.svelte
+│   │   └── TokenPurchase.svelte
+│   ├── stores
+│   │   └── user.js
+│   ├── stores.js
+│   ├── supabase.js
+│   └── utils
+│       └── upload.js
+├── structure.txt
+├── supabase_changes.txt
+├── supabase_data.sql
+├── supabase_dump.sql
+├── vercel.json
+└── vite.config.js
+
+10 directories, 56 files

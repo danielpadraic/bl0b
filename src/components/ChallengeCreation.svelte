@@ -265,9 +265,16 @@
 </script>
 
 {#if $showChallengeCreation}
-  <div class="modal-overlay" on:click={closeModal} on:keydown={closeModal}>
+  <div
+    class="modal-overlay"
+    role="dialog"
+    aria-label="Close challenge creation modal"
+    on:click={closeModal}
+    on:keydown={closeModal}
+  >
     <div
       class="modal-content"
+      role="document"
       on:click|stopPropagation
       on:keydown|stopPropagation={() => {}}
     >
