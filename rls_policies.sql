@@ -51,13 +51,19 @@ CREATE POLICY "Authenticated users can update their logs" ON public.user_challen
 CREATE POLICY "Challenge posts for participants" ON public.posts FOR SELECT TO authenticated USING ((challenge_id IN ( SELECT challenge_participants.challenge_id
 CREATE POLICY "General posts are public" ON public.posts FOR SELECT TO authenticated, anon USING ((challenge_id IS NULL));
 CREATE POLICY "Public challenges are readable by everyone" ON public.challenges FOR SELECT USING ((is_private = false));
+CREATE POLICY "Stories are viewable by everyone" ON public.stories FOR SELECT USING (true);
+CREATE POLICY "Story views are viewable by everyone" ON public.story_views FOR SELECT USING (true);
 CREATE POLICY "Users can delete their own profile" ON public.profiles FOR DELETE USING ((auth.uid() = id));
+CREATE POLICY "Users can delete their own stories" ON public.stories FOR DELETE TO authenticated USING ((auth.uid() = user_id));
 CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK ((auth.uid() = id));
+CREATE POLICY "Users can insert their own stories" ON public.stories FOR INSERT TO authenticated WITH CHECK ((auth.uid() = user_id));
+CREATE POLICY "Users can insert their own story views" ON public.story_views FOR INSERT TO authenticated WITH CHECK ((auth.uid() = user_id));
 CREATE POLICY "Users can insert their profile" ON public.profiles FOR INSERT TO authenticated WITH CHECK ((id = auth.uid()));
 CREATE POLICY "Users can insert their profile with unique username" ON public.profiles FOR INSERT TO authenticated WITH CHECK (((id = auth.uid()) AND (NOT (EXISTS ( SELECT 1
 CREATE POLICY "Users can read their own whispers" ON public.whispers FOR SELECT TO authenticated USING ((recipient_id = auth.uid()));
 CREATE POLICY "Users can send whispers" ON public.whispers FOR INSERT TO authenticated WITH CHECK ((sender_id = auth.uid()));
 CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING ((auth.uid() = id));
+CREATE POLICY "Users can update their own stories" ON public.stories FOR UPDATE TO authenticated USING ((auth.uid() = user_id));
 CREATE POLICY "Users can update their own whispers" ON public.whispers FOR UPDATE TO authenticated USING ((recipient_id = auth.uid()));
 CREATE POLICY "Users can update their profile" ON public.profiles FOR UPDATE TO authenticated USING ((id = auth.uid())) WITH CHECK ((id = auth.uid()));
 CREATE POLICY "Users can update their profile with unique username" ON public.profiles FOR UPDATE TO authenticated USING ((id = auth.uid())) WITH CHECK (((id = auth.uid()) AND (NOT (EXISTS ( SELECT 1
@@ -76,6 +82,8 @@ ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.private_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.social_channels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.story_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_challenge_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_challenges ENABLE ROW LEVEL SECURITY;

@@ -167,7 +167,7 @@
         prize_type: form.prizeType,
         prize_amount: form.prizeType === "set_amount" ? form.prizeAmount : null,
         number_of_winners:
-          form.prizeType === "evenly_distributed" ? form.numberOfWinners : null,
+          form.prizeType === "tournament" ? form.numberOfWinners : null,
         scoring_type:
           form.scoringType === "Other"
             ? form.otherScoringType
@@ -242,12 +242,8 @@
   }
 
   function closeModal(event) {
-    if (
-      event.type === "click" ||
-      (event.type === "keydown" && event.key === "Escape")
-    ) {
-      $showChallengeCreation = false;
-    }
+    // Only close if clicking the overlay or pressing Escape key
+    $showChallengeCreation = false;
   }
 
   function handleFileChange(event) {
@@ -268,16 +264,12 @@
   <div
     class="modal-overlay"
     role="dialog"
-    aria-label="Close challenge creation modal"
-    on:click={closeModal}
-    on:keydown={closeModal}
+    aria-modal="true"
+    aria-label="Challenge creation modal"
+    on:click|self={closeModal}
+    on:keydown={(e) => e.key === "Escape" && closeModal(e)}
   >
-    <div
-      class="modal-content"
-      role="document"
-      on:click|stopPropagation
-      on:keydown|stopPropagation={() => {}}
-    >
+    <div class="modal-content" role="document" on:click|stopPropagation>
       <h2>{editMode ? "Edit Challenge" : "Create a New Challenge"}</h2>
       {#if form.errorMessage}
         <p class="error">{form.errorMessage}</p>
@@ -385,7 +377,7 @@
               required
             />
           {/if}
-          {#if form.prizeType === "evenly_distributed"}
+          {#if form.prizeType === "tournament"}
             <input
               type="number"
               bind:value={form.numberOfWinners}
@@ -393,10 +385,20 @@
               placeholder="Number of winners"
               required
             />
+            <small>Top performers will receive prizes based on ranking.</small>
+          {/if}
+          {#if form.prizeType === "evenly_distributed"}
+            <small
+              >All participants who complete the challenge will split the prize
+              pool equally.</small
+            >
+          {/if}
+          {#if form.prizeType === "winner_takes_all"}
+            <small>The top performer wins the entire prize pool.</small>
           {/if}
           {#if form.prizeType === "tournament"}
             <small
-              >Prizes calculated based on participant count at challenge end.</small
+              >Prizes calculated based on participant count and ranking.</small
             >
           {/if}
         </label>
@@ -465,7 +467,7 @@
             accept="image/*,video/*"
             on:change={handleFileChange}
           />
-          {#if editMode && challenge.cover_media && !form.coverFile}
+          {#if editMode && challenge && challenge.cover_media && !form.coverFile}
             <small
               >Current: <a href={challenge.cover_media} target="_blank">View</a
               ></small

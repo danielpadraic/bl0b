@@ -186,6 +186,103 @@ COPY auth.audit_log_entries (instance_id, id, payload, created_at, ip_address) F
 00000000-0000-0000-0000-000000000000	f50799b0-bbb1-4147-a453-463ab7f43718	{"action":"token_revoked","actor_id":"4174dc1e-6d0b-4e69-a716-1654abf40f1e","actor_username":"none@none.com","actor_via_sso":false,"log_type":"token"}	2025-03-05 00:59:27.154849+00	
 00000000-0000-0000-0000-000000000000	613a7f3d-9e1c-4ad9-9491-7f603b880c94	{"action":"token_refreshed","actor_id":"4174dc1e-6d0b-4e69-a716-1654abf40f1e","actor_username":"none@none.com","actor_via_sso":false,"log_type":"token"}	2025-04-10 20:07:51.642632+00	
 00000000-0000-0000-0000-000000000000	fc6acd32-5f52-4f9a-b05f-c3ce7e41e952	{"action":"token_revoked","actor_id":"4174dc1e-6d0b-4e69-a716-1654abf40f1e","actor_username":"none@none.com","actor_via_sso":false,"log_type":"token"}	2025-04-10 20:07:51.644561+00	
+00000000-0000-0000-0000-000000000000	ac7621ca-d0e2-4f27-901d-c328c7a93643	{"action":"user_signedup","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"team","traits":{"provider":"email"}}	2025-04-11 01:32:57.38559+00	
+00000000-0000-0000-0000-000000000000	e164d62a-c73c-4a63-a1eb-e047dd0a8127	{"action":"login","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}	2025-04-11 01:32:57.391059+00	
+00000000-0000-0000-0000-000000000000	02d48c6b-4807-409f-acc0-9ea7f878b14f	{"action":"user_repeated_signup","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"user","traits":{"provider":"email"}}	2025-04-11 01:36:24.38836+00	
+00000000-0000-0000-0000-000000000000	203d5627-ebfe-4698-92b9-4d36cbc08937	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 02:31:20.897398+00	
+00000000-0000-0000-0000-000000000000	0fa32f55-547f-44b8-92d8-e9a9476acdef	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 02:31:20.898342+00	
+00000000-0000-0000-0000-000000000000	ae18a4d3-9289-4b67-95fa-a9c86be579d6	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 16:31:03.402425+00	
+00000000-0000-0000-0000-000000000000	455b879f-a1df-4981-9e96-693d4fdfcc1b	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 16:31:03.406933+00	
+00000000-0000-0000-0000-000000000000	9323cbb1-0899-44e7-8d56-fbead48d859e	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 17:30:30.247038+00	
+00000000-0000-0000-0000-000000000000	ea0348d1-0597-4038-a6df-05675675b3f5	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 17:30:30.252712+00	
+00000000-0000-0000-0000-000000000000	67dd600c-8aa1-4397-b6fd-28eca4bca868	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 18:29:36.247623+00	
+00000000-0000-0000-0000-000000000000	0b9cef6c-7d5d-42d2-ac12-b0faaff3cb87	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 18:29:36.248573+00	
+00000000-0000-0000-0000-000000000000	c1e39578-e548-4156-ad12-7511ee678599	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 19:30:08.530545+00	
+00000000-0000-0000-0000-000000000000	8fdc204c-47a0-4ceb-befd-6c9c01acf182	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-11 19:30:08.531513+00	
+00000000-0000-0000-0000-000000000000	91e8679a-a7aa-4971-a96b-eaedf366f449	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 03:03:20.909812+00	
+00000000-0000-0000-0000-000000000000	ef1379fd-bb08-49d5-b1d0-eec29516ecee	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 03:03:20.913703+00	
+00000000-0000-0000-0000-000000000000	49497bb7-a37f-48b6-a0ca-5f4deb1c8367	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 04:02:08.731711+00	
+00000000-0000-0000-0000-000000000000	36d17d78-dd4c-407b-96c2-d15e774a01e3	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 04:02:08.733296+00	
+00000000-0000-0000-0000-000000000000	b181d194-0128-4c1f-bfdb-136a267608c7	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 05:07:23.108041+00	
+00000000-0000-0000-0000-000000000000	98129b45-fcdf-4174-9276-e22ddd326338	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 05:07:23.109015+00	
+00000000-0000-0000-0000-000000000000	6126e396-70ad-4aaf-9534-d28934d560f3	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 07:42:54.034665+00	
+00000000-0000-0000-0000-000000000000	6fc27dd2-2b56-4236-8d26-0d439c9d72c2	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 07:42:54.035716+00	
+00000000-0000-0000-0000-000000000000	e3081602-64d0-4822-8cdb-28e5bea973f8	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 09:20:06.548639+00	
+00000000-0000-0000-0000-000000000000	3daf9df6-7124-43c1-be7c-9fe7decaaa68	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 09:20:06.549536+00	
+00000000-0000-0000-0000-000000000000	5526431c-5fb7-497a-afc7-314989c286f2	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 11:24:55.219801+00	
+00000000-0000-0000-0000-000000000000	04d90a44-e55c-4243-81e2-41587ce6e4ed	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 11:24:55.22077+00	
+00000000-0000-0000-0000-000000000000	459df3eb-3e51-4cd3-bf9f-e671d0c4eae8	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 13:04:27.295905+00	
+00000000-0000-0000-0000-000000000000	cbd64c08-261c-4f4c-a871-cadffd41cb91	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 13:04:27.296899+00	
+00000000-0000-0000-0000-000000000000	7e85c1b4-5abd-4f3d-b2b0-871425d2dc03	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 14:41:53.976508+00	
+00000000-0000-0000-0000-000000000000	13d606fb-bf8e-4473-960f-f1f581d2e216	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 14:41:53.977475+00	
+00000000-0000-0000-0000-000000000000	6bc7c3ec-3713-4088-a783-4f5293fba913	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 15:45:53.980563+00	
+00000000-0000-0000-0000-000000000000	693aaac6-f5d6-4574-9080-9a8a8f7fe2c9	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 15:45:53.981545+00	
+00000000-0000-0000-0000-000000000000	932ff643-dd01-4a09-a4b4-b1c5bbc553f5	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 16:56:33.347619+00	
+00000000-0000-0000-0000-000000000000	21c579a4-8a06-4dc9-942a-cc0e6bd84ed6	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 16:56:33.348642+00	
+00000000-0000-0000-0000-000000000000	290c2815-2258-4cf7-b167-d91fe87cd5f5	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 18:09:34.586832+00	
+00000000-0000-0000-0000-000000000000	2cf77c2c-cdab-40a8-aa0a-496da02cc003	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 18:09:34.587912+00	
+00000000-0000-0000-0000-000000000000	1fee2c3e-c3bf-4de6-a0fd-b29f122ceb15	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 19:10:19.827628+00	
+00000000-0000-0000-0000-000000000000	5352d90b-6247-43ab-92f8-18e36b032e9b	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 19:10:19.828714+00	
+00000000-0000-0000-0000-000000000000	8a297e77-69d2-45d8-ad84-3bc6074f0595	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 20:11:27.838955+00	
+00000000-0000-0000-0000-000000000000	cf1e909f-93c0-4eb6-8785-74a263d0effc	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 20:11:27.839903+00	
+00000000-0000-0000-0000-000000000000	0174b773-d29b-439d-946c-6c2cc0bb9da5	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 21:12:43.602991+00	
+00000000-0000-0000-0000-000000000000	6851b09a-b45a-4864-a23f-4e2434884fc0	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 21:12:43.604033+00	
+00000000-0000-0000-0000-000000000000	bab78438-f358-4024-bf82-99e83fcefd77	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 22:13:26.563801+00	
+00000000-0000-0000-0000-000000000000	649c3b2b-d05c-4d72-9912-5f7e4b8baab8	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 22:13:26.564844+00	
+00000000-0000-0000-0000-000000000000	c9ede235-0427-42dd-b954-259f1e856f3f	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 23:54:29.401575+00	
+00000000-0000-0000-0000-000000000000	5dc72580-e6c6-492c-89a7-d253db199e53	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-16 23:54:29.402498+00	
+00000000-0000-0000-0000-000000000000	57eeb372-f075-4e77-b615-ff922c9b2a3f	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 01:16:41.319581+00	
+00000000-0000-0000-0000-000000000000	d39b0f7b-9194-4c35-8a6c-51b6244f1ad5	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 01:16:41.320523+00	
+00000000-0000-0000-0000-000000000000	25c14268-986e-4ea5-919c-998e7d76dd8e	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 03:18:32.163091+00	
+00000000-0000-0000-0000-000000000000	7ab92459-1abd-490c-9370-eaec226e701c	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 03:18:32.164107+00	
+00000000-0000-0000-0000-000000000000	43e2b60c-810a-463f-9ea0-0fb3275b655f	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 05:56:58.071144+00	
+00000000-0000-0000-0000-000000000000	02bc3cd5-6e36-4b01-869c-c6ae86d8c865	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 05:56:58.072164+00	
+00000000-0000-0000-0000-000000000000	3b7974e4-457e-4219-9fb2-6c9cbc329065	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 10:04:11.007926+00	
+00000000-0000-0000-0000-000000000000	70899236-133f-4ee9-991b-07f1a7bf71ef	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 10:04:11.008986+00	
+00000000-0000-0000-0000-000000000000	12377fab-ec9b-49b2-a74e-503cd937a72b	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 12:03:56.098038+00	
+00000000-0000-0000-0000-000000000000	ec7a1215-bdbd-47bf-a921-b66665e21c52	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 12:03:56.099095+00	
+00000000-0000-0000-0000-000000000000	065915eb-1403-47aa-bb3c-5e26a75b790a	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 13:44:52.034741+00	
+00000000-0000-0000-0000-000000000000	aeed7f0f-71cc-42b9-bda2-742c2f80ae22	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 13:44:52.035677+00	
+00000000-0000-0000-0000-000000000000	1657d4f3-06d7-41e3-9ee0-f22bbca2ab75	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 15:10:08.555374+00	
+00000000-0000-0000-0000-000000000000	7fbdbbed-9688-4b21-8fa4-e3e53789ad6c	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 15:10:08.556366+00	
+00000000-0000-0000-0000-000000000000	e6307f4d-0d43-411d-acc1-7fc336c4134b	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 16:11:08.418997+00	
+00000000-0000-0000-0000-000000000000	4f2ccac7-0f70-4d66-86df-86b7c30408a7	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 16:11:08.419957+00	
+00000000-0000-0000-0000-000000000000	d2106cdb-16d7-4c0f-a1b3-d57229ea29f0	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 17:14:53.541224+00	
+00000000-0000-0000-0000-000000000000	aca7b63a-40cf-4ed8-8412-52103d59a224	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 17:14:53.542199+00	
+00000000-0000-0000-0000-000000000000	83a635b6-7829-41d4-913b-04b22ac11657	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 18:51:57.50481+00	
+00000000-0000-0000-0000-000000000000	234dd989-cc0a-47a3-988f-6b0e72444c6e	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 18:51:57.505762+00	
+00000000-0000-0000-0000-000000000000	e3731022-06ba-487a-af56-d19d31d2efb4	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 20:16:55.232228+00	
+00000000-0000-0000-0000-000000000000	3afac461-3af2-4b61-a2ab-5cb105c29305	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 20:16:55.233269+00	
+00000000-0000-0000-0000-000000000000	d138d7ea-a91b-4379-a171-67a2db46345b	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 21:18:13.851326+00	
+00000000-0000-0000-0000-000000000000	b6484cc4-9fa4-4dd4-ba7d-39c069ea9e96	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 21:18:13.852342+00	
+00000000-0000-0000-0000-000000000000	4cb79f2f-9ae9-46aa-a836-13e68b08981d	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 22:18:57.78221+00	
+00000000-0000-0000-0000-000000000000	30a72980-c325-4bc8-8736-13b2eb5994af	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 22:18:57.783147+00	
+00000000-0000-0000-0000-000000000000	39d37903-cbc5-4201-aa95-355fb7542efe	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 23:18:20.27593+00	
+00000000-0000-0000-0000-000000000000	b626d366-3b65-4478-adf4-efd8ef300fc9	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-17 23:18:20.276916+00	
+00000000-0000-0000-0000-000000000000	7436b87b-b440-4d14-af81-dd570901c1d2	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 00:17:29.350229+00	
+00000000-0000-0000-0000-000000000000	8e3d60f5-c4c7-4018-999c-8495744e485b	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 00:17:29.351153+00	
+00000000-0000-0000-0000-000000000000	b0c034d5-8ecc-48ab-b915-d95161422f75	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 01:16:29.352715+00	
+00000000-0000-0000-0000-000000000000	54fb87e8-c64a-4e99-b9ac-1207a3f77212	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 01:16:29.353663+00	
+00000000-0000-0000-0000-000000000000	9e73872c-28b2-4cb0-a387-abfcec565ca6	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 02:15:28.364655+00	
+00000000-0000-0000-0000-000000000000	9319152d-763a-4cf6-b42b-5463f147d8be	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 02:15:28.365641+00	
+00000000-0000-0000-0000-000000000000	21f621f1-ccf6-492e-8ab2-2cb88d916011	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 03:58:41.702239+00	
+00000000-0000-0000-0000-000000000000	ea5b1fc1-8509-4fed-8898-b9dfded72bc3	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 03:58:41.703117+00	
+00000000-0000-0000-0000-000000000000	f986a6de-373b-4d95-9a84-04889a2b5454	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 06:00:30.99122+00	
+00000000-0000-0000-0000-000000000000	abace4ba-1697-4a9a-9acd-ee34db494c2b	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 06:00:30.992172+00	
+00000000-0000-0000-0000-000000000000	81632835-af88-4c41-a49a-0c18c41eaf94	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 08:26:47.549259+00	
+00000000-0000-0000-0000-000000000000	430d4b56-cd11-42c3-890d-e84446cdeb58	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 08:26:47.55022+00	
+00000000-0000-0000-0000-000000000000	1b068792-cd2e-4366-b9d0-b785f6302494	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 11:34:27.101903+00	
+00000000-0000-0000-0000-000000000000	909c7081-63d0-4382-a370-8aa072592b6b	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 11:34:27.102953+00	
+00000000-0000-0000-0000-000000000000	1e1c48c8-261d-4965-83b4-87fb23a3e923	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 12:42:57.212606+00	
+00000000-0000-0000-0000-000000000000	d6a2fcd0-b03b-40a9-8b6a-f7d337665bb6	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 12:42:57.213569+00	
+00000000-0000-0000-0000-000000000000	974c620e-ff7f-424d-9925-b96e58d3568a	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 14:00:11.0401+00	
+00000000-0000-0000-0000-000000000000	59ec180c-12db-4696-b75d-24b91b2fa0c6	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 14:00:11.041167+00	
+00000000-0000-0000-0000-000000000000	d9813d60-6332-403c-a543-07b33800c0e2	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 16:02:25.733104+00	
+00000000-0000-0000-0000-000000000000	34fdf6e5-9aa1-4277-b0f0-7ab6aa11bf14	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 16:02:25.734164+00	
+00000000-0000-0000-0000-000000000000	a8a6d0a2-2b71-4c79-9a54-827e961f3ec2	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 17:01:01.427511+00	
+00000000-0000-0000-0000-000000000000	3725fa51-2bc1-4030-a5c6-a698a01e8bb3	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 17:01:01.429107+00	
+00000000-0000-0000-0000-000000000000	fb2cea88-a1e7-450d-a964-85600ae27382	{"action":"token_refreshed","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 18:00:01.42191+00	
+00000000-0000-0000-0000-000000000000	02c0dce8-ab31-428e-8ac2-cc2e6804a1c0	{"action":"token_revoked","actor_id":"fd667865-de1e-4f75-9701-db02d60d2b6e","actor_username":"danielpadraic@gmail.com","actor_via_sso":false,"log_type":"token"}	2025-04-18 18:00:01.423422+00	
 \.
 
 
@@ -204,6 +301,7 @@ COPY auth.flow_state (id, user_id, auth_code, code_challenge_method, code_challe
 COPY auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, invited_at, confirmation_token, confirmation_sent_at, recovery_token, recovery_sent_at, email_change_token_new, email_change, email_change_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, is_super_admin, created_at, updated_at, phone, phone_confirmed_at, phone_change, phone_change_token, phone_change_sent_at, email_change_token_current, email_change_confirm_status, banned_until, reauthentication_token, reauthentication_sent_at, is_sso_user, deleted_at, is_anonymous) FROM stdin;
 00000000-0000-0000-0000-000000000000	8935db97-9a3d-4058-9589-6e0f9b01ee84	authenticated	authenticated	grant@gravicdesign.com	$2a$10$WiGaopt1K5.ibhOzT7dRsue4PZD7VDXIF8zeURUh9ohbnvGOx179q	2025-02-27 17:48:46.117546+00	\N		\N		2025-03-04 02:43:16.361382+00			\N	2025-03-04 16:01:05.251106+00	{"provider": "email", "providers": ["email"]}	{"sub": "8935db97-9a3d-4058-9589-6e0f9b01ee84", "email": "grant@gravicdesign.com", "email_verified": true, "phone_verified": false}	\N	2025-02-27 17:48:46.096097+00	2025-03-04 16:01:05.258494+00	\N	\N			\N		0	\N		\N	f	\N	f
 00000000-0000-0000-0000-000000000000	4174dc1e-6d0b-4e69-a716-1654abf40f1e	authenticated	authenticated	none@none.com	$2a$10$0GxlfcyxYBuy9q/gA2x9gOTqfs0Qv/Yg1lSuOu8ovH/H.cKWtBFNW	2025-02-26 04:28:22.626012+00	\N		\N		\N			\N	2025-03-04 04:41:54.401281+00	{"provider": "email", "providers": ["email"]}	{"sub": "4174dc1e-6d0b-4e69-a716-1654abf40f1e", "email": "none@none.com", "email_verified": true, "phone_verified": false}	\N	2025-02-26 04:28:22.617771+00	2025-04-10 20:07:51.647078+00	\N	\N			\N		0	\N		\N	f	\N	f
+00000000-0000-0000-0000-000000000000	fd667865-de1e-4f75-9701-db02d60d2b6e	authenticated	authenticated	danielpadraic@gmail.com	$2a$10$h6E0XCjoPNdXjBa8zYvs3uS85G3otdo/M8Uqdj4Ab4aoH/1EY1yTe	2025-04-11 01:32:57.386457+00	\N		\N		\N			\N	2025-04-11 01:32:57.391709+00	{"provider": "email", "providers": ["email"]}	{"sub": "fd667865-de1e-4f75-9701-db02d60d2b6e", "email": "danielpadraic@gmail.com", "email_verified": true, "phone_verified": false}	\N	2025-04-11 01:32:57.373115+00	2025-04-18 18:00:01.428986+00	\N	\N			\N		0	\N		\N	f	\N	f
 \.
 
 
@@ -214,6 +312,7 @@ COPY auth.users (instance_id, id, aud, role, email, encrypted_password, email_co
 COPY auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, id) FROM stdin;
 4174dc1e-6d0b-4e69-a716-1654abf40f1e	4174dc1e-6d0b-4e69-a716-1654abf40f1e	{"sub": "4174dc1e-6d0b-4e69-a716-1654abf40f1e", "email": "none@none.com", "email_verified": false, "phone_verified": false}	email	2025-02-26 04:28:22.623013+00	2025-02-26 04:28:22.623059+00	2025-02-26 04:28:22.623059+00	fbc6d881-93bc-4ca1-92db-f8bd15bbae66
 8935db97-9a3d-4058-9589-6e0f9b01ee84	8935db97-9a3d-4058-9589-6e0f9b01ee84	{"sub": "8935db97-9a3d-4058-9589-6e0f9b01ee84", "email": "grant@gravicdesign.com", "email_verified": false, "phone_verified": false}	email	2025-02-27 17:48:46.112031+00	2025-02-27 17:48:46.112089+00	2025-02-27 17:48:46.112089+00	c7bfb735-3fea-43d2-a8a1-54301017cf2c
+fd667865-de1e-4f75-9701-db02d60d2b6e	fd667865-de1e-4f75-9701-db02d60d2b6e	{"sub": "fd667865-de1e-4f75-9701-db02d60d2b6e", "email": "danielpadraic@gmail.com", "email_verified": false, "phone_verified": false}	email	2025-04-11 01:32:57.38082+00	2025-04-11 01:32:57.380878+00	2025-04-11 01:32:57.380878+00	499395a9-b470-4b25-bd5f-1b7413743a2a
 \.
 
 
@@ -232,6 +331,7 @@ COPY auth.instances (id, uuid, raw_base_config, created_at, updated_at) FROM std
 COPY auth.sessions (id, user_id, created_at, updated_at, factor_id, aal, not_after, refreshed_at, user_agent, ip, tag) FROM stdin;
 962c97ff-d6a0-4363-99c4-07d4111b69ad	8935db97-9a3d-4058-9589-6e0f9b01ee84	2025-03-04 16:01:05.251813+00	2025-03-04 16:01:05.251813+00	\N	aal1	\N	\N	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36	5.182.32.111	\N
 36137970-d1f3-49b9-bd41-ad5065de0ce1	4174dc1e-6d0b-4e69-a716-1654abf40f1e	2025-03-04 04:41:54.401933+00	2025-04-10 20:07:51.648565+00	\N	aal1	\N	2025-04-10 20:07:51.648486	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36	184.155.198.138	\N
+3b649b0c-41b9-4e0c-8ddb-646197ea978a	fd667865-de1e-4f75-9701-db02d60d2b6e	2025-04-11 01:32:57.391783+00	2025-04-18 18:00:01.431979+00	\N	aal1	\N	2025-04-18 18:00:01.431895	Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1	184.155.198.138	\N
 \.
 
 
@@ -242,6 +342,7 @@ COPY auth.sessions (id, user_id, created_at, updated_at, factor_id, aal, not_aft
 COPY auth.mfa_amr_claims (session_id, created_at, updated_at, authentication_method, id) FROM stdin;
 36137970-d1f3-49b9-bd41-ad5065de0ce1	2025-03-04 04:41:54.407501+00	2025-03-04 04:41:54.407501+00	password	32436595-e359-4b78-8491-cbb4669a7cce
 962c97ff-d6a0-4363-99c4-07d4111b69ad	2025-03-04 16:01:05.259023+00	2025-03-04 16:01:05.259023+00	password	659c424a-24ab-4be2-b865-58318d9a9163
+3b649b0c-41b9-4e0c-8ddb-646197ea978a	2025-04-11 01:32:57.394891+00	2025-04-11 01:32:57.394891+00	password	737ac178-9a50-438e-8b29-091ada633ed4
 \.
 
 
@@ -291,6 +392,54 @@ COPY auth.refresh_tokens (instance_id, id, token, user_id, revoked, created_at, 
 00000000-0000-0000-0000-000000000000	75	YRwFCbWBvwXDYWpIxdsy2A	8935db97-9a3d-4058-9589-6e0f9b01ee84	f	2025-03-04 16:01:05.255037+00	2025-03-04 16:01:05.255037+00	\N	962c97ff-d6a0-4363-99c4-07d4111b69ad
 00000000-0000-0000-0000-000000000000	80	RS-lzBb2MUmzHREj0vthvg	4174dc1e-6d0b-4e69-a716-1654abf40f1e	t	2025-03-05 00:59:27.155938+00	2025-04-10 20:07:51.64515+00	v9MeelDpg1HJWPvVq-24iQ	36137970-d1f3-49b9-bd41-ad5065de0ce1
 00000000-0000-0000-0000-000000000000	81	4U2TUw-3jAc1BAhcSTm2pg	4174dc1e-6d0b-4e69-a716-1654abf40f1e	f	2025-04-10 20:07:51.645935+00	2025-04-10 20:07:51.645935+00	RS-lzBb2MUmzHREj0vthvg	36137970-d1f3-49b9-bd41-ad5065de0ce1
+00000000-0000-0000-0000-000000000000	82	KWshbR-1k7vbC5L4lXMlqw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-11 01:32:57.393012+00	2025-04-11 02:31:20.898881+00	\N	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	83	Eg_ptCtjWJPVo4s38Zj2dA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-11 02:31:20.899524+00	2025-04-11 16:31:03.407492+00	KWshbR-1k7vbC5L4lXMlqw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	84	mLplRCQZYEW9Hz1wYCgSLA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-11 16:31:03.40933+00	2025-04-11 17:30:30.253372+00	Eg_ptCtjWJPVo4s38Zj2dA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	85	PkQTnBynJMQTBNHSyiOdOQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-11 17:30:30.254152+00	2025-04-11 18:29:36.24912+00	mLplRCQZYEW9Hz1wYCgSLA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	86	Rewg578-ZpAG1uFW2QQRQw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-11 18:29:36.249827+00	2025-04-11 19:30:08.532074+00	PkQTnBynJMQTBNHSyiOdOQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	87	QkyTqQpBy93ayFcfSHn7Zg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-11 19:30:08.532729+00	2025-04-16 03:03:20.914855+00	Rewg578-ZpAG1uFW2QQRQw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	88	LNWxef1Lhum8G38JImzETQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 03:03:20.915543+00	2025-04-16 04:02:08.73385+00	QkyTqQpBy93ayFcfSHn7Zg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	89	FUU3zajU5wp-_ox6ZzRvjg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 04:02:08.734539+00	2025-04-16 05:07:23.10957+00	LNWxef1Lhum8G38JImzETQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	90	k49q6TI-OF-OTGazb37ACQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 05:07:23.110254+00	2025-04-16 07:42:54.036298+00	FUU3zajU5wp-_ox6ZzRvjg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	91	rV125YAKhuuPnQkwO8u61w	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 07:42:54.037066+00	2025-04-16 09:20:06.550043+00	k49q6TI-OF-OTGazb37ACQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	92	gBN-EcR-ym4vICkCbrog0Q	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 09:20:06.550685+00	2025-04-16 11:24:55.221321+00	rV125YAKhuuPnQkwO8u61w	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	93	dHjQRAcuwkfR0sC9LJ02UQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 11:24:55.22197+00	2025-04-16 13:04:27.297438+00	gBN-EcR-ym4vICkCbrog0Q	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	94	EnjVjIc5SCAnPf56lIvknA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 13:04:27.298096+00	2025-04-16 14:41:53.978029+00	dHjQRAcuwkfR0sC9LJ02UQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	95	t3PxChTMWw3hmO5nxmgGVQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 14:41:53.97865+00	2025-04-16 15:45:53.982066+00	EnjVjIc5SCAnPf56lIvknA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	96	LVgeIhuqXdUEvIxkRyUtlA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 15:45:53.982861+00	2025-04-16 16:56:33.349214+00	t3PxChTMWw3hmO5nxmgGVQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	97	_ZEJdoh6TmV5rCeqiZE2bg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 16:56:33.34995+00	2025-04-16 18:09:34.588557+00	LVgeIhuqXdUEvIxkRyUtlA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	98	ldiJvfW9X5lkzColQiKXLA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 18:09:34.589334+00	2025-04-16 19:10:19.829331+00	_ZEJdoh6TmV5rCeqiZE2bg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	99	16X6LLVNRyWwAFzQG6Y_Jg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 19:10:19.830109+00	2025-04-16 20:11:27.840426+00	ldiJvfW9X5lkzColQiKXLA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	100	7mvrqJihhe8K6O79lfduEg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 20:11:27.841152+00	2025-04-16 21:12:43.604639+00	16X6LLVNRyWwAFzQG6Y_Jg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	101	O6fv36Rp2hDDXVXcr6FC7Q	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 21:12:43.605382+00	2025-04-16 22:13:26.565405+00	7mvrqJihhe8K6O79lfduEg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	102	NwYmY2vTb66fSloff7CsVw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 22:13:26.566068+00	2025-04-16 23:54:29.402997+00	O6fv36Rp2hDDXVXcr6FC7Q	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	103	YpVibAlcutN4sGJYdQh6Aw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-16 23:54:29.40369+00	2025-04-17 01:16:41.321174+00	NwYmY2vTb66fSloff7CsVw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	104	HjGwq9AAkrYGc6V2xBGZGA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 01:16:41.321909+00	2025-04-17 03:18:32.164648+00	YpVibAlcutN4sGJYdQh6Aw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	105	Bo0SDKtGKLkDjEavmgcgzQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 03:18:32.165359+00	2025-04-17 05:56:58.072816+00	HjGwq9AAkrYGc6V2xBGZGA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	106	QrYQpCekEfNwyzWvDiMsEw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 05:56:58.07358+00	2025-04-17 10:04:11.009564+00	Bo0SDKtGKLkDjEavmgcgzQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	107	egL4ihN7aOpH5FDcRtDcMw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 10:04:11.010379+00	2025-04-17 12:03:56.100005+00	QrYQpCekEfNwyzWvDiMsEw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	108	GOSJcv7T3MqDLFj53DKcJA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 12:03:56.100851+00	2025-04-17 13:44:52.036157+00	egL4ihN7aOpH5FDcRtDcMw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	109	-udLgJQfhN4bUJyT--JapQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 13:44:52.036867+00	2025-04-17 15:10:08.55701+00	GOSJcv7T3MqDLFj53DKcJA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	110	H01uxXi72LqNPOh-nDVGhQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 15:10:08.557721+00	2025-04-17 16:11:08.42054+00	-udLgJQfhN4bUJyT--JapQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	111	kmkyyNCFcVZDC_4T1lylZA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 16:11:08.421294+00	2025-04-17 17:14:53.54274+00	H01uxXi72LqNPOh-nDVGhQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	112	BEjIb39QBQxmszAKlf2YZQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 17:14:53.543408+00	2025-04-17 18:51:57.506259+00	kmkyyNCFcVZDC_4T1lylZA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	113	SQtjLgPbvHLq8A6sWRyKTQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 18:51:57.506918+00	2025-04-17 20:16:55.233792+00	BEjIb39QBQxmszAKlf2YZQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	114	hSQJM0Yr4UqUh5FtH-doww	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 20:16:55.234474+00	2025-04-17 21:18:13.85301+00	SQtjLgPbvHLq8A6sWRyKTQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	115	BjwDmc6PS29Xpdhq3Lgx_A	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 21:18:13.853701+00	2025-04-17 22:18:57.783643+00	hSQJM0Yr4UqUh5FtH-doww	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	116	jTOLkYI1L6bdTrnkeGUcpg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 22:18:57.784327+00	2025-04-17 23:18:20.277454+00	BjwDmc6PS29Xpdhq3Lgx_A	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	117	pH8s5BNilDYCfNNsGMKNaw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-17 23:18:20.278117+00	2025-04-18 00:17:29.353387+00	jTOLkYI1L6bdTrnkeGUcpg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	118	j3TUd9AaWCw0DoMraQWzDg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 00:17:29.354136+00	2025-04-18 01:16:29.354195+00	pH8s5BNilDYCfNNsGMKNaw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	119	B8mRy_SIG57qjNCQM0mp3w	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 01:16:29.354909+00	2025-04-18 02:15:28.366206+00	j3TUd9AaWCw0DoMraQWzDg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	120	G7GDyFgjNANoOK4l-93m_g	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 02:15:28.366825+00	2025-04-18 03:58:41.703623+00	B8mRy_SIG57qjNCQM0mp3w	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	121	sGSlJtk_mxQx11-wJsCayg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 03:58:41.704286+00	2025-04-18 06:00:30.992843+00	G7GDyFgjNANoOK4l-93m_g	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	122	yE9fEuobMAX88pLPXmNMZA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 06:00:30.993526+00	2025-04-18 08:26:47.550778+00	sGSlJtk_mxQx11-wJsCayg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	123	0xyiZ_YhrRI56_3wnprUng	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 08:26:47.551559+00	2025-04-18 11:34:27.103595+00	yE9fEuobMAX88pLPXmNMZA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	124	aGMLojNeBxjRmKd9Axgj3w	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 11:34:27.10434+00	2025-04-18 12:42:57.214055+00	0xyiZ_YhrRI56_3wnprUng	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	125	WMBffgOhQ2WTaVckXvOlTg	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 12:42:57.215444+00	2025-04-18 14:00:11.041755+00	aGMLojNeBxjRmKd9Axgj3w	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	126	0cZGcCGZPIWEyXgckNZ-TA	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 14:00:11.042609+00	2025-04-18 16:02:25.734696+00	WMBffgOhQ2WTaVckXvOlTg	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	127	AuuWtPeaheEev4_LOc8iPw	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 16:02:25.73539+00	2025-04-18 17:01:01.429653+00	0cZGcCGZPIWEyXgckNZ-TA	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	128	t21xm-z9Z79nGj-cenV6xQ	fd667865-de1e-4f75-9701-db02d60d2b6e	t	2025-04-18 17:01:01.430352+00	2025-04-18 18:00:01.425206+00	AuuWtPeaheEev4_LOc8iPw	3b649b0c-41b9-4e0c-8ddb-646197ea978a
+00000000-0000-0000-0000-000000000000	129	RFUHfxMaxTAyHUG-DXIOrQ	fd667865-de1e-4f75-9701-db02d60d2b6e	f	2025-04-18 18:00:01.4273+00	2025-04-18 18:00:01.4273+00	t21xm-z9Z79nGj-cenV6xQ	3b649b0c-41b9-4e0c-8ddb-646197ea978a
 \.
 
 
@@ -396,6 +545,23 @@ COPY auth.sso_domains (id, sso_provider_id, domain, created_at, updated_at) FROM
 
 
 --
+-- Data for Name: job; Type: TABLE DATA; Schema: cron; Owner: supabase_admin
+--
+
+COPY cron.job (jobid, schedule, command, nodename, nodeport, database, username, active, jobname) FROM stdin;
+2	0 * * * *	SELECT cleanup_expired_stories();	localhost	5432	postgres	postgres	t	cleanup-expired-stories
+\.
+
+
+--
+-- Data for Name: job_run_details; Type: TABLE DATA; Schema: cron; Owner: supabase_admin
+--
+
+COPY cron.job_run_details (jobid, runid, job_pid, database, username, command, status, return_message, start_time, end_time) FROM stdin;
+\.
+
+
+--
 -- Data for Name: key; Type: TABLE DATA; Schema: pgsodium; Owner: supabase_admin
 --
 
@@ -410,6 +576,7 @@ COPY pgsodium.key (id, status, created, expires, key_type, key_id, key_context, 
 COPY public.profiles (id, first_name, last_name, username, profile_photo_url, phone_number, phone_number_raw, address, participates_in_challenges, gender, dob, height, weight, body_fat_percentage, bmi, bmr, first_name_public, last_name_public, username_public, phone_number_public, address_public, participates_in_challenges_public, gender_public, dob_public, height_public, weight_public, body_fat_percentage_public, profile_photo_url_public, bmi_public, bmr_public) FROM stdin;
 4174dc1e-6d0b-4e69-a716-1654abf40f1e	Buzz	McCallister	buzzmccallister	https://aacvoxossqxdkfahgsvc.supabase.co/storage/v1/object/public/profile_photos/4174dc1e-6d0b-4e69-a716-1654abf40f1e.webp	5555555555	5555555555	123 Main St. Miami, FL 	t	Male	1975-01-01	75	239	21	29.9	2030	t	t	t	f	f	t	t	f	f	f	f	t	f	f
 8935db97-9a3d-4058-9589-6e0f9b01ee84	\N	\N	gravic	\N	\N	\N	\N	f	\N	\N	0	0	0	\N	\N	f	f	t	f	f	f	f	f	f	f	f	t	f	f
+fd667865-de1e-4f75-9701-db02d60d2b6e	Bob	Leblaw	bobleblaw	https://aacvoxossqxdkfahgsvc.supabase.co/storage/v1/object/public/profile_photos/fd667865-de1e-4f75-9701-db02d60d2b6e.jpeg	2085555555		123 Anywhere St. Boise, ID 83702	t	Male	1975-01-01	75	235	20	29.4	2012	t	t	t	f	f	f	t	f	f	f	f	t	f	f
 \.
 
 
@@ -418,6 +585,14 @@ COPY public.profiles (id, first_name, last_name, username, profile_photo_url, ph
 --
 
 COPY public.blocks (id, blocker_id, blocked_id, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: bookmarks; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.bookmarks (user_id, content_type, content_id, created_at) FROM stdin;
 \.
 
 
@@ -667,6 +842,22 @@ COPY public.group_members (id, group_id, user_id) FROM stdin;
 
 
 --
+-- Data for Name: message_threads; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.message_threads (id, created_at, updated_at, last_message_preview) FROM stdin;
+\.
+
+
+--
+-- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.messages (id, thread_id, user_id, content, media_url, created_at, edited_at, is_deleted) FROM stdin;
+\.
+
+
+--
 -- Data for Name: news_feed; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -707,6 +898,23 @@ COPY public.social_channels (id, name, is_public, created_at) FROM stdin;
 
 
 --
+-- Data for Name: stories; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.stories (id, user_id, media_url, text_overlay, interactive_element, created_at, expires_at, views, text_position, font_color, font_size) FROM stdin;
+611bc87e-e6a9-42f2-b1c6-b52b960048c9	8935db97-9a3d-4058-9589-6e0f9b01ee84	https://images.unsplash.com/photo-1531804055935-76f44d7c3621?q=80&w=1288&auto=format&fit=crop	Test story using found user ID	{"type": "poll", "options": [{"text": "Option 1", "votes": []}, {"text": "Option 2", "votes": []}]}	2025-04-18 18:39:33.631064+00	2025-04-19 18:39:33.631064+00	0	center	#ffffff	medium
+\.
+
+
+--
+-- Data for Name: story_views; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.story_views (id, user_id, story_id, viewed_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: tasks; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -742,6 +950,14 @@ e0645b39-5664-4c43-b20c-1b6e65071480	a6586327-c636-4e38-8cfe-6c7414707ad5	4174dc
 
 
 --
+-- Data for Name: thread_participants; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.thread_participants (thread_id, user_id, joined_at, last_read_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: user_challenge_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -758,6 +974,14 @@ COPY public.user_challenges (id, user_id, challenge_id, joined_at) FROM stdin;
 
 
 --
+-- Data for Name: user_relationships; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.user_relationships (follower_id, following_id, relationship_type, created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: whispers; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -766,58 +990,74 @@ COPY public.whispers (id, sender_id, recipient_id, content, created_at, read) FR
 
 
 --
--- Data for Name: messages_2025_03_01; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_13; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_01 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_13 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
 --
--- Data for Name: messages_2025_03_02; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_14; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_02 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_14 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
 --
--- Data for Name: messages_2025_03_03; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_15; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_03 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_15 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
 --
--- Data for Name: messages_2025_03_04; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_16; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_04 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_16 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
 --
--- Data for Name: messages_2025_03_05; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_17; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_05 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_17 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
 --
--- Data for Name: messages_2025_03_06; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_18; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_06 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_18 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
 --
--- Data for Name: messages_2025_03_07; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+-- Data for Name: messages_2025_04_19; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
 --
 
-COPY realtime.messages_2025_03_07 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+COPY realtime.messages_2025_04_19 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: messages_2025_04_20; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+--
+
+COPY realtime.messages_2025_04_20 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: messages_2025_04_21; Type: TABLE DATA; Schema: realtime; Owner: supabase_admin
+--
+
+COPY realtime.messages_2025_04_21 (topic, extension, payload, event, private, updated_at, inserted_at, id) FROM stdin;
 \.
 
 
@@ -966,6 +1206,8 @@ e34741b2-5256-404c-90c1-38584de4bbb8	challenge-covers	1741052977711-bible.jpg	41
 39dd6aaa-c80a-4b0d-9295-88fb7da71334	media	1741070223958-bl0b coin 2.jpg	4174dc1e-6d0b-4e69-a716-1654abf40f1e	2025-03-04 06:37:04.37285+00	2025-03-04 06:37:04.37285+00	2025-03-04 06:37:04.37285+00	{"eTag": "\\"a966f7a5dd7759286f7948937875a47c\\"", "size": 61749, "mimetype": "image/jpeg", "cacheControl": "max-age=3600", "lastModified": "2025-03-04T06:37:05.000Z", "contentLength": 61749, "httpStatusCode": 200}	d71f752e-deb6-4815-abc2-a8a63dbe8e89	4174dc1e-6d0b-4e69-a716-1654abf40f1e	{}
 1061cbfa-d6f9-4d2e-bcf0-c38a86a0036c	profile_photos	8935db97-9a3d-4058-9589-6e0f9b01ee84.png	8935db97-9a3d-4058-9589-6e0f9b01ee84	2025-03-04 15:55:55.157114+00	2025-03-04 15:55:55.157114+00	2025-03-04 15:55:55.157114+00	{"eTag": "\\"437449304cae8f97bda2924737258220\\"", "size": 108416, "mimetype": "image/png", "cacheControl": "max-age=3600", "lastModified": "2025-03-04T15:55:56.000Z", "contentLength": 108416, "httpStatusCode": 200}	1dc8a4e6-e8f3-479c-a098-218fab3ebd56	8935db97-9a3d-4058-9589-6e0f9b01ee84	{}
 04d97e48-97e9-4a1b-9e14-bca1312e3918	challenge-covers	1741105272110-bible.jpg	4174dc1e-6d0b-4e69-a716-1654abf40f1e	2025-03-04 16:21:12.557357+00	2025-03-04 16:21:12.557357+00	2025-03-04 16:21:12.557357+00	{"eTag": "\\"ee07dca91a60d2880923444f4a8b2578\\"", "size": 33672, "mimetype": "image/jpeg", "cacheControl": "max-age=3600", "lastModified": "2025-03-04T16:21:13.000Z", "contentLength": 33672, "httpStatusCode": 200}	bc753c08-7220-49fd-9f31-75be534393e2	4174dc1e-6d0b-4e69-a716-1654abf40f1e	{}
+c94cc5ba-e5c4-4a9b-a47d-3221a76bf300	profile_photos	fd667865-de1e-4f75-9701-db02d60d2b6e.jpg	fd667865-de1e-4f75-9701-db02d60d2b6e	2025-04-11 01:32:57.967468+00	2025-04-11 01:32:57.967468+00	2025-04-11 01:32:57.967468+00	{"eTag": "\\"1e23725c7fb8af3763ceac847ebd894b\\"", "size": 475130, "mimetype": "image/jpeg", "cacheControl": "max-age=3600", "lastModified": "2025-04-11T01:32:58.000Z", "contentLength": 475130, "httpStatusCode": 200}	a7f1c9ae-da08-4e25-b156-e6f2e56f4d67	fd667865-de1e-4f75-9701-db02d60d2b6e	{}
+802e37f8-6e70-4d15-a2e3-5a3700f2150a	profile_photos	fd667865-de1e-4f75-9701-db02d60d2b6e.jpeg	fd667865-de1e-4f75-9701-db02d60d2b6e	2025-04-11 02:44:32.887415+00	2025-04-11 02:44:32.887415+00	2025-04-11 02:44:32.887415+00	{"eTag": "\\"77b8435396fef402f56927af99096304\\"", "size": 11349, "mimetype": "image/jpeg", "cacheControl": "max-age=3600", "lastModified": "2025-04-11T02:44:33.000Z", "contentLength": 11349, "httpStatusCode": 200}	54c7075b-7f8a-400c-baab-715c9d2b448e	fd667865-de1e-4f75-9701-db02d60d2b6e	{}
 \.
 
 
@@ -997,7 +1239,21 @@ COPY vault.secrets (id, name, description, secret, key_id, nonce, created_at, up
 -- Name: refresh_tokens_id_seq; Type: SEQUENCE SET; Schema: auth; Owner: supabase_auth_admin
 --
 
-SELECT pg_catalog.setval('auth.refresh_tokens_id_seq', 81, true);
+SELECT pg_catalog.setval('auth.refresh_tokens_id_seq', 129, true);
+
+
+--
+-- Name: jobid_seq; Type: SEQUENCE SET; Schema: cron; Owner: supabase_admin
+--
+
+SELECT pg_catalog.setval('cron.jobid_seq', 2, true);
+
+
+--
+-- Name: runid_seq; Type: SEQUENCE SET; Schema: cron; Owner: supabase_admin
+--
+
+SELECT pg_catalog.setval('cron.runid_seq', 1, false);
 
 
 --

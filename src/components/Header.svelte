@@ -2,9 +2,9 @@
   export let menuOpen = false;
   export let currentUser = null;
 
-  function toggleMenu() {
-    menuOpen = !menuOpen;
-    // Dispatch toggleMenu event using standard DOM event
+  // Don't toggle the state locally - let App.svelte handle it
+  function handleMenuButtonClick() {
+    console.log("Menu button clicked in Header.svelte");
     document.dispatchEvent(new CustomEvent("toggleMenu"));
   }
 
@@ -28,7 +28,12 @@
       <span class="logo-text">bl0b</span>
     </div>
 
-    <button class="menu-button" on:click={toggleMenu} aria-label="Toggle menu">
+    <button
+      class="menu-button"
+      on:click={handleMenuButtonClick}
+      aria-label="Toggle menu"
+      aria-expanded={menuOpen}
+    >
       <div class="menu-icon" class:active={menuOpen}>
         <span></span>
         <span></span>
@@ -42,11 +47,11 @@
       class="menu-overlay"
       tabindex="0"
       role="button"
-      on:click={toggleMenu}
+      on:click={handleMenuButtonClick}
       on:keydown={(e) => {
         if (e.key === "Enter" || e.key === "Space") {
           e.preventDefault();
-          toggleMenu();
+          handleMenuButtonClick();
         }
       }}
     >
@@ -55,12 +60,7 @@
         tabindex="0"
         role="menu"
         on:click|stopPropagation
-        on:keydown={(e) => {
-          if (e.key === "Enter" || e.key === "Space") {
-            e.preventDefault();
-            // No action needed for stopPropagation
-          }
-        }}
+        on:keydown|stopPropagation
       >
         {#if currentUser}
           <button on:click={handleLogout}>Logout</button>

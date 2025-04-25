@@ -1,9 +1,17 @@
 <script>
-  import { showTaskCompletionForm } from "../stores.js";
+  import { onMount, onDestroy } from "svelte";
+  import {
+    showTaskCompletionForm,
+    showChallengeCreation,
+    user,
+  } from "../stores.js";
 
   // Props
   export let activeTab = "home";
   export let notificationCount = 0;
+
+  // Menu state
+  let showCreateMenu = false;
 
   // Handle navigation
   function navigateTo(route) {
@@ -14,12 +22,67 @@
       // Fallback to simple location change if navigateTo isn't available
       window.location.href = route;
     }
+
+    // Close menu if it was open
+    showCreateMenu = false;
   }
 
-  // Show task completion form
-  function showTaskForm() {
-    showTaskCompletionForm.set(true);
+  // Handle create menu toggle
+  function toggleCreateMenu() {
+    showCreateMenu = !showCreateMenu;
   }
+
+  // Close menu if clicked outside
+  function handleDocumentClick(event) {
+    const actionButton = document.querySelector(".action-button");
+    const createMenu = document.querySelector(".create-menu");
+
+    if (showCreateMenu && actionButton && createMenu) {
+      if (
+        !actionButton.contains(event.target) &&
+        !createMenu.contains(event.target)
+      ) {
+        showCreateMenu = false;
+      }
+    }
+  }
+
+  // Handle action selection
+  function handleAction(action) {
+    showCreateMenu = false;
+
+    switch (action) {
+      case "task":
+        showTaskCompletionForm.set(true);
+        break;
+      case "challenge":
+        showChallengeCreation.set(true);
+        break;
+      case "story":
+        navigateTo("/create-story");
+        break;
+      case "post":
+        // Navigate to home and focus on post input
+        navigateTo("/");
+        setTimeout(() => {
+          const postInput = document.querySelector(".input-container textarea");
+          if (postInput) postInput.focus();
+        }, 300);
+        break;
+      case "reel":
+        // To be implemented
+        alert("Reels creation coming soon!");
+        break;
+    }
+  }
+
+  onMount(() => {
+    document.addEventListener("click", handleDocumentClick);
+  });
+
+  onDestroy(() => {
+    document.removeEventListener("click", handleDocumentClick);
+  });
 </script>
 
 <nav class="bottom-nav">
@@ -52,7 +115,7 @@
         />
       </svg>
     </div>
-    <span class="nav-label">Home</span>
+    <div class="nav-text">Home</div>
   </button>
 
   <button
@@ -121,12 +184,40 @@
         />
       </svg>
     </div>
-    <span class="nav-label">Discover</span>
+    <div class="nav-text">Discover</div>
   </button>
 
-  <button class="nav-item action-button" on:click={showTaskForm}>
-    <div class="plus-icon">+</div>
-  </button>
+  <div class="nav-item-center">
+    <button class="action-button" on:click={toggleCreateMenu}>
+      <div class="plus-icon">+</div>
+    </button>
+    <div class="nav-text create-text">Create</div>
+
+    {#if showCreateMenu}
+      <div class="create-menu">
+        <button class="menu-item" on:click={() => handleAction("story")}>
+          <div class="menu-icon story-icon">📸</div>
+          <span>Story</span>
+        </button>
+        <button class="menu-item" on:click={() => handleAction("post")}>
+          <div class="menu-icon post-icon">📝</div>
+          <span>Post</span>
+        </button>
+        <button class="menu-item" on:click={() => handleAction("task")}>
+          <div class="menu-icon task-icon">✓</div>
+          <span>Task</span>
+        </button>
+        <button class="menu-item" on:click={() => handleAction("challenge")}>
+          <div class="menu-icon challenge-icon">🏆</div>
+          <span>Challenge</span>
+        </button>
+        <button class="menu-item" on:click={() => handleAction("reel")}>
+          <div class="menu-icon reel-icon">🎬</div>
+          <span>Reel</span>
+        </button>
+      </div>
+    {/if}
+  </div>
 
   <button
     class="nav-item"
@@ -162,7 +253,7 @@
         >
       {/if}
     </div>
-    <span class="nav-label">Alerts</span>
+    <div class="nav-text">Alerts</div>
   </button>
 
   <button
@@ -194,7 +285,7 @@
         />
       </svg>
     </div>
-    <span class="nav-label">Profile</span>
+    <div class="nav-text">Profile</div>
   </button>
 </nav>
 
@@ -226,6 +317,7 @@
     position: relative;
     transition: color 0.2s ease;
     cursor: pointer;
+    height: 100%;
   }
 
   .nav-item:hover {
@@ -241,9 +333,32 @@
     margin-bottom: 4px;
   }
 
-  .nav-label {
-    font-size: 12px;
-    font-weight: 500;
+  /* Ultra strong text styling to override any global styles */
+  .nav-text {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    display: block !important;
+    visibility: visible !important;
+    color: #2f4858 !important; /* Using the actual color code instead of var */
+    margin-top: 4px !important;
+    text-align: center !important;
+    line-height: 1 !important;
+    opacity: 1 !important;
+  }
+
+  /* Special style for active item text */
+  .nav-item.active .nav-text {
+    color: #f26440 !important; /* Using the actual color code instead of var */
+  }
+
+  .create-text {
+    position: absolute !important;
+    bottom: 2px !important;
+    left: 0 !important;
+    right: 0 !important;
+    text-align: center !important;
+    color: #f26440 !important; /* Using the actual color code instead of var */
+    font-weight: 600 !important;
   }
 
   .notification-badge {
@@ -263,10 +378,19 @@
     padding: 0 4px;
   }
 
+  .nav-item-center {
+    position: relative;
+    height: 60px;
+    width: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
   /* Special styling for the center action button */
   .action-button {
     margin-top: -25px; /* Pull up to overlap with bottom nav */
-    flex: 0 0 60px;
+    width: 60px;
     height: 60px;
     border-radius: 50%;
     background-color: var(--tomato);
@@ -281,6 +405,10 @@
     transition:
       transform 0.2s ease,
       background-color 0.2s ease;
+    cursor: pointer;
+    z-index: 101;
+    position: absolute;
+    top: -30px;
   }
 
   .action-button:hover,
@@ -293,5 +421,79 @@
     font-size: 28px;
     font-weight: bold;
     margin-top: -2px; /* Visual alignment */
+  }
+
+  /* Create menu styling */
+  .create-menu {
+    position: absolute;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: left;
+  }
+
+  .menu-item:hover {
+    background-color: var(--light-gray);
+  }
+
+  .menu-item span {
+    color: #2f4858 !important; /* Dark charcoal color */
+    font-weight: 600 !important;
+    font-size: 14px !important;
+  }
+
+  .menu-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 20px;
+  }
+
+  .story-icon {
+    background-color: #e91e63;
+    color: white;
+  }
+
+  .post-icon {
+    background-color: #2196f3;
+    color: white;
+  }
+
+  .task-icon {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  .challenge-icon {
+    background-color: #ff9800;
+    color: white;
+  }
+
+  .reel-icon {
+    background-color: #9c27b0;
+    color: white;
   }
 </style>

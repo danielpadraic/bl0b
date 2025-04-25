@@ -4,6 +4,7 @@
   import { user } from "../stores.js";
   import { navigate } from "svelte-routing";
   import Comment from "./Comment.svelte";
+  import { writable } from "svelte/store";
 
   export let challengeId = null;
   export let challengeName = "bl0b-general";
@@ -26,10 +27,85 @@
   let minimized = false;
   let expandedComments = {};
   let expandedReplies = {};
-  let profilesMap = new Map();
+
+  // Create a Svelte store for profilesMap to ensure proper reactivity
+  let profilesMapStore = writable(new Map());
+  $: profilesMap = $profilesMapStore;
 
   const GIPHY_API_KEY = "lGJJOnOXxAtmYy5GaKCId3RDdah90xaG";
   const COMMENTS_PER_PAGE = 3;
+
+  // Function to load the current user's profile
+  async function loadCurrentUserProfile() {
+    if (!$user || !$user.id) {
+      console.log("No user logged in, skipping profile load");
+      currentUserUsername = "Anonymous";
+      return;
+    }
+
+    try {
+      console.log("Fetching current user profile for ID:", $user.id);
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, first_name, last_name, profile_photo_url")
+        .eq("id", $user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return;
+      }
+
+      if (data) {
+        console.log("Successfully loaded user profile:", data);
+        currentUserUsername = data.username || "Anonymous";
+
+        // Update the store to trigger reactivity
+        profilesMapStore.update((map) => {
+          const newMap = new Map(map);
+          newMap.set($user.id, data);
+          console.log("Updated profilesMapStore with current user data");
+          return newMap;
+        });
+
+        // If there's a profile photo URL, verify it loads correctly
+        if (data.profile_photo_url) {
+          console.log("Verifying profile photo URL:", data.profile_photo_url);
+
+          // Create a new image to test loading
+          const img = new Image();
+          img.onload = () => {
+            console.log("Profile image loaded successfully");
+          };
+
+          img.onerror = () => {
+            console.error(
+              "Failed to load profile image:",
+              data.profile_photo_url
+            );
+            // Update the store with null profile photo on error
+            profilesMapStore.update((map) => {
+              const newMap = new Map(map);
+              newMap.set($user.id, {
+                ...data,
+                profile_photo_url: null,
+              });
+              return newMap;
+            });
+          };
+
+          img.src = data.profile_photo_url;
+        }
+      } else {
+        console.log("No user profile data found");
+        currentUserUsername = "Anonymous";
+      }
+    } catch (err) {
+      console.error("Error in loadCurrentUserProfile:", err);
+      currentUserUsername = "Anonymous";
+    }
+  }
 
   onMount(async () => {
     console.log(
@@ -39,7 +115,16 @@
       challengeName
     );
     console.log("Current user ID:", $user?.id);
-    await fetchCurrentUserUsername();
+
+    // Initialize profilesMap store
+    profilesMapStore.set(new Map());
+
+    // First, load the current user's profile
+    if ($user) {
+      await loadCurrentUserProfile();
+    }
+
+    // Then continue with other loading operations
     await fetchPosts();
     await fetchParticipants();
 
@@ -113,44 +198,6 @@
   onDestroy(() => {
     console.log("SocialFeed destroyed, cleaning up subscriptions");
   });
-
-  async function fetchCurrentUserUsername() {
-    if (!$user) {
-      currentUserUsername = "Anonymous";
-      console.log("No user logged in, username set to Anonymous");
-      return;
-    }
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", $user.id)
-      .single();
-    currentUserUsername = error ? "Anonymous" : data?.username || "Anonymous";
-    console.log("Fetched username:", currentUserUsername);
-  }
-
-  function buildPostTree(posts) {
-    const postMap = new Map();
-    posts.forEach((post) => {
-      post.comments = [];
-      postMap.set(post.id, post);
-    });
-    posts.forEach((post) => {
-      if (post.parent_id) {
-        const parent = postMap.get(post.parent_id);
-        if (parent) {
-          parent.comments.push(post);
-        }
-      }
-    });
-    const sortComments = (comments) => {
-      comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      comments.forEach((comment) => sortComments(comment.comments));
-    };
-    const tree = posts.filter((post) => !post.parent_id);
-    tree.forEach((post) => sortComments(post.comments));
-    return tree.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }
 
   async function fetchPosts() {
     try {
@@ -226,19 +273,38 @@
             ...postsData.flatMap((post) =>
               post.post_reactions.map((r) => r.user_id)
             ),
+            // Always include current user ID
+            $user?.id,
           ].filter((id) => id) // Filter out null user_ids
         ),
       ];
+
       let profilesData = [];
       if (userIds.length > 0) {
         const { data: fetchedProfiles, error: profilesError } = await supabase
           .from("profiles")
           .select("id, first_name, last_name, username, profile_photo_url")
           .in("id", userIds);
+
         if (profilesError) throw profilesError;
         profilesData = fetchedProfiles || [];
+
+        // Update the profilesMapStore to trigger reactivity
+        profilesMapStore.update((map) => {
+          const newMap = new Map(map);
+
+          // Add all fetched profiles to the map
+          profilesData.forEach((profile) => {
+            // Don't overwrite the current user's profile if it's already in the map
+            if (!newMap.has(profile.id) || profile.id !== $user?.id) {
+              newMap.set(profile.id, profile);
+            }
+          });
+
+          return newMap;
+        });
       }
-      profilesMap = new Map(profilesData.map((p) => [p.id, p]));
+
       console.log(
         "Fetched profiles:",
         profilesData.length,
@@ -246,11 +312,16 @@
         profilesData
       );
 
-      const allPosts = [
-        ...postsData.map((post) => processPost(post)),
-        ...whispersData.map((whisper) => processWhisper(whisper)),
-      ];
+      const processedPosts = await Promise.all(
+        postsData.map((post) => processPost(post))
+      );
+      const processedWhispers = await Promise.all(
+        whispersData.map((whisper) => processWhisper(whisper))
+      );
+
+      const allPosts = [...processedPosts, ...processedWhispers];
       posts = buildPostTree(allPosts);
+
       console.log(
         "Final posts array:",
         posts.map((p) => ({
@@ -272,21 +343,56 @@
     }
   }
 
+  function buildPostTree(posts) {
+    const postMap = new Map();
+    posts.forEach((post) => {
+      post.comments = [];
+      postMap.set(post.id, post);
+    });
+    posts.forEach((post) => {
+      if (post.parent_id) {
+        const parent = postMap.get(post.parent_id);
+        if (parent) {
+          parent.comments.push(post);
+        }
+      }
+    });
+    const sortComments = (comments) => {
+      comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      comments.forEach((comment) => sortComments(comment.comments));
+    };
+    const tree = posts.filter((post) => !post.parent_id);
+    tree.forEach((post) => sortComments(post.comments));
+    return tree.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+
   function processPost(post) {
     let mediaUrl = post.media_url;
     try {
       if (Array.isArray(mediaUrl) && mediaUrl.length > 0) {
         mediaUrl = mediaUrl[0];
       } else if (typeof mediaUrl === "string") {
-        mediaUrl = JSON.parse(mediaUrl)[0] || null;
+        try {
+          mediaUrl = JSON.parse(mediaUrl)[0] || null;
+        } catch (e) {
+          mediaUrl = mediaUrl; // Keep as is if it's not JSON
+        }
       } else {
         mediaUrl = null;
       }
     } catch (e) {
       mediaUrl = null;
     }
-    const profile = post.user_id ? profilesMap.get(post.user_id) : null;
+
+    // Use the reactive profilesMap derived from profilesMapStore
+    const profile =
+      post.user_id && profilesMap ? profilesMap.get(post.user_id) : null;
     const isAutomated = post.user_id === null; // Automated posts have null user_id
+
+    // Make sure we're not returning undefined for profile_photo_url
+    const photoUrl =
+      profile && profile.profile_photo_url ? profile.profile_photo_url : null;
+
     return {
       ...post,
       timestamp: new Date(post.created_at).toLocaleString("en-US", {
@@ -297,9 +403,7 @@
       first_name: isAutomated ? "Bob" : profile?.first_name || "Anonymous",
       last_name: isAutomated ? "leBlob" : profile?.last_name || "",
       username: isAutomated ? "bob_leblob" : profile?.username || "unknown",
-      profile_photo_url: isAutomated
-        ? null
-        : profile?.profile_photo_url || null,
+      profile_photo_url: isAutomated ? null : photoUrl,
       reactions: post.post_reactions || [],
       media_url: mediaUrl,
       challenge_title: post.challenge_id
@@ -312,9 +416,12 @@
   }
 
   function processWhisper(whisper) {
-    const profile = whisper.sender_id
-      ? profilesMap.get(whisper.sender_id)
-      : null;
+    // Use the reactive profilesMap derived from profilesMapStore
+    const profile =
+      whisper.sender_id && profilesMap
+        ? profilesMap.get(whisper.sender_id)
+        : null;
+
     return {
       id: whisper.id,
       user_id: whisper.sender_id,
@@ -635,6 +742,194 @@
 </script>
 
 <div class="feed-container">
+  <!-- Post Form positioned at the top of the feed -->
+  <div class="post-form-container">
+    <div class="input-container">
+      {#if $user && $user.id}
+        {#if profilesMap && profilesMap.has($user.id) && profilesMap.get($user.id).profile_photo_url}
+          <!-- User has a profile photo -->
+          <img
+            src={profilesMap.get($user.id).profile_photo_url}
+            alt="Your profile"
+            class="user-avatar"
+          />
+        {:else}
+          <!-- Show initials if no profile photo -->
+          <div class="user-avatar-placeholder">
+            {#if profilesMap && profilesMap.has($user.id)}
+              {profilesMap.get($user.id).first_name
+                ? profilesMap.get($user.id).first_name.charAt(0)
+                : ""}
+              {profilesMap.get($user.id).last_name
+                ? profilesMap.get($user.id).last_name.charAt(0)
+                : ""}
+            {:else}
+              ?
+            {/if}
+          </div>
+        {/if}
+      {:else}
+        <!-- User not logged in -->
+        <div class="user-avatar-placeholder">?</div>
+      {/if}
+
+      <textarea
+        bind:value={newPost}
+        on:input={handleInput}
+        on:keydown={(e) => handleKeydown(e, null)}
+        placeholder="Share what's on your mind..."
+        rows="2"
+      ></textarea>
+
+      <button class="send-btn" on:click={submitPost} disabled={!$user}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+    {#if showTagPicker && tagSuggestions.length > 0}
+      <div class="tag-picker">
+        {#each tagSuggestions as username}
+          <div
+            class="tag-suggestion"
+            role="button"
+            tabindex="0"
+            on:click={() => addTag(username)}
+            on:keydown={(e) => handleKeyPress(e, () => addTag(username))}
+          >
+            {username}
+          </div>
+        {/each}
+      </div>
+    {/if}
+    <div class="toolbar">
+      <button
+        type="button"
+        on:click={() => document.getElementById("mediaInput").click()}
+        title="Upload Image"
+        class="toolbar-btn"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+      </button>
+      <input
+        id="mediaInput"
+        type="file"
+        accept="image/*"
+        on:change={handleMediaChange}
+        hidden
+      />
+      <button
+        type="button"
+        on:click={() => document.getElementById("videoInput").click()}
+        title="Upload Video"
+        class="toolbar-btn"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polygon points="23 7 16 12 23 17 23 7" />
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+        </svg>
+      </button>
+      <input
+        id="videoInput"
+        type="file"
+        accept="video/*"
+        on:change={handleMediaChange}
+        hidden
+      />
+      <button
+        type="button"
+        on:click={() => (showGifPicker = !showGifPicker)}
+        title="Add GIF"
+        class="toolbar-btn gif-btn"
+      >
+        <span class="gif-text">GIF</span>
+      </button>
+    </div>
+    {#if showGifPicker}
+      <div class="gif-picker">
+        <input
+          type="text"
+          bind:value={gifSearch}
+          on:input={searchGifs}
+          placeholder="Search GIFs"
+        />
+        <div class="gif-list">
+          {#each gifs as gif}
+            <button
+              type="button"
+              class="gif-button"
+              on:click={() => addGif(gif.url)}
+              on:keydown={(e) => handleKeyPress(e, () => addGif(gif.url))}
+            >
+              <img src={gif.url} alt="GIF" />
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Debug button - can be removed once everything is working properly -->
+  {#if $user && $user.id}
+    <button
+      class="debug-button"
+      on:click={() => {
+        console.log("Current user:", $user);
+        console.log(
+          "ProfilesMap has user?",
+          profilesMap && profilesMap.has($user.id)
+        );
+        if (profilesMap && profilesMap.has($user.id)) {
+          console.log("User in profilesMap:", profilesMap.get($user.id));
+          console.log(
+            "Profile photo URL:",
+            profilesMap.get($user.id).profile_photo_url
+          );
+        }
+
+        // Trigger a manual reload of the profile
+        loadCurrentUserProfile();
+      }}
+    >
+      Debug Profile
+    </button>
+  {/if}
+
   <div class="feed">
     {#each posts.filter((post) => !post.parent_id) as post (post.id)}
       <div class="post" class:automated={post.isAutomated}>
@@ -717,7 +1012,22 @@
               (showReactionPicker =
                 showReactionPicker === post.id ? null : post.id)}
           >
-            🙂➕
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+              <line x1="9" y1="9" x2="9.01" y2="9" />
+              <line x1="15" y1="9" x2="15.01" y2="9" />
+            </svg>
           </button>
           {#if showReactionPicker === post.id}
             <div class="reaction-picker">
@@ -743,7 +1053,11 @@
                 class="reaction-count"
                 title={post.reactions
                   .filter((r) => r.reaction_type === type)
-                  .map((r) => profilesMap.get(r.user_id)?.username || "unknown")
+                  .map(
+                    (r) =>
+                      (profilesMap && profilesMap.get(r.user_id)?.username) ||
+                      "unknown"
+                  )
                   .join(", ")}
               >
                 {type === "like"
@@ -764,7 +1078,22 @@
             class="comment-link"
             on:click|preventDefault={() => toggleReply(post.id)}
           >
-            Comment
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              />
+            </svg>
+            <span>Comment</span>
           </a>
         </div>
         {#if replyingTo === post.id}
@@ -776,9 +1105,22 @@
               placeholder="Reply..."
               rows="1"
             ></textarea>
-            <button class="send-btn" on:click={() => submitReply(post.id)}
-              >➤</button
-            >
+            <button class="send-btn" on:click={() => submitReply(post.id)}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
           </div>
         {/if}
         {#if post.comments.length > 0}
@@ -812,108 +1154,9 @@
       </div>
     {/each}
     {#if posts.length === 0}
-      <p>No posts yet.</p>
-    {/if}
-  </div>
-  <div class="post-form" class:minimized>
-    {#if minimized}
-      <div class="minimized-bar">
-        <button class="toggle-btn" on:click={toggleMinimize}>↑</button>
-      </div>
-    {:else}
-      <div class="input-container">
-        <textarea
-          bind:value={newPost}
-          on:input={handleInput}
-          on:keydown={(e) => handleKeydown(e, null)}
-          placeholder="Say something..."
-          rows="2"
-        ></textarea>
-        <button class="send-btn" on:click={submitPost}>➤</button>
-        <button class="toggle-btn" on:click={toggleMinimize}>↓</button>
-      </div>
-      {#if showTagPicker && tagSuggestions.length > 0}
-        <div class="tag-picker">
-          {#each tagSuggestions as username}
-            <div
-              class="tag-suggestion"
-              role="button"
-              tabindex="0"
-              on:click={() => addTag(username)}
-              on:keydown={(e) => handleKeyPress(e, () => addTag(username))}
-            >
-              {username}
-            </div>
-          {/each}
-        </div>
-      {/if}
-      <div class="toolbar">
-        <button
-          type="button"
-          on:click={() => document.getElementById("mediaInput").click()}
-          title="Image"
-        >
-          <span>🖼️</span>
-        </button>
-        <input
-          id="mediaInput"
-          type="file"
-          multiple
-          accept="image/*,video/*"
-          on:change={handleMediaChange}
-          hidden
-        />
-        <button
-          type="button"
-          on:click={() => (showGifPicker = !showGifPicker)}
-          title="GIF"
-        >
-          <span>🎞️</span>
-        </button>
-        <button
-          type="button"
-          on:click={() => (showEmojiPicker = !showEmojiPicker)}
-          title="Emoji"
-        >
-          <span>😊</span>
-        </button>
-      </div>
-      {#if showGifPicker}
-        <div class="gif-picker">
-          <input
-            type="text"
-            bind:value={gifSearch}
-            on:input={searchGifs}
-            placeholder="Search GIFs"
-          />
-          <div class="gif-list">
-            {#each gifs as gif}
-              <button
-                type="button"
-                class="gif-button"
-                on:click={() => addGif(gif.url)}
-                on:keydown={(e) => handleKeyPress(e, () => addGif(gif.url))}
-              >
-                <img src={gif.url} alt="GIF" />
-              </button>
-            {/each}
-          </div>
-        </div>
-      {/if}
-      {#if showEmojiPicker}
-        <div class="emoji-picker">
-          {#each ["😊", "👍", "😂", "❤️", "🔥"] as emoji}
-            <button
-              type="button"
-              class="emoji-button"
-              on:click={() => addEmoji(emoji)}
-              on:keydown={(e) => handleKeyPress(e, () => addEmoji(emoji))}
-            >
-              {emoji}
-            </button>
-          {/each}
-        </div>
-      {/if}
+      <p class="empty-message">
+        No posts yet. Be the first to share something!
+      </p>
     {/if}
   </div>
 </div>
@@ -922,333 +1165,534 @@
   .feed-container {
     display: flex;
     flex-direction: column;
-    max-width: 450px;
+    max-width: 600px;
     width: 100%;
     margin: 0 auto;
-    min-height: calc(100vh - 60px);
+    position: relative;
+    z-index: 20;
   }
+
+  /* Post form container at the top */
+  .post-form-container {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 12px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 30;
+  }
+
+  .input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  textarea {
+    width: 100%;
+    resize: none;
+    border: 1px solid var(--light-gray);
+    border-radius: 20px;
+    padding: 12px 40px 12px 16px;
+    font-size: 14px;
+    background-color: var(--light-gray);
+    transition:
+      background-color 0.2s,
+      border-color 0.2s;
+  }
+
+  textarea:focus {
+    outline: none;
+    background-color: white;
+    border-color: var(--carolina-blue);
+  }
+
+  .send-btn {
+    position: absolute;
+    right: 8px;
+    bottom: 50%;
+    transform: translateY(50%);
+    padding: 8px;
+    background-color: var(--tomato);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .send-btn:hover {
+    background-color: var(--tomato-light);
+  }
+
+  .send-btn:disabled {
+    background-color: var(--gray);
+    cursor: not-allowed;
+  }
+
+  .toolbar {
+    display: flex;
+    padding-top: 8px;
+    gap: 12px;
+  }
+
+  .toolbar-btn {
+    background: none;
+    border: none;
+    color: var(--gray);
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .toolbar-btn:hover {
+    background-color: var(--light-gray);
+    color: var(--tomato);
+  }
+
+  /* Feed content styling */
   .feed {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.25rem;
-    font-size: 0.9rem;
-    padding-bottom: 150px;
-  }
-  .post-form {
-    padding: 0.25rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    position: fixed;
-    bottom: 60px;
-    width: 100%;
-    max-width: 450px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--white);
-    z-index: 1000;
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-    transition: height 0.3s ease;
+    gap: 16px;
   }
-  .post-form.minimized {
-    height: 40px;
-  }
-  @media (min-width: 769px) {
-    .post-form {
-      bottom: 0;
-    }
-  }
-  .minimized-bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    height: 40px;
-    padding: 0 0.5rem;
-  }
+
   .post {
-    border-bottom: 1px solid #eee;
-    padding: 0.5rem 0;
-    font-size: clamp(0.75rem, 2.5vw, 0.85rem);
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    transition: transform 0.2s;
   }
+
+  .post:hover {
+    transform: translateY(-2px);
+  }
+
   .post.automated {
     background-color: #f0f8ff;
     border-left: 4px solid var(--carolina-blue);
   }
+
   .post-header {
     display: flex;
     align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 12px;
+    margin-bottom: 12px;
   }
+
   .profile-pic {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
+    object-fit: cover;
     cursor: pointer;
   }
+
   .profile-pic-placeholder {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background-color: var(--light-gray);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
+    font-size: 16px;
+    font-weight: 500;
     color: var(--charcoal);
     cursor: pointer;
   }
+
   .system-icon {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background-color: var(--carolina-blue);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    color: var(--white);
+    font-size: 20px;
+    color: white;
   }
+
   .user-info {
-    display: flex;
-    flex-direction: column;
+    flex: 1;
   }
+
   .name-row {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 2px;
   }
+
   .full-name {
-    font-size: clamp(0.9rem, 2.5vw, 1rem);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--charcoal);
+    font-size: 15px;
     cursor: pointer;
   }
+
   .full-name.automated-name {
     color: var(--charcoal);
     font-weight: bold;
     cursor: default;
   }
+
   .full-name:hover:not(.automated-name) {
     text-decoration: underline;
   }
+
   .channel-name {
-    font-size: clamp(0.65rem, 2vw, 0.75rem);
-    color: var(--dark-moderate-pink);
+    font-size: 13px;
+    color: var(--tomato);
     text-decoration: none;
   }
+
   .channel-name:hover {
     text-decoration: underline;
-    color: var(--tomato);
   }
+
   .timestamp {
-    font-size: clamp(0.6rem, 2vw, 0.7rem);
+    font-size: 12px;
     color: var(--gray);
-    opacity: 0.7;
   }
+
   .whisper-label {
-    font-size: clamp(0.65rem, 2vw, 0.75rem);
+    font-size: 12px;
     color: var(--tomato);
     font-style: italic;
-    margin-left: 0.5rem;
   }
-  .input-container,
-  .reply-form {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-  .post-form textarea,
-  .reply-form textarea {
-    width: 100%;
-    resize: none;
-    padding: 0.25rem 2rem 0.25rem 0.25rem;
-    border: 1px solid var(--light-gray);
-    border-radius: 4px;
-    font-size: clamp(0.75rem, 2vw, 0.85rem);
-    min-height: clamp(20px, 5vw, 28px);
-    line-height: 1.2;
-  }
-  .send-btn {
-    position: absolute;
-    right: 2rem;
-    bottom: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    background-color: var(--tomato);
-    color: var(--white);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.7rem;
-    transition: background-color 0.3s;
-    width: auto;
-    height: auto;
-  }
-  .toggle-btn {
-    position: absolute;
-    right: 0.25rem;
-    bottom: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    background-color: var(--charcoal);
-    color: var(--white);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.7rem;
-    transition: background-color 0.3s;
-    width: auto;
-    height: auto;
-  }
-  .minimized-bar .toggle-btn {
-    position: static;
-    margin: 0;
-  }
-  .send-btn:hover,
-  .toggle-btn:hover {
-    background-color: var(--tomato-light);
-  }
-  .toolbar {
-    display: flex;
-    gap: 0.25rem;
-    flex-wrap: wrap;
-  }
-  .toolbar button {
-    padding: 0.25rem;
-    background: none;
-    border: none;
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
-    cursor: pointer;
-    color: var(--charcoal);
-  }
-  .toolbar button:hover {
-    color: var(--tomato);
-  }
-  .gif-picker,
-  .emoji-picker,
-  .tag-picker,
-  .reaction-picker {
-    position: absolute;
-    background: var(--white);
-    border: 1px solid var(--light-gray);
-    border-radius: 4px;
-    padding: 0.5rem;
-    z-index: 2000;
-    max-width: 100%;
-  }
-  .gif-picker {
-    bottom: calc(100% + 5px);
-    left: 0;
-  }
-  .gif-picker input {
-    width: 100%;
-    margin-bottom: 0.5rem;
-    font-size: clamp(0.7rem, 2vw, 0.8rem);
-  }
-  .gif-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    max-height: 150px;
-    overflow-y: auto;
-  }
-  .gif-button {
-    padding: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-  .gif-list img {
-    width: clamp(60px, 20vw, 80px);
-    height: clamp(60px, 20vw, 80px);
-    border-radius: 4px;
-  }
-  .emoji-button {
-    padding: 0.25rem;
-    background: none;
-    border: none;
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
-    cursor: pointer;
-    color: var(--charcoal);
-  }
-  .emoji-button:hover {
-    color: var(--tomato);
-  }
-  .reaction-picker {
-    bottom: 100%;
-    left: 0;
-    display: flex;
-    gap: 0.25rem;
-  }
-  .reaction-picker button {
-    padding: 0.25rem;
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
-  }
-  .tag-picker {
-    max-height: 150px;
-    overflow-y: auto;
-  }
-  .tag-suggestion {
-    padding: 0.25rem;
-    font-size: clamp(0.75rem, 2vw, 0.85rem);
-  }
-  .tag-suggestion:hover,
-  .tag-suggestion:focus {
-    background-color: var(--light-gray);
-  }
+
   .post-content {
-    margin: 0.25rem 0;
+    margin-bottom: 12px;
     white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.5;
   }
+
+  .media {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .media img,
+  .media video {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+  }
+
   .reactions {
     display: flex;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    position: relative;
+  }
+
+  .reaction-btn {
+    background: none;
+    border: none;
+    color: var(--gray);
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+
+  .reaction-btn:hover {
+    background-color: var(--light-gray);
+    color: var(--charcoal);
+  }
+
+  .reaction-count {
+    background-color: var(--light-gray);
+    color: var(--charcoal);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  .reaction-count:hover {
+    background-color: #e0e0e0;
+  }
+
+  .comment-link {
+    margin-left: auto;
+    color: var(--gray);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .comment-link:hover {
+    color: var(--tomato);
+  }
+
+  .reply-form {
+    margin-top: 12px;
+    display: flex;
     align-items: center;
     position: relative;
   }
-  .reaction-btn {
-    padding: 0.2rem 0.5rem;
+
+  .reply-form textarea {
+    border-radius: 16px;
+    padding: 8px 40px 8px 12px;
+    font-size: 13px;
+  }
+
+  .reaction-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .reaction-picker button {
     background: none;
     border: none;
-    font-size: clamp(0.75rem, 2vw, 0.85rem);
+    font-size: 18px;
     cursor: pointer;
-    color: var(--charcoal);
+    padding: 4px;
+    border-radius: 4px;
+    transition:
+      transform 0.2s,
+      background-color 0.2s;
   }
-  .reaction-btn:hover {
-    color: var(--tomato);
+
+  .reaction-picker button:hover {
+    transform: scale(1.2);
+    background-color: var(--light-gray);
   }
-  .reaction-count {
-    font-size: clamp(0.65rem, 2vw, 0.75rem);
-    color: var(--charcoal);
-    cursor: pointer;
-  }
-  .reaction-count:hover {
-    color: var(--tomato);
-  }
-  .comment-link {
-    font-size: clamp(0.55rem, 1.5vw, 0.65rem);
-    padding: 0.1rem 0.3rem;
-    color: var(--tomato);
-    text-decoration: underline;
-    cursor: pointer;
-    line-height: 1;
-  }
-  .comment-link:hover {
-    color: var(--tomato-light);
-  }
+
   .comments {
-    margin-top: 0.5rem;
+    margin-top: 16px;
+    border-top: 1px solid var(--light-gray);
+    padding-top: 12px;
   }
+
   .view-more-link {
-    font-size: clamp(0.65rem, 2vw, 0.75rem);
-    color: var(--tomato);
-    text-decoration: underline;
-    cursor: pointer;
     display: block;
-    margin-top: 0.25rem;
-    margin-left: 1rem;
+    margin-top: 8px;
+    color: var(--tomato);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
   }
+
   .view-more-link:hover {
-    color: var(--tomato-light);
+    text-decoration: underline;
+  }
+
+  .tag-picker {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    width: 200px;
+  }
+
+  .tag-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .tag-suggestion:hover {
+    background-color: var(--light-gray);
+  }
+
+  .user-avatar,
+  .user-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .user-avatar {
+    object-fit: cover;
+  }
+
+  .user-avatar-placeholder {
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--charcoal);
+  }
+
+  .gif-btn {
+    font-size: 13px;
+    font-weight: 700;
+    background-color: transparent;
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gif-text {
+    letter-spacing: 0.5px;
+  }
+
+  .gif-btn:hover {
+    color: var(--tomato);
+    border-color: var(--tomato);
+  }
+
+  .gif-picker {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    margin-top: 4px;
+    width: 300px;
+    max-height: 300px;
+    padding: 12px;
+  }
+
+  .gif-picker input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .gif-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .gif-button {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .gif-button img {
+    width: 100%;
+    height: auto;
+    transition: transform 0.2s;
+  }
+
+  .gif-button:hover img {
+    transform: scale(1.05);
+  }
+
+  .emoji-picker {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 8px;
+    gap: 8px;
+    max-width: 300px;
+    position: absolute;
+    background: white;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    margin-top: 4px;
+  }
+
+  .emoji-button {
+    font-size: 20px;
+    padding: 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition:
+      transform 0.2s,
+      background-color 0.2s;
+  }
+
+  .emoji-button:hover {
+    transform: scale(1.2);
+    background-color: var(--light-gray);
+  }
+
+  .empty-message {
+    text-align: center;
+    padding: 20px;
+    color: var(--gray);
+    font-size: 14px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Debug button styling */
+  .debug-button {
+    margin: 0 auto 16px;
+    padding: 6px 12px;
+    font-size: 12px;
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .debug-button:hover {
+    background-color: #e0e0e0;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .post {
+      border-radius: 0;
+      margin-left: -16px;
+      margin-right: -16px;
+      width: calc(100% + 32px);
+    }
   }
 </style>

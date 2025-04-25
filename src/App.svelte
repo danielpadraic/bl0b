@@ -25,6 +25,8 @@
   import TaskCompletionForm from "./components/TaskCompletionForm.svelte";
   import ChallengeCreation from "./components/ChallengeCreation.svelte";
   import LoadingSpinner from "./components/LoadingSpinner.svelte";
+  import StoryViewer from "./components/StoryViewer.svelte";
+  import StoryCreator from "./components/StoryCreator.svelte";
 
   let menuOpen = false;
   let currentUser = null;
@@ -32,6 +34,21 @@
   let notificationCount = 0;
   let currentPage = "home";
   let pageProps = {};
+
+  // Create functions for event handlers to ensure proper cleanup
+  function handleToggleMenu() {
+    console.log("toggleMenu event received in App.svelte");
+    toggleMenu();
+  }
+
+  function handleLogout() {
+    supabase.auth.signOut();
+    menuOpen = false;
+  }
+
+  function handlePopstate() {
+    handleNavigate(window.location.pathname);
+  }
 
   // Simple router function
   function handleNavigate(path) {
@@ -65,6 +82,15 @@
     } else if (parts[0] === "notifications") {
       currentPage = "notifications";
       pageProps = {};
+    } else if (parts[0] === "story" && parts.length > 1) {
+      currentPage = "story-viewer";
+      pageProps = { storyId: parts[1] };
+    } else if (parts[0] === "stories" && parts.length > 1) {
+      currentPage = "story-viewer";
+      pageProps = { username: parts[1] };
+    } else if (parts[0] === "create-story") {
+      currentPage = "story-creator";
+      pageProps = {};
     } else {
       currentPage = "not-found";
       pageProps = {};
@@ -77,6 +103,29 @@
     window.history.pushState({}, "", path);
   };
 
+  function toggleMenu() {
+    menuOpen = !menuOpen;
+    console.log("App.svelte: menuOpen toggled to", menuOpen);
+  }
+
+  async function fetchNotificationCount() {
+    if (!$user) return;
+
+    try {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact" })
+        .eq("user_id", $user.id)
+        .eq("read", false);
+
+      if (!error) {
+        notificationCount = count || 0;
+      }
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+    }
+  }
+
   onMount(async () => {
     console.log("App mounted");
 
@@ -84,9 +133,7 @@
     handleNavigate(window.location.pathname);
 
     // Add popstate listener for back/forward navigation
-    window.addEventListener("popstate", () => {
-      handleNavigate(window.location.pathname);
-    });
+    window.addEventListener("popstate", handlePopstate);
 
     const {
       data: { session },
@@ -117,45 +164,20 @@
 
     appLoading = false;
 
-    document.addEventListener("toggleMenu", () => toggleMenu());
+    // Add event listeners with proper reference to functions
+    document.addEventListener("toggleMenu", handleToggleMenu);
     document.addEventListener("logout", handleLogout);
 
     return () => {
+      // Clean up resources
       subscription.unsubscribe();
-      document.removeEventListener("toggleMenu", () => toggleMenu());
+
+      // Remove event listeners with the same function references
+      document.removeEventListener("toggleMenu", handleToggleMenu);
       document.removeEventListener("logout", handleLogout);
-      window.removeEventListener("popstate", () => {
-        handleNavigate(window.location.pathname);
-      });
+      window.removeEventListener("popstate", handlePopstate);
     };
   });
-
-  async function fetchNotificationCount() {
-    if (!$user) return;
-
-    try {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact" })
-        .eq("user_id", $user.id)
-        .eq("read", false);
-
-      if (!error) {
-        notificationCount = count || 0;
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-    }
-  }
-
-  function toggleMenu() {
-    menuOpen = !menuOpen;
-  }
-
-  function handleLogout() {
-    supabase.auth.signOut();
-    menuOpen = false;
-  }
 </script>
 
 {#if appLoading}
@@ -172,8 +194,15 @@
         <Home />
       {:else if currentPage === "challenge"}
         <ChallengeDetails challengeId={pageProps.challengeId} />
+      {:else if currentPage === "story-creator"}
+        <StoryCreator />
       {:else if currentPage === "profile"}
         <Profile />
+      {:else if currentPage === "story-viewer"}
+        <StoryViewer
+          storyId={pageProps.storyId}
+          username={pageProps.username}
+        />
       {:else if currentPage === "public-profile"}
         <PublicProfile username={pageProps.username} />
       {:else if currentPage === "login"}
@@ -211,21 +240,15 @@
       </div>
     {/if}
     {#if $showTaskCompletionForm}
-      <div
-        class="modal-overlay"
-        role="dialog"
-        aria-label="Close task completion form"
-        on:click={() => ($showTaskCompletionForm = false)}
-        on:keydown={(e) => {
-          if (e.key === "Enter" || e.key === "Space" || e.key === "Escape") {
-            $showTaskCompletionForm = false;
-          }
-        }}
-        tabindex="0"
-      >
-        <TaskCompletionForm
-          on:close={() => ($showTaskCompletionForm = false)}
-        />
+      <div class="modal-overlay" role="dialog" aria-modal="true">
+        <div
+          class="modal-dialog-container"
+          on:click|self={() => ($showChallengeCreation = false)}
+        >
+          <ChallengeCreation
+            on:close={() => ($showChallengeCreation = false)}
+          />
+        </div>
       </div>
     {/if}
   </div>
@@ -274,6 +297,14 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
+  }
+
+  .modal-dialog-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
   }
 
   .not-found {

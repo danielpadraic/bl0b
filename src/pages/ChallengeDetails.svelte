@@ -418,6 +418,24 @@
                   <td>${challenge.prize_pool.toFixed(2)}</td>
                 </tr>
                 <tr>
+                  <th>Prize Structure</th>
+                  <td>
+                    {#if challenge.prize_type === "just_for_fun"}
+                      Just for Fun
+                    {:else if challenge.prize_type === "set_amount"}
+                      ${challenge.prize_amount.toFixed(2)} Set Amount
+                    {:else if challenge.prize_type === "winner_takes_all"}
+                      Winner Takes All
+                    {:else if challenge.prize_type === "evenly_distributed"}
+                      Split Evenly Among Completers
+                    {:else if challenge.prize_type === "tournament"}
+                      Tournament Style ({challenge.number_of_winners} winners)
+                    {:else}
+                      {challenge.prize_type}
+                    {/if}
+                  </td>
+                </tr>
+                <tr>
                   <th>Scoring</th>
                   <td>{challenge.scoring_type}</td>
                 </tr>

@@ -7,6 +7,7 @@
   import StoriesBanner from "../components/StoriesBanner.svelte";
   import NewChallengeButton from "../components/NewChallengeButton.svelte";
   import LoadingSpinner from "../components/LoadingSpinner.svelte";
+  import SocialFeed from "../components/SocialFeed.svelte";
   import ChallengeCreation from "../components/ChallengeCreation.svelte";
 
   let challenges = [];
@@ -382,19 +383,30 @@
 
           {#if popularChallenges && popularChallenges.length > 0}
             <div class="section-header">
-              <h2>Popular Challenges</h2>
+              <h2>Challenges</h2>
               <a href="/discover" class="see-all">See All</a>
             </div>
-            <div class="challenge-grid">
-              {#each popularChallenges.slice(0, 6) as challenge (challenge.id)}
-                <ChallengeCard
-                  {challenge}
-                  on:click={() =>
-                    window.navigateTo(`/challenge/${challenge.id}`)}
-                />
-              {/each}
+            <div class="horizontal-scroll-container">
+              <div class="challenges-scroll">
+                {#each popularChallenges.slice(0, 10) as challenge (challenge.id)}
+                  <div class="challenge-card-wrapper">
+                    <ChallengeCard
+                      {challenge}
+                      compact={true}
+                      on:click={() =>
+                        window.navigateTo(`/challenge/${challenge.id}`)}
+                    />
+                  </div>
+                {/each}
+              </div>
             </div>
           {/if}
+          <div class="section-header feed-header">
+            <h2>Activity Feed</h2>
+          </div>
+          <div class="social-feed-container">
+            <SocialFeed />
+          </div>
 
           {#if $user}
             <div class="section-header">
@@ -492,6 +504,47 @@
     overflow: hidden;
     transition: height 0.3s ease;
     z-index: 10;
+  }
+
+  .horizontal-scroll-container {
+    margin-bottom: 24px;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .challenges-scroll {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding: 0 16px 16px 16px;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+  }
+
+  /* Hide scrollbar for Chrome/Safari */
+  .challenges-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .challenge-card-wrapper {
+    flex: 0 0 auto;
+    width: 180px; /* Slightly smaller to fit more on screen */
+    scroll-snap-align: start;
+    height: 100%;
+  }
+
+  .social-feed-container {
+    position: relative;
+    z-index: 10;
+    margin-bottom: 80px;
+    background-color: transparent;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .feed-header {
+    margin-top: 24px;
+    margin-bottom: 8px;
   }
 
   .spinner {
